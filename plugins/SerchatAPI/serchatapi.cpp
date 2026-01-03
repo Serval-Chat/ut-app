@@ -43,6 +43,26 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::myProfileFetched);
     connect(m_apiClient, &ApiClient::myProfileFetchFailed, 
             this, &SerchatAPI::myProfileFetchFailed);
+    
+    // Connect server signals
+    connect(m_apiClient, &ApiClient::serversFetched,
+            this, &SerchatAPI::serversFetched);
+    connect(m_apiClient, &ApiClient::serversFetchFailed,
+            this, &SerchatAPI::serversFetchFailed);
+    connect(m_apiClient, &ApiClient::serverDetailsFetched,
+            this, &SerchatAPI::serverDetailsFetched);
+    connect(m_apiClient, &ApiClient::serverDetailsFetchFailed,
+            this, &SerchatAPI::serverDetailsFetchFailed);
+    
+    // Connect channel signals
+    connect(m_apiClient, &ApiClient::channelsFetched,
+            this, &SerchatAPI::channelsFetched);
+    connect(m_apiClient, &ApiClient::channelsFetchFailed,
+            this, &SerchatAPI::channelsFetchFailed);
+    connect(m_apiClient, &ApiClient::channelDetailsFetched,
+            this, &SerchatAPI::channelDetailsFetched);
+    connect(m_apiClient, &ApiClient::channelDetailsFetchFailed,
+            this, &SerchatAPI::channelDetailsFetchFailed);
 
     // Connect network client for automatic 401 handling
     connect(m_networkClient, &NetworkClient::authTokenExpired,
@@ -132,7 +152,7 @@ void SerchatAPI::validateAuthToken() {
 }
 
 // ============================================================================
-// API Methods
+// API Methods - Profile
 // ============================================================================
 
 void SerchatAPI::getUserProfile() {
@@ -148,23 +168,51 @@ int SerchatAPI::getProfile(const QString& userId, bool useCache) {
 }
 
 // ============================================================================
+// API Methods - Servers
+// ============================================================================
+
+int SerchatAPI::getServers(bool useCache) {
+    return m_apiClient->getServers(useCache);
+}
+
+int SerchatAPI::getServerDetails(const QString& serverId, bool useCache) {
+    return m_apiClient->getServerDetails(serverId, useCache);
+}
+
+// ============================================================================
+// API Methods - Channels
+// ============================================================================
+
+int SerchatAPI::getChannels(const QString& serverId, bool useCache) {
+    return m_apiClient->getChannels(serverId, useCache);
+}
+
+int SerchatAPI::getChannelDetails(const QString& serverId, const QString& channelId, bool useCache) {
+    return m_apiClient->getChannelDetails(serverId, channelId, useCache);
+}
+
+// ============================================================================
 // Cache Management
 // ============================================================================
 
-void SerchatAPI::setProfileCacheTTL(int seconds) {
+void SerchatAPI::setCacheTTL(int seconds) {
     m_apiClient->setCacheTTL(seconds);
 }
 
-void SerchatAPI::clearProfileCache() {
+void SerchatAPI::clearCache() {
     m_apiClient->clearCache();
 }
 
+void SerchatAPI::clearCacheFor(const QString& cacheKey) {
+    m_apiClient->clearCacheFor(cacheKey);
+}
+
 void SerchatAPI::clearProfileCacheFor(const QString& userId) {
-    m_apiClient->clearCacheFor(userId);
+    m_apiClient->clearCacheFor(QStringLiteral("profile:%1").arg(userId));
 }
 
 bool SerchatAPI::hasProfileCached(const QString& userId) const {
-    return m_apiClient->hasCachedProfile(userId);
+    return m_apiClient->hasCachedData(QStringLiteral("profile:%1").arg(userId));
 }
 
 // ============================================================================

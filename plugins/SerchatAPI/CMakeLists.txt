@@ -9,6 +9,9 @@ set(
     network/networkclient.cpp
     auth/authclient.cpp
     api/apiclient.cpp
+    api/cache.cpp
+    api/profile.cpp
+    api/servers.cpp
 )
 
 set(CMAKE_AUTOMOC ON)

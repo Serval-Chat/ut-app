@@ -71,26 +71,67 @@ public:
      * @param userId User ID to fetch (or "me" for current user)
      * @param useCache If true, return cached data if valid (default: true)
      * @return Request ID for matching with profileFetched signal
-     * 
-     * Multiple parallel calls are supported. The request ID allows QML to
-     * track which response corresponds to which request.
      */
     Q_INVOKABLE int getProfile(const QString& userId, bool useCache = true);
     
     // ========================================================================
+    // Servers API
+    // ========================================================================
+    
+    /**
+     * @brief Fetch all servers the current user is a member of.
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with serversFetched signal
+     */
+    Q_INVOKABLE int getServers(bool useCache = true);
+    
+    /**
+     * @brief Fetch details for a specific server.
+     * @param serverId The server ID to fetch
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with serverDetailsFetched signal
+     */
+    Q_INVOKABLE int getServerDetails(const QString& serverId, bool useCache = true);
+    
+    // ========================================================================
+    // Channels API
+    // ========================================================================
+    
+    /**
+     * @brief Fetch all channels for a specific server.
+     * @param serverId The server ID to fetch channels for
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with channelsFetched signal
+     */
+    Q_INVOKABLE int getChannels(const QString& serverId, bool useCache = true);
+    
+    /**
+     * @brief Fetch details for a specific channel.
+     * @param serverId The server ID
+     * @param channelId The channel ID
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with channelDetailsFetched signal
+     */
+    Q_INVOKABLE int getChannelDetails(const QString& serverId, const QString& channelId, 
+                                       bool useCache = true);
+
+    // ========================================================================
     // Cache Management
     // ========================================================================
     
-    /// Set profile cache TTL in seconds (default: 60)
-    Q_INVOKABLE void setProfileCacheTTL(int seconds);
+    /// Set cache TTL in seconds (default: 60)
+    Q_INVOKABLE void setCacheTTL(int seconds);
     
-    /// Clear all cached profiles
-    Q_INVOKABLE void clearProfileCache();
+    /// Clear all cached data
+    Q_INVOKABLE void clearCache();
     
-    /// Clear cached profile for a specific user
+    /// Clear cached data for a specific cache key
+    Q_INVOKABLE void clearCacheFor(const QString& cacheKey);
+    
+    // Legacy profile cache methods (for backward compatibility)
+    Q_INVOKABLE void setProfileCacheTTL(int seconds) { setCacheTTL(seconds); }
+    Q_INVOKABLE void clearProfileCache() { clearCache(); }
     Q_INVOKABLE void clearProfileCacheFor(const QString& userId);
-    
-    /// Check if a cached profile exists and is valid
     Q_INVOKABLE bool hasProfileCached(const QString& userId) const;
     
     // ========================================================================
@@ -137,6 +178,18 @@ signals:
     // Convenience signals for simple use (current user's profile only)
     void myProfileFetched(const QVariantMap& profile);
     void myProfileFetchFailed(const QString& error);
+    
+    // Server signals
+    void serversFetched(int requestId, const QVariantList& servers);
+    void serversFetchFailed(int requestId, const QString& error);
+    void serverDetailsFetched(int requestId, const QVariantMap& server);
+    void serverDetailsFetchFailed(int requestId, const QString& error);
+    
+    // Channel signals
+    void channelsFetched(int requestId, const QString& serverId, const QVariantList& channels);
+    void channelsFetchFailed(int requestId, const QString& serverId, const QString& error);
+    void channelDetailsFetched(int requestId, const QVariantMap& channel);
+    void channelDetailsFetchFailed(int requestId, const QString& error);
 
 private slots:
     // Auth client handlers

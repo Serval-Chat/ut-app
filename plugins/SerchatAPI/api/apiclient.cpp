@@ -13,168 +13,6 @@ ApiClient::~ApiClient() {
 }
 
 // ============================================================================
-// Profile API
-// ============================================================================
-
-int ApiClient::getMyProfile() {
-    return getProfile("me", true);
-}
-
-int ApiClient::getProfile(const QString& userId, bool useCache) {
-    int requestId = generateRequestId();
-    
-    if (m_baseUrl.isEmpty()) {
-        // Use QTimer to emit asynchronously (consistent behavior)
-        QMetaObject::invokeMethod(this, [this, requestId]() {
-            completeRequest(requestId, false, {}, "API base URL not configured");
-        }, Qt::QueuedConnection);
-        return requestId;
-    }
-    
-    QString cacheKey = userId;
-    bool isMyProfile = (userId == "me");
-    
-    // Check cache first if allowed
-    if (useCache && m_profileCache.contains(cacheKey)) {
-        const CacheEntry& entry = m_profileCache[cacheKey];
-        if (entry.isValid()) {
-            qDebug() << "[ApiClient] Cache hit for profile:" << userId;
-            // Emit asynchronously for consistent behavior
-            QVariantMap cachedData = entry.data;
-            QMetaObject::invokeMethod(this, [this, requestId, cachedData, isMyProfile]() {
-                emit profileFetched(requestId, cachedData);
-                if (isMyProfile) {
-                    emit myProfileFetched(cachedData);
-                }
-            }, Qt::QueuedConnection);
-            return requestId;
-        } else {
-            // Expired, remove from cache
-            m_profileCache.remove(cacheKey);
-        }
-    }
-    
-    // Build endpoint
-    QString endpoint = (userId == "me") 
-        ? "/api/v1/profile/me" 
-        : QString("/api/v1/profile/%1").arg(userId);
-    
-    // Check for request deduplication - if we already have an in-flight request
-    // for this endpoint, just add our requestId to the waiting list
-    if (m_endpointToRequests.contains(endpoint)) {
-        qDebug() << "[ApiClient] Deduplicating request for:" << endpoint;
-        m_endpointToRequests[endpoint].append(requestId);
-        
-        // Create a pending request entry without a reply (we'll share the existing one)
-        PendingRequest pending;
-        pending.reply = nullptr;  // No direct reply, we're sharing
-        pending.endpoint = endpoint;
-        pending.cacheKey = cacheKey;
-        pending.isMyProfile = isMyProfile;
-        m_pendingRequests[requestId] = pending;
-        
-        return requestId;
-    }
-    
-    // Make the actual network request
-    QUrl url = buildUrl(m_baseUrl, endpoint);
-    QNetworkReply* reply = m_networkClient->get(url);
-    
-    // Track the request
-    PendingRequest pending;
-    pending.reply = reply;
-    pending.endpoint = endpoint;
-    pending.cacheKey = cacheKey;
-    pending.isMyProfile = isMyProfile;
-    m_pendingRequests[requestId] = pending;
-    
-    // Track endpoint -> requestIds for deduplication
-    m_endpointToRequests[endpoint].append(requestId);
-    
-    // Store requestId in reply for lookup in slot
-    reply->setProperty("requestId", requestId);
-    connect(reply, &QNetworkReply::finished, this, &ApiClient::onReplyFinished);
-    
-    qDebug() << "[ApiClient] Started request" << requestId << "for" << endpoint;
-    return requestId;
-}
-
-void ApiClient::onReplyFinished() {
-    QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
-    if (!reply) return;
-    
-    int primaryRequestId = reply->property("requestId").toInt();
-    
-    // Find the pending request to get endpoint info
-    if (!m_pendingRequests.contains(primaryRequestId)) {
-        reply->deleteLater();
-        return;
-    }
-    
-    PendingRequest& primary = m_pendingRequests[primaryRequestId];
-    QString endpoint = primary.endpoint;
-    QString cacheKey = primary.cacheKey;
-    
-    // Process the reply
-    ApiResult result = handleReply(reply);
-    reply->deleteLater();
-    
-    // Cache successful results
-    if (result.success && !cacheKey.isEmpty()) {
-        CacheEntry entry;
-        entry.data = result.data;
-        entry.expiry = QDateTime::currentDateTime().addSecs(m_cacheTTLSeconds);
-        m_profileCache[cacheKey] = entry;
-        qDebug() << "[ApiClient] Cached profile for:" << cacheKey;
-    }
-    
-    // Get all requestIds waiting for this endpoint
-    QList<int> waitingRequests = m_endpointToRequests.take(endpoint);
-    
-    // Complete all waiting requests with the same result
-    for (int requestId : waitingRequests) {
-        if (m_pendingRequests.contains(requestId)) {
-            PendingRequest& req = m_pendingRequests[requestId];
-            
-            if (result.success) {
-                emit profileFetched(requestId, result.data);
-                if (req.isMyProfile) {
-                    emit myProfileFetched(result.data);
-                }
-            } else {
-                emit profileFetchFailed(requestId, result.errorMessage);
-                if (req.isMyProfile) {
-                    emit myProfileFetchFailed(result.errorMessage);
-                }
-            }
-            
-            m_pendingRequests.remove(requestId);
-        }
-    }
-}
-
-// ============================================================================
-// Cache Management
-// ============================================================================
-
-void ApiClient::clearCache() {
-    m_profileCache.clear();
-    qDebug() << "[ApiClient] Cache cleared";
-}
-
-void ApiClient::clearCacheFor(const QString& userId) {
-    m_profileCache.remove(userId);
-    qDebug() << "[ApiClient] Cache cleared for:" << userId;
-}
-
-bool ApiClient::hasCachedProfile(const QString& userId) const {
-    if (!m_profileCache.contains(userId)) {
-        return false;
-    }
-    return m_profileCache[userId].isValid();
-}
-
-// ============================================================================
 // Request Management
 // ============================================================================
 
@@ -214,30 +52,6 @@ bool ApiClient::isRequestPending(int requestId) const {
     return m_pendingRequests.contains(requestId);
 }
 
-void ApiClient::completeRequest(int requestId, bool success, const QVariantMap& data, const QString& error) {
-    // Check if request was cancelled
-    if (!m_pendingRequests.contains(requestId)) {
-        return;
-    }
-    
-    PendingRequest& req = m_pendingRequests[requestId];
-    bool isMyProfile = req.isMyProfile;
-    
-    cleanupRequest(requestId);
-    
-    if (success) {
-        emit profileFetched(requestId, data);
-        if (isMyProfile) {
-            emit myProfileFetched(data);
-        }
-    } else {
-        emit profileFetchFailed(requestId, error);
-        if (isMyProfile) {
-            emit myProfileFetchFailed(error);
-        }
-    }
-}
-
 void ApiClient::cleanupRequest(int requestId) {
     if (!m_pendingRequests.contains(requestId)) {
         return;
@@ -254,4 +68,189 @@ void ApiClient::cleanupRequest(int requestId) {
     }
     
     m_pendingRequests.remove(requestId);
+}
+
+// ============================================================================
+// Generic Request Infrastructure
+// ============================================================================
+
+int ApiClient::startGetRequest(RequestType type, const QString& endpoint, 
+                                const QString& cacheKey, bool useCache,
+                                const QVariantMap& context) {
+    int requestId = generateRequestId();
+    
+    if (m_baseUrl.isEmpty()) {
+        // Emit error asynchronously for consistent behavior
+        QMetaObject::invokeMethod(this, [this, requestId, type, context]() {
+            PendingRequest req;
+            req.type = type;
+            req.context = context;
+            emitFailure(requestId, req, "API base URL not configured");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    // Check cache first if allowed
+    if (useCache && !cacheKey.isEmpty()) {
+        QVariantMap cachedData;
+        if (checkCache(cacheKey, cachedData)) {
+            qDebug() << "[ApiClient] Cache hit for:" << cacheKey;
+            QMetaObject::invokeMethod(this, [this, requestId, type, context, cachedData]() {
+                PendingRequest req;
+                req.type = type;
+                req.context = context;
+                emitSuccess(requestId, req, cachedData);
+            }, Qt::QueuedConnection);
+            return requestId;
+        }
+    }
+    
+    // Check for request deduplication
+    if (m_endpointToRequests.contains(endpoint)) {
+        qDebug() << "[ApiClient] Deduplicating request for:" << endpoint;
+        m_endpointToRequests[endpoint].append(requestId);
+        
+        PendingRequest pending;
+        pending.reply = nullptr;  // No direct reply, sharing existing
+        pending.endpoint = endpoint;
+        pending.cacheKey = cacheKey;
+        pending.type = type;
+        pending.context = context;
+        m_pendingRequests[requestId] = pending;
+        
+        return requestId;
+    }
+    
+    // Make the actual network request
+    QUrl url = buildUrl(m_baseUrl, endpoint);
+    QNetworkReply* reply = m_networkClient->get(url);
+    
+    // Track the request
+    PendingRequest pending;
+    pending.reply = reply;
+    pending.endpoint = endpoint;
+    pending.cacheKey = cacheKey;
+    pending.type = type;
+    pending.context = context;
+    m_pendingRequests[requestId] = pending;
+    
+    // Track endpoint -> requestIds for deduplication
+    m_endpointToRequests[endpoint].append(requestId);
+    
+    // Store requestId in reply for lookup in slot
+    reply->setProperty("requestId", requestId);
+    connect(reply, &QNetworkReply::finished, this, &ApiClient::onReplyFinished);
+    
+    qDebug() << "[ApiClient] Started request" << requestId << "for" << endpoint;
+    return requestId;
+}
+
+void ApiClient::onReplyFinished() {
+    QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
+    if (!reply) return;
+    
+    int primaryRequestId = reply->property("requestId").toInt();
+    
+    if (!m_pendingRequests.contains(primaryRequestId)) {
+        reply->deleteLater();
+        return;
+    }
+    
+    PendingRequest& primary = m_pendingRequests[primaryRequestId];
+    QString endpoint = primary.endpoint;
+    QString cacheKey = primary.cacheKey;
+    
+    // Process the reply
+    ApiResult result = handleReply(reply);
+    reply->deleteLater();
+    
+    // Cache successful results
+    if (result.success && !cacheKey.isEmpty()) {
+        updateCache(cacheKey, result.data);
+    }
+    
+    // Get all requestIds waiting for this endpoint
+    QList<int> waitingRequests = m_endpointToRequests.take(endpoint);
+    
+    // Complete all waiting requests with the same result
+    for (int requestId : waitingRequests) {
+        handleRequestComplete(requestId, result);
+    }
+}
+
+void ApiClient::handleRequestComplete(int requestId, const ApiResult& result) {
+    if (!m_pendingRequests.contains(requestId)) {
+        return;
+    }
+    
+    PendingRequest req = m_pendingRequests.take(requestId);
+    
+    if (result.success) {
+        emitSuccess(requestId, req, result.data);
+    } else {
+        emitFailure(requestId, req, result.errorMessage);
+    }
+}
+
+// ============================================================================
+// Signal Emission (routes based on RequestType)
+// ============================================================================
+
+void ApiClient::emitSuccess(int requestId, const PendingRequest& req, const QVariantMap& data) {
+    switch (req.type) {
+        case RequestType::Profile:
+            emit profileFetched(requestId, data);
+            break;
+            
+        case RequestType::MyProfile:
+            emit profileFetched(requestId, data);
+            emit myProfileFetched(data);
+            break;
+            
+        case RequestType::Servers:
+            emit serversFetched(requestId, data.value("items").toList());
+            break;
+            
+        case RequestType::ServerDetails:
+            emit serverDetailsFetched(requestId, data);
+            break;
+            
+        case RequestType::Channels:
+            emit channelsFetched(requestId, req.context.value("serverId").toString(), 
+                                 data.value("items").toList());
+            break;
+            
+        case RequestType::ChannelDetails:
+            emit channelDetailsFetched(requestId, data);
+            break;
+    }
+}
+
+void ApiClient::emitFailure(int requestId, const PendingRequest& req, const QString& error) {
+    switch (req.type) {
+        case RequestType::Profile:
+            emit profileFetchFailed(requestId, error);
+            break;
+            
+        case RequestType::MyProfile:
+            emit profileFetchFailed(requestId, error);
+            emit myProfileFetchFailed(error);
+            break;
+            
+        case RequestType::Servers:
+            emit serversFetchFailed(requestId, error);
+            break;
+            
+        case RequestType::ServerDetails:
+            emit serverDetailsFetchFailed(requestId, error);
+            break;
+            
+        case RequestType::Channels:
+            emit channelsFetchFailed(requestId, req.context.value("serverId").toString(), error);
+            break;
+            
+        case RequestType::ChannelDetails:
+            emit channelDetailsFetchFailed(requestId, error);
+            break;
+    }
 }

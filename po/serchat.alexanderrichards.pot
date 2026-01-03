@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-03 21:10+0000\n"
+"POT-Creation-Date: 2026-01-03 22:16+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -21,12 +21,89 @@ msgstr ""
 msgid "Debug"
 msgstr ""
 
-#: ../qml/DebugPage.qml:23
+#: ../qml/DebugPage.qml:33
+msgid "Authentication"
+msgstr ""
+
+#: ../qml/DebugPage.qml:42 ../qml/DebugPage.qml:55 ../qml/LoginPage.qml:11
+#: ../qml/LoginPage.qml:49
+msgid "Login"
+msgstr ""
+
+#: ../qml/DebugPage.qml:48 ../qml/LoginPage.qml:42
+msgid "Password"
+msgstr ""
+
+#: ../qml/DebugPage.qml:61
+msgid "Logout"
+msgstr ""
+
+#: ../qml/DebugPage.qml:67
+msgid "Validate Token"
+msgstr ""
+
+#: ../qml/DebugPage.qml:76
+msgid "Profile"
+msgstr ""
+
+#: ../qml/DebugPage.qml:83
 msgid "Fetch User Profile"
 msgstr ""
 
-#: ../qml/DebugPage.qml:34
-msgid "Profile data will appear here..."
+#: ../qml/DebugPage.qml:89
+msgid "Get My Profile"
+msgstr ""
+
+#: ../qml/DebugPage.qml:99
+msgid "Servers"
+msgstr ""
+
+#: ../qml/DebugPage.qml:106
+msgid "Get Servers"
+msgstr ""
+
+#: ../qml/DebugPage.qml:115 ../qml/DebugPage.qml:139
+msgid "Server ID"
+msgstr ""
+
+#: ../qml/DebugPage.qml:118
+msgid "Get Server Details"
+msgstr ""
+
+#: ../qml/DebugPage.qml:130
+msgid "Channels"
+msgstr ""
+
+#: ../qml/DebugPage.qml:142
+msgid "Get Channels"
+msgstr ""
+
+#: ../qml/DebugPage.qml:154
+msgid "Cache"
+msgstr ""
+
+#: ../qml/DebugPage.qml:161
+msgid "Clear Cache"
+msgstr ""
+
+#: ../qml/DebugPage.qml:168
+msgid "Set Cache TTL 30s"
+msgstr ""
+
+#: ../qml/DebugPage.qml:178
+msgid "Debug Info"
+msgstr ""
+
+#: ../qml/DebugPage.qml:185
+msgid "Enable Debug"
+msgstr ""
+
+#: ../qml/DebugPage.qml:192
+msgid "Logged In: "
+msgstr ""
+
+#: ../qml/DebugPage.qml:202
+msgid "API responses will appear here..."
 msgstr ""
 
 #: ../qml/HomePage.qml:11 serchat.desktop.in.h:1
@@ -37,18 +114,10 @@ msgstr ""
 msgid "Version %1"
 msgstr ""
 
-#: ../qml/LoginPage.qml:11 ../qml/LoginPage.qml:49
-msgid "Login"
-msgstr ""
-
 #: ../qml/LoginPage.qml:29
 msgid "Welcome to Serchat"
 msgstr ""
 
 #: ../qml/LoginPage.qml:36
 msgid "Email/Login"
-msgstr ""
-
-#: ../qml/LoginPage.qml:42
-msgid "Password"
 msgstr ""
