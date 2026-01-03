@@ -1,0 +1,9 @@
+<!DOCTYPE RCC>
+<RCC>
+  <qresource prefix="/">
+    <file>Main.qml</file>
+    <file>HomePage.qml</file>
+    <file>LoginPage.qml</file>
+    <file>DebugPage.qml</file>
+  </qresource>
+</RCC>

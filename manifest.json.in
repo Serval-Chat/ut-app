@@ -1,0 +1,15 @@
+{
+    "name": "serchat.alexanderrichards",
+    "description": "A open-source discord-like chatting application.",
+    "architecture": "@CLICK_ARCH@",
+    "title": "Serchat",
+    "hooks": {
+        "serchat": {
+            "apparmor": "serchat.apparmor",
+            "desktop":  "serchat.desktop"
+        }
+    },
+    "version": "@BUILD_VERSION@",
+    "maintainer": "Alexander Richards <electrodeyt@gmail.com>",
+    "framework" : "@CLICK_FRAMEWORK@"
+}

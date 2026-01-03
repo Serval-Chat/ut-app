@@ -1,0 +1,82 @@
+---
+###############################################################################
+# Define defaults and template anchors
+###############################################################################
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  DOCKER_DRIVER: overlay2
+  CLICKABLE_VERSION: "8"
+  UT_VERSION: "20.04"
+
+.node_anchors:
+  click_path: &click_path
+  - 'build/${ARCH_TRIPLET}/app/*.click'
+
+  amd64: &amd64
+    variables:
+      ARCH: "amd64"
+      ARCH_TRIPLET: "x86_64-linux-gnu"
+  arm64: &arm64
+    variables:
+      ARCH: "arm64"
+      ARCH_TRIPLET: "aarch64-linux-gnu"
+  armhf: &armhf
+    variables:
+      ARCH: "armhf"
+      ARCH_TRIPLET: "arm-linux-gnueabihf"
+
+default:
+  image: "clickable/ci-$UT_VERSION-$ARCH:$CLICKABLE_VERSION"
+
+###############################################################################
+# Define stages
+###############################################################################
+stages:
+- build
+- publish
+
+###############################################################################
+# `build` stage: build clicks for all architectures
+###############################################################################
+.build:
+  stage: build
+  script:
+  - clickable build
+  artifacts:
+    paths: *click_path
+    expire_in: 1 week
+
+build_amd64:
+  <<: *amd64
+  extends: .build
+
+build_arm64:
+  <<: *arm64
+  extends: .build
+
+build_armhf:
+  <<: *armhf
+  extends: .build
+
+###############################################################################
+# `release` stage: upload to OpenStore on tags
+###############################################################################
+publish:
+  <<: *amd64
+  stage: publish
+  rules:
+  - if: $CI_COMMIT_TAG
+  script:
+  - 'clickable publish --arch amd64 -- "$CI_COMMIT_MESSAGE"'
+  - 'clickable publish --arch arm64'
+  - 'clickable publish --arch armhf'
+  dependencies:
+  - build_amd64
+  - build_arm64
+  - build_armhf
+  artifacts:
+    paths:
+    - build/x86_64-linux-gnu/app/*.click
+    - build/aarch64-linux-gnu/app/*.click
+    - build/arm-linux-gnueabihf/app/*.click
+    expire_in: 1 month

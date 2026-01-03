@@ -1,0 +1,54 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the serchat.alexanderrichards package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: serchat.alexanderrichards\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-03 21:10+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../qml/DebugPage.qml:9 ../qml/HomePage.qml:17
+msgid "Debug"
+msgstr ""
+
+#: ../qml/DebugPage.qml:23
+msgid "Fetch User Profile"
+msgstr ""
+
+#: ../qml/DebugPage.qml:34
+msgid "Profile data will appear here..."
+msgstr ""
+
+#: ../qml/HomePage.qml:11 serchat.desktop.in.h:1
+msgid "Serchat"
+msgstr ""
+
+#: ../qml/HomePage.qml:41
+msgid "Version %1"
+msgstr ""
+
+#: ../qml/LoginPage.qml:11 ../qml/LoginPage.qml:49
+msgid "Login"
+msgstr ""
+
+#: ../qml/LoginPage.qml:29
+msgid "Welcome to Serchat"
+msgstr ""
+
+#: ../qml/LoginPage.qml:36
+msgid "Email/Login"
+msgstr ""
+
+#: ../qml/LoginPage.qml:42
+msgid "Password"
+msgstr ""
