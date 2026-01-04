@@ -44,12 +44,21 @@ Rectangle {
     // Track pending profile requests to avoid duplicates
     property var pendingProfileRequests: ({})
     
+    // Members data
+    property var serverMembers: []
+    property bool showMembersPanel: false
+    
+    // Custom emojis for markdown rendering
+    property var customEmojis: ({})
+    
     signal sendMessage(string text, string replyToId)
     signal loadMoreMessages()
     signal messageReplyClicked(string messageId)
     signal userProfileClicked(string userId)
     signal backClicked()
     signal viewFullProfile(string userId)
+    signal openDMWithUser(string recipientId, string recipientName, string recipientAvatar)
+    signal sendFriendRequest(string userId, string username)
     
     color: Theme.palette.normal.background
     
@@ -151,29 +160,30 @@ Rectangle {
                             width: units.gu(2.2)
                             height: units.gu(2.2)
                             name: "search"
-                            color: Theme.palette.normal.backgroundSecondaryText
+                            color: searchOverlay.opened ? LomiriColors.blue : Theme.palette.normal.backgroundSecondaryText
                         }
                         
                         onClicked: {
-                            // TODO: Implement search
+                            searchOverlay.open()
                         }
                     }
                     
-                    // Members/info button
+                    // Members/info button (only for server channels)
                     AbstractButton {
                         width: units.gu(4)
                         height: units.gu(4)
+                        visible: !isDMMode
                         
                         Icon {
                             anchors.centerIn: parent
                             width: units.gu(2.2)
                             height: units.gu(2.2)
                             name: "contact-group"
-                            color: Theme.palette.normal.backgroundSecondaryText
+                            color: showMembersPanel ? LomiriColors.blue : Theme.palette.normal.backgroundSecondaryText
                         }
                         
                         onClicked: {
-                            // TODO: Show members panel
+                            showMembersPanel = !showMembersPanel
                         }
                     }
                 }
@@ -205,13 +215,18 @@ Rectangle {
             
             model: messages
             
+            // Lock scrolling when message bubble is swiping
+            property bool swipeLockActive: false
+            interactive: !swipeLockActive
+            
             delegate: Components.MessageBubble {
+                id: messageDelegate
                 width: messageList.width
                 messageId: modelData._id || modelData.id || ""
                 senderId: modelData.senderId || ""
                 senderName: getSenderName(modelData.senderId)
                 senderAvatar: getSenderAvatar(modelData.senderId)
-                text: formatMessageText(modelData.text || "")
+                text: modelData.text || ""  // Raw text - MarkdownText handles all formatting
                 timestamp: modelData.createdAt || ""
                 isOwn: modelData.senderId === currentUserId
                 isEdited: modelData.isEdited || false
@@ -220,13 +235,44 @@ Rectangle {
                 replyToText: modelData.repliedMessage ? modelData.repliedMessage.text : ""
                 replyToSender: modelData.repliedMessage ? getSenderName(modelData.repliedMessage.senderId) : ""
                 reactions: modelData.reactions || []
+                customEmojis: messageView.customEmojis
+                userProfiles: messageView.userProfiles
+                
+                // Bind swipe state to list scroll lock
+                onIsSwipeActiveChanged: {
+                    messageList.swipeLockActive = isSwipeActive
+                }
                 
                 onAvatarClicked: openProfileSheet(senderId)
-                onLongPressed: showMessageOptions(modelData)
+                onReplyRequested: {
+                    // Set up reply in composer (messageId, senderName, messageText)
+                    composer.setReplyTo(messageId, senderName, messageText)
+                }
                 onReplyClicked: {
                     if (modelData.repliedMessage) {
                         scrollToMessage(modelData.repliedMessage._id)
                     }
+                }
+                onReactRequested: {
+                    showReactionPicker(messageId)
+                }
+                onReactionTapped: {
+                    // Toggle reaction - add if not reacted, remove if already reacted
+                    toggleReaction(messageId, emoji, emojiType, emojiId)
+                }
+                onMenuRequested: {
+                    // Open bottom sheet action menu
+                    messageActionSheet.open(messageId, messageText, senderName, senderId, isOwn)
+                }
+                onCopyRequested: {
+                    console.log("[MessageView] Text copied to clipboard")
+                }
+                onDeleteRequested: {
+                    deleteMessage(messageId)
+                }
+                onEditRequested: {
+                    // TODO: Implement edit message
+                    console.log("[MessageView] Edit message:", messageId)
                 }
             }
             
@@ -255,11 +301,16 @@ Rectangle {
                 }
             }
             
-            // Auto-scroll behavior
+            // Auto-scroll behavior - only scroll when new messages are added at bottom
+            property int previousCount: 0
+            
             onCountChanged: {
-                if (atYEnd) {
+                // Only auto-scroll if we added new messages (not just updating existing ones)
+                // and we were already at the bottom
+                if (count > previousCount && atYEnd) {
                     positionViewAtBeginning()
                 }
+                previousCount = count
             }
             
             // Pull to load more (debounced)
@@ -393,12 +444,84 @@ Rectangle {
         return escaped
     }
     
-    // Show message context menu
+    // Show message context menu (legacy - now handled by MessageBubble)
     function showMessageOptions(message) {
-        // TODO: Implement message options (reply, edit, delete, react)
+        // Now handled directly in MessageBubble via context menu
         composer.setReplyTo(message._id || message.id, 
                            getSenderName(message.senderId),
                            message.text)
+    }
+    
+    // Show reaction picker for a message
+    function showReactionPicker(messageId) {
+        reactionPickerSheet.open(messageId)
+    }
+    
+    // Toggle reaction on a message (uses existing API methods)
+    function toggleReaction(messageId, emoji, emojiType, emojiId) {
+        console.log("[MessageView] Toggle reaction:", messageId, emoji, emojiType, emojiId)
+        // Find the message to check if we already reacted
+        var message = null
+        for (var i = 0; i < messages.length; i++) {
+            if (messages[i]._id === messageId || messages[i].id === messageId) {
+                message = messages[i]
+                break
+            }
+        }
+        
+        // Check if we already reacted with this emoji
+        var hasReacted = false
+        if (message && message.reactions) {
+            for (var j = 0; j < message.reactions.length; j++) {
+                var r = message.reactions[j]
+                if ((r.emoji === emoji || r.emojiId === emojiId) && r.hasReacted) {
+                    hasReacted = true
+                    break
+                }
+            }
+        }
+        
+        // Use the message type based on whether it's a DM or server message
+        var messageType = isDMMode ? "dm" : "server"
+        
+        if (hasReacted) {
+            // Remove reaction
+            if (isDMMode) {
+                SerchatAPI.removeReaction(messageId, messageType, emoji)
+            } else {
+                SerchatAPI.removeReaction(messageId, messageType, emoji, serverId, channelId)
+            }
+        } else {
+            // Add reaction
+            if (isDMMode) {
+                SerchatAPI.addReaction(messageId, messageType, emoji)
+            } else {
+                SerchatAPI.addReaction(messageId, messageType, emoji, serverId, channelId)
+            }
+        }
+    }
+    
+    // Add reaction to a message
+    function addReaction(messageId, emoji, emojiType, emojiId) {
+        console.log("[MessageView] Add reaction:", messageId, emoji, emojiType, emojiId)
+        var messageType = isDMMode ? "dm" : "server"
+        
+        if (isDMMode) {
+            SerchatAPI.addReaction(messageId, messageType, emoji)
+        } else {
+            SerchatAPI.addReaction(messageId, messageType, emoji, serverId, channelId)
+        }
+    }
+    
+    // Delete a message
+    function deleteMessage(messageId) {
+        // TODO: Implement message deletion via API
+        console.log("[MessageView] Delete message:", messageId)
+        if (isDMMode) {
+            SerchatAPI.deleteDirectMessage(messageId)
+        } else {
+            SerchatAPI.deleteServerMessage(serverId, channelId, messageId)
+        }
     }
     
     // Scroll to a specific message
@@ -449,13 +572,19 @@ Rectangle {
         }
         
         onSendMessageClicked: {
-            // TODO: Open DM conversation with user
-            console.log("Opening DM with user:", userId)
+            // Open DM with user
+            var profile = userProfileSheet.userProfile
+            var recipientName = profile.displayName || profile.username || ""
+            var recipientAvatar = profile.profilePicture ? 
+                                  (SerchatAPI.apiBaseUrl + profile.profilePicture) : ""
+            openDMWithUser(userId, recipientName, recipientAvatar)
         }
         
         onAddFriendClicked: {
-            // TODO: Send friend request
-            console.log("Adding friend:", userId)
+            // Send friend request
+            var profile = userProfileSheet.userProfile
+            var username = profile.username || ""
+            sendFriendRequest(userId, username)
         }
     }
     
@@ -523,6 +652,96 @@ Rectangle {
         // Fetch profiles for unknown senders
         for (var id in senderIds) {
             fetchProfileIfNeeded(id)
+        }
+    }
+    
+    // Search overlay
+    Components.SearchOverlay {
+        id: searchOverlay
+        anchors.fill: parent
+        channelId: messageView.channelId
+        dmRecipientId: messageView.dmRecipientId
+        
+        onResultClicked: {
+            searchOverlay.opened = false
+            scrollToMessage(messageId)
+        }
+    }
+    
+    // Members list panel (slides in from right)
+    Rectangle {
+        id: membersPanel
+        anchors.top: channelHeader.bottom
+        anchors.bottom: composer.top
+        anchors.right: parent.right
+        width: showMembersPanel && !isDMMode ? Math.min(units.gu(32), parent.width * 0.4) : 0
+        color: Qt.darker(messageView.color, 1.04)
+        clip: true
+        visible: width > 0
+        
+        Behavior on width {
+            NumberAnimation { duration: 200; easing.type: Easing.OutQuad }
+        }
+        
+        // Left border
+        Rectangle {
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: units.dp(1)
+            color: Qt.darker(messageView.color, 1.1)
+        }
+        
+        Components.MembersListView {
+            anchors.fill: parent
+            anchors.leftMargin: units.dp(1)
+            members: serverMembers
+            
+            onMemberClicked: {
+                openProfileSheet(memberId)
+            }
+        }
+    }
+    
+    // Message action sheet (bottom sheet popup for message options)
+    Components.MessageActionSheet {
+        id: messageActionSheet
+        anchors.fill: parent
+        
+        onReplyClicked: {
+            composer.setReplyTo(messageId, senderName, messageText)
+        }
+        
+        onReactClicked: {
+            showReactionPicker(messageId)
+        }
+        
+        onEmojiSelected: {
+            addReaction(messageId, emoji, "unicode", "")
+        }
+        
+        onCopyClicked: {
+            console.log("[MessageView] Text copied from action sheet")
+        }
+        
+        onEditClicked: {
+            console.log("[MessageView] Edit message:", messageId)
+            // TODO: Implement edit UI
+        }
+        
+        onDeleteClicked: {
+            deleteMessage(messageId)
+        }
+    }
+    
+    // Reaction picker sheet (bottom sheet for full emoji picker)
+    Components.ReactionPickerSheet {
+        id: reactionPickerSheet
+        anchors.fill: parent
+        customEmojis: messageView.customEmojis
+        
+        onReactionSelected: {
+            addReaction(messageId, emoji, emojiType, emojiId)
         }
     }
 }

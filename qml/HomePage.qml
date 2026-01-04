@@ -52,6 +52,8 @@ Page {
     property var messages: []
     property var userProfiles: ({})
     property var unreadCounts: ({})
+    property var serverEmojis: ({})  // Map of emojiId -> emoji data for custom emoji rendering
+    property var allEmojis: ({})  // Global emoji cache from all servers (emojiId -> emoji data)
     
     // DM data stores
     property var dmConversations: []
@@ -164,17 +166,28 @@ Page {
             userProfiles: homePage.userProfiles
             showBackButton: isSmallScreen && mobileViewMode === "messages"
             canSendMessages: homePage.canSendInCurrentChannel
+            customEmojis: homePage.allEmojis  // Use global emoji cache for cross-server emojis
             
             onBackClicked: {
                 mobileViewMode = "channels"
             }
             
             onSendMessage: {
-                sendMessageToChannel(text, replyToId)
+                // Check if we're in DM mode or channel mode
+                if (currentDMRecipientId !== "") {
+                    sendDMMessageToUser(text, replyToId)
+                } else {
+                    sendMessageToChannel(text, replyToId)
+                }
             }
             
             onLoadMoreMessages: {
-                loadOlderMessages()
+                // Check if we're in DM mode or channel mode
+                if (currentDMRecipientId !== "") {
+                    loadOlderDMMessages()
+                } else {
+                    loadOlderMessages()
+                }
             }
             
             onUserProfileClicked: {
@@ -187,6 +200,31 @@ Page {
                 pageStack.push(Qt.resolvedUrl("ProfilePage.qml"), {
                     userId: userId
                 })
+            }
+            
+            onOpenDMWithUser: {
+                // Switch to DM mode with the selected user
+                currentDMRecipientId = recipientId
+                currentDMRecipientName = recipientName
+                currentDMRecipientAvatar = recipientAvatar
+                
+                // Clear server/channel state
+                currentChannelId = ""
+                currentChannelName = ""
+                currentServerId = ""
+                currentServerName = ""
+                
+                loadDMMessages(recipientId)
+                
+                if (isSmallScreen) {
+                    mobileViewMode = "messages"
+                }
+            }
+            
+            onSendFriendRequest: {
+                // Send friend request via API (when implemented)
+                console.log("Sending friend request to:", username, "userId:", userId)
+                // TODO: Call SerchatAPI.sendFriendRequest(username) when implemented
             }
         }
         
@@ -445,8 +483,7 @@ Page {
             }
             
             onCreateDMClicked: {
-                // TODO: Open create DM dialog
-                console.log("Create DM clicked")
+                createDMDialog.open()
             }
         }
         
@@ -655,6 +692,48 @@ Page {
             }
         }
         
+        // Server Emojis
+        onServerEmojisFetched: {
+            if (serverId === currentServerId) {
+                // Build emoji lookup map by emoji ID
+                var emojiMap = {}
+                for (var i = 0; i < emojis.length; i++) {
+                    var emoji = emojis[i]
+                    var emojiId = emoji._id || emoji.id
+                    emojiMap[emojiId] = emoji
+                }
+                homePage.serverEmojis = emojiMap
+                console.log("[HomePage] Server emojis loaded:", Object.keys(emojiMap).length)
+            }
+        }
+        
+        onServerEmojisFetchFailed: {
+            if (serverId === currentServerId) {
+                console.log("[HomePage] Failed to fetch server emojis:", error)
+                // Clear emojis but don't block other operations
+                homePage.serverEmojis = {}
+            }
+        }
+        
+        // All Emojis (from all servers user is a member of)
+        onAllEmojisFetched: {
+            // Build global emoji lookup map by emoji ID
+            var emojiMap = {}
+            for (var i = 0; i < emojis.length; i++) {
+                var emoji = emojis[i]
+                var emojiId = emoji._id || emoji.id
+                emojiMap[emojiId] = emoji
+            }
+            homePage.allEmojis = emojiMap
+            console.log("[HomePage] All emojis loaded:", Object.keys(emojiMap).length)
+        }
+        
+        onAllEmojisFetchFailed: {
+            console.log("[HomePage] Failed to fetch all emojis:", error)
+            // Fall back to server emojis if global fetch fails
+            homePage.allEmojis = homePage.serverEmojis
+        }
+        
         // Messages
         onMessagesFetched: function(requestId, serverId, channelId, fetchedMessages) {
             console.log("[HomePage] Messages fetched for channel:", channelId, "current:", currentChannelId, "count:", fetchedMessages.length)
@@ -773,6 +852,91 @@ Page {
         
         onFriendsFetchFailed: {
             console.log("[HomePage] Failed to fetch friends:", error)
+        }
+        
+        // DM Messages
+        onDmMessagesFetched: function(requestId, recipientId, fetchedMessages) {
+            console.log("[HomePage] DM Messages fetched for:", recipientId, "current:", currentDMRecipientId, "count:", fetchedMessages.length)
+            if (recipientId === currentDMRecipientId) {
+                loadingMessages = false
+                
+                // API returns oldest first, but we need newest first (index 0 = bottom with BottomToTop)
+                var reversedMessages = fetchedMessages.slice().reverse()
+                
+                // Check if this is a pagination request
+                if (homePage.messages.length > 0 && reversedMessages.length > 0) {
+                    // This is pagination - append older messages at the end
+                    homePage.messages = homePage.messages.concat(reversedMessages)
+                } else {
+                    // Initial load - replace all messages
+                    homePage.messages = reversedMessages
+                }
+                console.log("[HomePage] DM Messages updated, total:", homePage.messages.length)
+                
+                // Check if there are more messages
+                hasMoreMessages = fetchedMessages.length >= 50
+            } else {
+                console.log("[HomePage] Ignoring DM messages for old recipient:", recipientId)
+            }
+        }
+        
+        onDmMessagesFetchFailed: {
+            if (recipientId === currentDMRecipientId) {
+                loadingMessages = false
+                console.log("[HomePage] Failed to fetch DM messages:", error)
+            }
+        }
+        
+        onDmMessageSent: {
+            console.log("[HomePage] DM Message sent via HTTP:", message._id)
+            
+            var msgId = String(message._id || message.id || "")
+            var newMessages = []
+            var foundTempMessage = false
+            var alreadyHasRealMessage = false
+            
+            // Check if we already have the real message from Socket.IO
+            for (var i = 0; i < homePage.messages.length; i++) {
+                var existingId = String(homePage.messages[i]._id || homePage.messages[i].id || "")
+                if (existingId === msgId) {
+                    alreadyHasRealMessage = true
+                    break
+                }
+            }
+            
+            // Build new array, replacing temp message if needed
+            for (var j = 0; j < homePage.messages.length; j++) {
+                var msg = homePage.messages[j]
+                var id = String(msg._id || msg.id || "")
+                
+                if (id.indexOf("temp_") === 0 && msg.text === message.text && !foundTempMessage) {
+                    foundTempMessage = true
+                    if (!alreadyHasRealMessage) {
+                        newMessages.push(message)
+                    }
+                } else {
+                    newMessages.push(msg)
+                }
+            }
+            
+            if (!foundTempMessage && !alreadyHasRealMessage) {
+                newMessages = [message].concat(newMessages)
+            }
+            
+            homePage.messages = newMessages
+        }
+        
+        onDmMessageSendFailed: {
+            console.log("[HomePage] Failed to send DM message:", error)
+            // Remove temp message
+            var newMessages = []
+            for (var i = 0; i < homePage.messages.length; i++) {
+                var msg = homePage.messages[i]
+                if (!(msg._id && msg._id.toString().indexOf("temp_") === 0)) {
+                    newMessages.push(msg)
+                }
+            }
+            homePage.messages = newMessages
         }
         
         // Server management
@@ -1068,6 +1232,9 @@ Page {
         currentChannelId = ""
         currentChannelName = ""
         SerchatAPI.getChannels(serverId)
+        
+        // Also fetch server emojis for custom emoji rendering
+        SerchatAPI.getServerEmojis(serverId)
     }
     
     function loadMessages(serverId, channelId) {
@@ -1120,30 +1287,111 @@ Page {
         homePage.messages = []
         hasMoreMessages = true
         
-        // TODO: Implement DM message fetching when API is ready
-        // SerchatAPI.getDMMessages(recipientId, 50, "")
-        loadingMessages = false
+        // Fetch DM messages from API
+        SerchatAPI.getDMMessages(recipientId, 50, "")
     }
     
-    // Update reactions for a message
-    function updateMessageReactions(messageId, reactions) {
-        var newMessages = []
+    function loadOlderDMMessages() {
+        if (loadingMessages || !hasMoreMessages || homePage.messages.length === 0 || !currentDMRecipientId) return
+        
+        loadingMessages = true
+        
+        // Get the oldest message ID
+        var oldestId = homePage.messages[homePage.messages.length - 1]._id || homePage.messages[homePage.messages.length - 1].id
+        SerchatAPI.getDMMessages(currentDMRecipientId, 50, oldestId)
+    }
+    
+    function sendDMMessageToUser(text, replyToId) {
+        if (!currentDMRecipientId || !text) return
+        
+        // Optimistically add message to view
+        var newMessage = {
+            _id: "temp_" + Date.now(),
+            senderId: currentUserId,
+            receiverId: currentDMRecipientId,
+            text: text,
+            createdAt: new Date().toISOString(),
+            pending: true,
+            replyToId: replyToId || null
+        }
+        
+        homePage.messages = [newMessage].concat(homePage.messages)
+        
+        // Send via API
+        SerchatAPI.sendDMMessage(currentDMRecipientId, text, replyToId || "")
+    }
+    
+    // Open DM with a specific user (can be called from ProfilePage)
+    function openDMWithUser(recipientId, recipientName, recipientAvatar) {
+        // Set DM state
+        currentDMRecipientId = recipientId
+        currentDMRecipientName = recipientName
+        currentDMRecipientAvatar = recipientAvatar
+        
+        // Clear server/channel state
+        currentChannelId = ""
+        currentChannelName = ""
+        currentServerId = ""
+        currentServerName = ""
+        
+        loadDMMessages(recipientId)
+        
+        if (isSmallScreen) {
+            mobileViewMode = "messages"
+        }
+    }
+    
+    // Update reactions for a message (preserves scroll position)
+    function updateMessageReactions(messageId, newReactions) {
+        // Find and update the message
         for (var i = 0; i < homePage.messages.length; i++) {
             var msg = homePage.messages[i]
             var existingId = msg._id || msg.id
             if (existingId === messageId) {
-                // Create new object with updated reactions
-                var updatedMsg = Object.assign({}, msg)
-                updatedMsg.reactions = reactions
-                newMessages.push(updatedMsg)
-            } else {
-                newMessages.push(msg)
+                // Create a shallow copy of the messages array
+                var updatedMessages = homePage.messages.slice()
+                // Create a copy of the message with updated reactions
+                updatedMessages[i] = Object.assign({}, msg, { reactions: newReactions })
+                // Signal that only this message changed (not the whole list)
+                homePage.messagesChanged()
+                homePage.messages = updatedMessages
+                return
             }
         }
-        homePage.messages = newMessages
     }
     
     // Note: Channel room joining is handled in loadMessages() function
+    
+    // ========================================================================
+    // Dialogs
+    // ========================================================================
+    
+    // Create DM dialog
+    Components.CreateDMDialog {
+        id: createDMDialog
+        anchors.fill: parent
+        
+        onConversationStarted: {
+            createDMDialog.opened = false
+            
+            // Set DM state
+            currentDMRecipientId = recipientId
+            currentDMRecipientName = recipientName
+            currentDMRecipientAvatar = recipientAvatar
+            
+            // Clear channel state
+            currentChannelId = ""
+            currentChannelName = ""
+            currentServerId = ""
+            currentServerName = ""
+            
+            loadDMMessages(recipientId)
+            
+            if (isSmallScreen) {
+                mobileViewMode = "messages"
+            }
+        }
+    }
     
     // ========================================================================
     // Initialization
@@ -1155,5 +1403,8 @@ Page {
         
         // Load servers
         loadServers()
+        
+        // Load all emojis from all servers for cross-server emoji rendering
+        SerchatAPI.getAllEmojis()
     }
 }

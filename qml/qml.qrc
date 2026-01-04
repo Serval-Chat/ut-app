@@ -23,5 +23,12 @@
     <file>components/MessageView.qml</file>
     <file>components/DMListView.qml</file>
     <file>components/UserProfileSheet.qml</file>
+    <file>components/MembersListView.qml</file>
+    <file>components/SearchOverlay.qml</file>
+    <file>components/CreateDMDialog.qml</file>
+    <file>components/EmojiPicker.qml</file>
+    <file>components/MarkdownText.qml</file>
+    <file>components/MessageActionSheet.qml</file>
+    <file>components/ReactionPickerSheet.qml</file>
   </qresource>
 </RCC>

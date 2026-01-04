@@ -31,7 +31,16 @@ Page {
                 text: i18n.tr("Message")
                 visible: !isOwnProfile
                 onTriggered: {
-                    // TODO: Open DM with user
+                    // Navigate back and open DM with user
+                    var recipientName = userProfile.displayName || userProfile.username || ""
+                    var recipientAvatar = userProfile.profilePicture ? 
+                                         (SerchatAPI.apiBaseUrl + userProfile.profilePicture) : ""
+                    pageStack.pop()
+                    // The HomePage will need to listen for this signal
+                    // For now, we use a direct property approach
+                    if (pageStack.currentItem && pageStack.currentItem.openDMWithUser) {
+                        pageStack.currentItem.openDMWithUser(userId, recipientName, recipientAvatar)
+                    }
                 }
             }
         ]

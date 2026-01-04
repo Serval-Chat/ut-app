@@ -1,5 +1,6 @@
 import QtQuick 2.7
 import Lomiri.Components 1.3
+import "." as Components
 
 /*
  * MessageComposer - Text input with send button and optional attachment/emoji pickers
@@ -13,6 +14,9 @@ Item {
     property bool showAttachmentButton: true
     property bool showEmojiButton: true
     property alias textField: inputField
+    
+    // Custom emojis for the server (passed from parent)
+    property var customEmojis: ({})
     
     // Reply state
     property bool isReplying: false
@@ -183,11 +187,15 @@ Item {
                         width: units.gu(2.5)
                         height: units.gu(2.5)
                         name: "like"
-                        color: enabled ? Theme.palette.normal.backgroundSecondaryText : 
-                               Theme.palette.disabled.backgroundSecondaryText
+                        color: emojiPicker.visible ? LomiriColors.blue :
+                               (enabled ? Theme.palette.normal.backgroundSecondaryText : 
+                               Theme.palette.disabled.backgroundSecondaryText)
                     }
                     
-                    onClicked: emojiClicked()
+                    onClicked: {
+                        emojiPicker.visible = !emojiPicker.visible
+                        emojiClicked()
+                    }
                 }
                 
                 // Send button
@@ -247,5 +255,32 @@ Item {
         replyToMessageId = ""
         replyToSenderName = ""
         replyToText = ""
+        emojiPicker.visible = false
+    }
+    
+    // Emoji picker popup
+    Components.EmojiPicker {
+        id: emojiPicker
+        
+        // Position above the composer, aligned with emoji button
+        anchors.bottom: contentColumn.top
+        anchors.bottomMargin: units.gu(1)
+        anchors.right: parent.right
+        anchors.rightMargin: units.gu(1)
+        
+        visible: false
+        customEmojis: composer.customEmojis
+        
+        onEmojiSelected: {
+            // Insert emoji at cursor position
+            var cursorPos = inputField.cursorPosition
+            var currentText = inputField.text
+            inputField.text = currentText.substring(0, cursorPos) + emoji + currentText.substring(cursorPos)
+            inputField.cursorPosition = cursorPos + emoji.length
+        }
+        
+        onClosed: {
+            emojiPicker.visible = false
+        }
     }
 }
