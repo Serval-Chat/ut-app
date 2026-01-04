@@ -42,8 +42,8 @@ Page {
         return true
     }
     
-    // View mode for mobile: "servers", "channels", "messages"
-    property string mobileViewMode: "servers"
+    // View mode for mobile: "channels", "messages"
+    property string mobileViewMode: "channels"
     
     // Data stores
     property var servers: []
@@ -81,7 +81,6 @@ Page {
     readonly property real sidebarX: {
         if (!isSmallScreen) return 0  // Fixed position on wide/medium screens
         switch (mobileViewMode) {
-            case "servers": return 0  // Sidebar at edge, content will overlap channel list
             case "channels": return 0  // Show both sidebars
             case "messages": return -sidebarContainer.width  // Hide sidebars off-screen
             default: return 0
@@ -92,7 +91,6 @@ Page {
     readonly property real mainContentX: {
         if (!isSmallScreen) return serverListWidth + channelListWidth
         switch (mobileViewMode) {
-            case "servers": return serverListWidth  // Shows after server list (overlaps channel)
             case "channels": return sidebarContainer.width  // Shows after sidebar
             case "messages": return 0  // Full screen
             default: return 0
@@ -103,10 +101,9 @@ Page {
     readonly property real visibleSidebarWidth: {
         if (!isSmallScreen) return totalSidebarWidth
         switch (mobileViewMode) {
-            case "servers": return serverListWidth
             case "channels": return parent.width * 0.85
             case "messages": return 0
-            default: return 0
+            default: return parent.width * 0.85
         }
     }
     
@@ -484,7 +481,7 @@ Page {
             }
             
             onBackClicked: {
-                mobileViewMode = "servers"
+                mobileViewMode = "channels"
             }
             
             onCreateDMClicked: {
@@ -539,7 +536,7 @@ Page {
             }
             
             onBackClicked: {
-                mobileViewMode = "servers"
+                mobileViewMode = "channels"
             }
             
             onServerSettingsClicked: {
