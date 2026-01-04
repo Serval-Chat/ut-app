@@ -262,7 +262,7 @@ Page {
     // Saving overlay
     Components.LoadingOverlay {
         visible: saving
-        text: i18n.tr("Saving...")
+        message: i18n.tr("Saving...")
     }
     
     function getBannerColor() {
