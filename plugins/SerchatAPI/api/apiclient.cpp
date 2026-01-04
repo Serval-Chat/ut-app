@@ -245,6 +245,33 @@ void ApiClient::emitSuccess(int requestId, const PendingRequest& req, const QVar
         case RequestType::CreateServer:
             emit serverCreated(requestId, data.value("server").toMap());
             break;
+            
+        case RequestType::ServerMembers:
+            emit serverMembersFetched(requestId, req.context.value("serverId").toString(),
+                                      data.value("items").toList());
+            break;
+            
+        case RequestType::ServerEmojis:
+            emit serverEmojisFetched(requestId, req.context.value("serverId").toString(),
+                                     data.value("items").toList());
+            break;
+            
+        case RequestType::AllEmojis:
+            emit allEmojisFetched(requestId, data.value("items").toList());
+            break;
+            
+        case RequestType::SingleEmoji:
+            emit emojiFetched(requestId, req.context.value("emojiId").toString(), data);
+            break;
+            
+        case RequestType::DMMessages:
+            emit dmMessagesFetched(requestId, req.context.value("recipientId").toString(),
+                                   data.value("items").toList());
+            break;
+            
+        case RequestType::SendDMMessage:
+            emit dmMessageSent(requestId, data);
+            break;
     }
 }
 
@@ -294,6 +321,30 @@ void ApiClient::emitFailure(int requestId, const PendingRequest& req, const QStr
             
         case RequestType::CreateServer:
             emit serverCreateFailed(requestId, error);
+            break;
+            
+        case RequestType::ServerMembers:
+            emit serverMembersFetchFailed(requestId, req.context.value("serverId").toString(), error);
+            break;
+            
+        case RequestType::ServerEmojis:
+            emit serverEmojisFetchFailed(requestId, req.context.value("serverId").toString(), error);
+            break;
+            
+        case RequestType::AllEmojis:
+            emit allEmojisFetchFailed(requestId, error);
+            break;
+            
+        case RequestType::SingleEmoji:
+            emit emojiFetchFailed(requestId, req.context.value("emojiId").toString(), error);
+            break;
+            
+        case RequestType::DMMessages:
+            emit dmMessagesFetchFailed(requestId, req.context.value("recipientId").toString(), error);
+            break;
+            
+        case RequestType::SendDMMessage:
+            emit dmMessageSendFailed(requestId, error);
             break;
     }
 }

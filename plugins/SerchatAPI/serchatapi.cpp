@@ -69,6 +69,30 @@ SerchatAPI::SerchatAPI() {
     connect(m_apiClient, &ApiClient::channelDetailsFetchFailed,
             this, &SerchatAPI::channelDetailsFetchFailed);
     
+    // Connect server members signals
+    connect(m_apiClient, &ApiClient::serverMembersFetched,
+            this, &SerchatAPI::serverMembersFetched);
+    connect(m_apiClient, &ApiClient::serverMembersFetchFailed,
+            this, &SerchatAPI::serverMembersFetchFailed);
+    
+    // Connect server emojis signals
+    connect(m_apiClient, &ApiClient::serverEmojisFetched,
+            this, &SerchatAPI::serverEmojisFetched);
+    connect(m_apiClient, &ApiClient::serverEmojisFetchFailed,
+            this, &SerchatAPI::serverEmojisFetchFailed);
+    
+    // Connect all emojis signals
+    connect(m_apiClient, &ApiClient::allEmojisFetched,
+            this, &SerchatAPI::allEmojisFetched);
+    connect(m_apiClient, &ApiClient::allEmojisFetchFailed,
+            this, &SerchatAPI::allEmojisFetchFailed);
+    
+    // Connect single emoji signals (for cross-server emoji lookup)
+    connect(m_apiClient, &ApiClient::emojiFetched,
+            this, &SerchatAPI::emojiFetched);
+    connect(m_apiClient, &ApiClient::emojiFetchFailed,
+            this, &SerchatAPI::emojiFetchFailed);
+    
     // Connect message signals
     connect(m_apiClient, &ApiClient::messagesFetched,
             this, &SerchatAPI::messagesFetched);
@@ -78,6 +102,16 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::messageSent);
     connect(m_apiClient, &ApiClient::messageSendFailed,
             this, &SerchatAPI::messageSendFailed);
+    
+    // Connect DM message signals
+    connect(m_apiClient, &ApiClient::dmMessagesFetched,
+            this, &SerchatAPI::dmMessagesFetched);
+    connect(m_apiClient, &ApiClient::dmMessagesFetchFailed,
+            this, &SerchatAPI::dmMessagesFetchFailed);
+    connect(m_apiClient, &ApiClient::dmMessageSent,
+            this, &SerchatAPI::dmMessageSent);
+    connect(m_apiClient, &ApiClient::dmMessageSendFailed,
+            this, &SerchatAPI::dmMessageSendFailed);
     
     // Connect friends signals
     connect(m_apiClient, &ApiClient::friendsFetched,
@@ -325,6 +359,30 @@ int SerchatAPI::getChannelDetails(const QString& serverId, const QString& channe
 }
 
 // ============================================================================
+// API Methods - Server Members
+// ============================================================================
+
+int SerchatAPI::getServerMembers(const QString& serverId, bool useCache) {
+    return m_apiClient->getServerMembers(serverId, useCache);
+}
+
+// ============================================================================
+// API Methods - Server Emojis
+// ============================================================================
+
+int SerchatAPI::getServerEmojis(const QString& serverId, bool useCache) {
+    return m_apiClient->getServerEmojis(serverId, useCache);
+}
+
+int SerchatAPI::getAllEmojis(bool useCache) {
+    return m_apiClient->getAllEmojis(useCache);
+}
+
+int SerchatAPI::getEmojiById(const QString& emojiId, bool useCache) {
+    return m_apiClient->getEmojiById(emojiId, useCache);
+}
+
+// ============================================================================
 // API Methods - Messages
 // ============================================================================
 
@@ -336,6 +394,18 @@ int SerchatAPI::getMessages(const QString& serverId, const QString& channelId,
 int SerchatAPI::sendMessage(const QString& serverId, const QString& channelId,
                             const QString& text, const QString& replyToId) {
     return m_apiClient->sendMessage(serverId, channelId, text, replyToId);
+}
+
+// ============================================================================
+// API Methods - Direct Messages
+// ============================================================================
+
+int SerchatAPI::getDMMessages(const QString& userId, int limit, const QString& before) {
+    return m_apiClient->getDMMessages(userId, limit, before);
+}
+
+int SerchatAPI::sendDMMessage(const QString& userId, const QString& text, const QString& replyToId) {
+    return m_apiClient->sendDMMessage(userId, text, replyToId);
 }
 
 // ============================================================================

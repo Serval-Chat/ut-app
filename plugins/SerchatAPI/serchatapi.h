@@ -144,6 +144,46 @@ public:
                                        bool useCache = true);
     
     // ========================================================================
+    // Server Members API
+    // ========================================================================
+    
+    /**
+     * @brief Fetch all members of a server.
+     * @param serverId The server ID
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with serverMembersFetched signal
+     */
+    Q_INVOKABLE int getServerMembers(const QString& serverId, bool useCache = true);
+    
+    // ========================================================================
+    // Server Emojis API
+    // ========================================================================
+    
+    /**
+     * @brief Fetch all custom emojis for a server.
+     * @param serverId The server ID
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with serverEmojisFetched signal
+     */
+    Q_INVOKABLE int getServerEmojis(const QString& serverId, bool useCache = true);
+    
+    /**
+     * @brief Fetch all custom emojis from all servers user is a member of.
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with allEmojisFetched signal
+     */
+    Q_INVOKABLE int getAllEmojis(bool useCache = true);
+    
+    /**
+     * @brief Fetch a specific emoji by its ID.
+     * Use this to fetch emojis that aren't in the user's servers (cross-server emojis).
+     * @param emojiId The emoji ID to fetch
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with emojiFetched signal
+     */
+    Q_INVOKABLE int getEmojiById(const QString& emojiId, bool useCache = true);
+    
+    // ========================================================================
     // Messages API
     // ========================================================================
     
@@ -168,6 +208,28 @@ public:
      */
     Q_INVOKABLE int sendMessage(const QString& serverId, const QString& channelId,
                                 const QString& text, const QString& replyToId = QString());
+
+    // ========================================================================
+    // Direct Messages API
+    // ========================================================================
+    
+    /**
+     * @brief Fetch direct messages with a user.
+     * @param userId The user ID to fetch DMs with
+     * @param limit Maximum number of messages to fetch (default: 50)
+     * @param before Fetch messages before this message ID (for pagination)
+     * @return Request ID for matching with dmMessagesFetched signal
+     */
+    Q_INVOKABLE int getDMMessages(const QString& userId, int limit = 50, const QString& before = QString());
+    
+    /**
+     * @brief Send a direct message to a user.
+     * @param userId The recipient user ID
+     * @param text The message text
+     * @param replyToId Optional message ID to reply to
+     * @return Request ID for matching with dmMessageSent signal
+     */
+    Q_INVOKABLE int sendDMMessage(const QString& userId, const QString& text, const QString& replyToId = QString());
 
     // ========================================================================
     // Cache Management
@@ -317,6 +379,22 @@ signals:
     void channelDetailsFetched(int requestId, const QVariantMap& channel);
     void channelDetailsFetchFailed(int requestId, const QString& error);
     
+    // Server members signals
+    void serverMembersFetched(int requestId, const QString& serverId, const QVariantList& members);
+    void serverMembersFetchFailed(int requestId, const QString& serverId, const QString& error);
+    
+    // Server emojis signals
+    void serverEmojisFetched(int requestId, const QString& serverId, const QVariantList& emojis);
+    void serverEmojisFetchFailed(int requestId, const QString& serverId, const QString& error);
+    
+    // All emojis signals (from all servers)
+    void allEmojisFetched(int requestId, const QVariantList& emojis);
+    void allEmojisFetchFailed(int requestId, const QString& error);
+    
+    // Single emoji signals (for cross-server emojis)
+    void emojiFetched(int requestId, const QString& emojiId, const QVariantMap& emoji);
+    void emojiFetchFailed(int requestId, const QString& emojiId, const QString& error);
+    
     // Message signals
     void messagesFetched(int requestId, const QString& serverId, const QString& channelId,
                          const QVariantList& messages);
@@ -324,6 +402,12 @@ signals:
                              const QString& error);
     void messageSent(int requestId, const QVariantMap& message);
     void messageSendFailed(int requestId, const QString& error);
+    
+    // DM message signals
+    void dmMessagesFetched(int requestId, const QString& recipientId, const QVariantList& messages);
+    void dmMessagesFetchFailed(int requestId, const QString& recipientId, const QString& error);
+    void dmMessageSent(int requestId, const QVariantMap& message);
+    void dmMessageSendFailed(int requestId, const QString& error);
     
     // Friends signals
     void friendsFetched(int requestId, const QVariantList& friends);

@@ -77,6 +77,81 @@ int ApiClient::getChannelDetails(const QString& serverId, const QString& channel
 }
 
 // ============================================================================
+// Server Members API
+// ============================================================================
+
+int ApiClient::getServerMembers(const QString& serverId, bool useCache) {
+    if (serverId.isEmpty()) {
+        int requestId = generateRequestId();
+        QMetaObject::invokeMethod(this, [this, requestId]() {
+            PendingRequest req;
+            req.type = RequestType::ServerMembers;
+            emitFailure(requestId, req, "Server ID is required");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    QString cacheKey = QStringLiteral("members:%1").arg(serverId);
+    QString endpoint = QStringLiteral("/api/v1/servers/%1/members").arg(serverId);
+    
+    QVariantMap context;
+    context["serverId"] = serverId;
+    
+    return startGetRequest(RequestType::ServerMembers, endpoint, cacheKey, useCache, context);
+}
+
+// ============================================================================
+// Server Emojis API
+// ============================================================================
+
+int ApiClient::getServerEmojis(const QString& serverId, bool useCache) {
+    if (serverId.isEmpty()) {
+        int requestId = generateRequestId();
+        QMetaObject::invokeMethod(this, [this, requestId]() {
+            PendingRequest req;
+            req.type = RequestType::ServerEmojis;
+            emitFailure(requestId, req, "Server ID is required");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    QString cacheKey = QStringLiteral("emojis:%1").arg(serverId);
+    QString endpoint = QStringLiteral("/api/v1/servers/%1/emojis").arg(serverId);
+    
+    QVariantMap context;
+    context["serverId"] = serverId;
+    
+    return startGetRequest(RequestType::ServerEmojis, endpoint, cacheKey, useCache, context);
+}
+
+int ApiClient::getAllEmojis(bool useCache) {
+    QString cacheKey = QStringLiteral("emojis:all");
+    QString endpoint = "/api/v1/emojis";
+    
+    return startGetRequest(RequestType::AllEmojis, endpoint, cacheKey, useCache);
+}
+
+int ApiClient::getEmojiById(const QString& emojiId, bool useCache) {
+    if (emojiId.isEmpty()) {
+        int requestId = generateRequestId();
+        QMetaObject::invokeMethod(this, [this, requestId]() {
+            PendingRequest req;
+            req.type = RequestType::SingleEmoji;
+            emitFailure(requestId, req, "Emoji ID is required");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    QString cacheKey = QStringLiteral("emoji:%1").arg(emojiId);
+    QString endpoint = QStringLiteral("/api/v1/emojis/%1").arg(emojiId);
+    
+    QVariantMap context;
+    context["emojiId"] = emojiId;
+    
+    return startGetRequest(RequestType::SingleEmoji, endpoint, cacheKey, useCache, context);
+}
+
+// ============================================================================
 // Friends API (for DM conversations)
 // ============================================================================
 
