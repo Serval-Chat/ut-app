@@ -382,7 +382,7 @@ Rectangle {
                 
                 Label {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: i18n.tr("This is the start of the #%1 channel.").arg(channelName)
+                    text: i18n.tr("This is the start of the #%1 channel. There are no messages yet.").arg(channelName)
                     fontSize: "small"
                     color: Theme.palette.normal.backgroundSecondaryText
                     horizontalAlignment: Text.AlignHCenter

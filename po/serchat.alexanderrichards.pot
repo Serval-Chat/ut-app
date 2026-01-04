@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-04 19:43+0000\n"
+"POT-Creation-Date: 2026-01-04 19:45+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -722,7 +722,7 @@ msgid "Welcome to #%1!"
 msgstr ""
 
 #: ../qml/components/MessageView.qml:385
-msgid "This is the start of the #%1 channel."
+msgid "This is the start of the #%1 channel. There are no messages yet."
 msgstr ""
 
 #: ../qml/components/MessageView.qml:403
