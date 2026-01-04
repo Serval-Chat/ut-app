@@ -422,7 +422,6 @@ Page {
             selectedConversationId: currentDMRecipientId
             currentUserName: homePage.currentUserName
             currentUserAvatar: homePage.currentUserAvatar
-            showBackButton: isSmallScreen && mobileViewMode === "channels"
             
             onConversationSelected: {
                 // Clear channel state when switching to DM
@@ -472,7 +471,6 @@ Page {
             categories: homePage.categories
             currentUserName: homePage.currentUserName
             currentUserAvatar: homePage.currentUserAvatar
-            showBackButton: isSmallScreen && mobileViewMode === "channels"
             
             onChannelSelected: {
                 // Leave old channel if we were in one

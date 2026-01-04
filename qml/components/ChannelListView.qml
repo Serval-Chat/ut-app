@@ -20,7 +20,6 @@ Rectangle {
     property var mentionChannels: ({})  // channelId -> hasMention
     property var mutedChannels: ({})  // channelId -> muted
     property bool canManageChannels: false
-    property bool showBackButton: false  // Whether to show back button for navigation
     
     // Track expanded state per category
     property var expandedCategories: ({})
@@ -52,31 +51,12 @@ Rectangle {
                 anchors.rightMargin: units.gu(1.5)
                 spacing: units.gu(1)
                 
-                // Back button (for navigation when server list is hidden)
-                AbstractButton {
-                    id: backButton
-                    width: units.gu(4)
-                    height: parent.height
-                    visible: showBackButton
-                    z: 10  // Ensure it's above the header mouse area
-                    
-                    Icon {
-                        anchors.centerIn: parent
-                        width: units.gu(2.5)
-                        height: units.gu(2.5)
-                        name: "back"
-                        color: Theme.palette.normal.baseText
-                    }
-                    
-                    onClicked: backClicked()
-                }
-                
                 Label {
                     text: serverName
                     font.bold: true
                     fontSize: "medium"
                     elide: Text.ElideRight
-                    width: parent.width - (backButton.visible ? backButton.width : 0) - dropdownIcon.width - units.gu(2)
+                    width: parent.width - dropdownIcon.width - units.gu(2)
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 
@@ -93,7 +73,6 @@ Rectangle {
             MouseArea {
                 id: serverHeaderMouse
                 anchors.fill: parent
-                anchors.leftMargin: backButton.visible ? backButton.width + units.gu(1.5) : 0  // Don't overlap back button
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: serverSettingsClicked()

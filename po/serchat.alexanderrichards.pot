@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-04 13:53+0000\n"
+"POT-Creation-Date: 2026-01-04 14:04+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -272,7 +272,7 @@ msgstr ""
 msgid "Profile update not yet implemented"
 msgstr ""
 
-#: ../qml/HomePage.qml:235 ../qml/components/DMListView.qml:63
+#: ../qml/HomePage.qml:235 ../qml/components/DMListView.qml:44
 msgid "Direct Messages"
 msgstr ""
 
@@ -292,7 +292,7 @@ msgstr ""
 msgid "Pick a channel from the list to start chatting"
 msgstr ""
 
-#: ../qml/HomePage.qml:564 ../qml/SettingsPage.qml:81
+#: ../qml/HomePage.qml:562 ../qml/SettingsPage.qml:81
 msgid "Loading..."
 msgstr ""
 
@@ -581,36 +581,36 @@ msgstr ""
 msgid "Log Out"
 msgstr ""
 
-#: ../qml/components/ChannelListView.qml:178
-#: ../qml/components/DMListView.qml:327
+#: ../qml/components/ChannelListView.qml:157
+#: ../qml/components/DMListView.qml:308
 msgid "Online"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:119
+#: ../qml/components/DMListView.qml:100
 msgid "Find or start a conversation"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:144
+#: ../qml/components/DMListView.qml:125
 msgid "DIRECT MESSAGES"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:183
+#: ../qml/components/DMListView.qml:164
 msgid "No conversations yet"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:190
+#: ../qml/components/DMListView.qml:171
 msgid "Start a new conversation!"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:328
+#: ../qml/components/DMListView.qml:309
 msgid "Idle"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:329
+#: ../qml/components/DMListView.qml:310
 msgid "Do Not Disturb"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:330
+#: ../qml/components/DMListView.qml:311
 msgid "Offline"
 msgstr ""
 

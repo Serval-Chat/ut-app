@@ -16,7 +16,6 @@ Rectangle {
     property string currentUserName: ""
     property string currentUserAvatar: ""
     property string currentUserStatus: "online"
-    property bool showBackButton: false
     
     signal conversationSelected(string recipientId, string recipientName, string recipientAvatar)
     signal createDMClicked()
@@ -41,30 +40,12 @@ Rectangle {
                 anchors.rightMargin: units.gu(1.5)
                 spacing: units.gu(1)
                 
-                // Back button (for mobile view)
-                AbstractButton {
-                    id: backButton
-                    width: units.gu(4)
-                    height: parent.height
-                    visible: showBackButton
-                    
-                    Icon {
-                        anchors.centerIn: parent
-                        width: units.gu(2.5)
-                        height: units.gu(2.5)
-                        name: "back"
-                        color: Theme.palette.normal.baseText
-                    }
-                    
-                    onClicked: backClicked()
-                }
-                
                 Label {
                     text: i18n.tr("Direct Messages")
                     font.bold: true
                     fontSize: "medium"
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - (backButton.visible ? backButton.width : 0) - addButton.width - units.gu(2)
+                    width: parent.width - addButton.width - units.gu(2)
                 }
                 
                 // New DM button
