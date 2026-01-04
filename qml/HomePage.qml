@@ -64,8 +64,8 @@ Page {
     property bool hasMoreMessages: true
     
     // Responsive layout threshold
-    readonly property bool isWideScreen: width >= units.gu(80)
-    readonly property bool isMediumScreen: width >= units.gu(50) && width < units.gu(80)
+    readonly property bool isWideScreen: width >= units.gu(200)
+    readonly property bool isMediumScreen: width >= units.gu(150) && !isWideScreen
     
     // Main layout
     Row {

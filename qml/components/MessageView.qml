@@ -53,15 +53,13 @@ Rectangle {
     
     color: Theme.palette.normal.background
     
-    Column {
-        anchors.fill: parent
-        
-        // Channel header
-        Rectangle {
-            id: channelHeader
-            width: parent.width
-            height: units.gu(6)
-            color: Qt.darker(messageView.color, 1.02)
+    // Channel header
+    Rectangle {
+        id: channelHeader
+        anchors.top: parent.top
+        width: parent.width
+        height: units.gu(6)
+        color: Qt.darker(messageView.color, 1.02)
             
             Row {
                 anchors.fill: parent
@@ -190,14 +188,20 @@ Rectangle {
             }
         }
         
-        // Messages list
-        ListView {
-            id: messageList
+        // Content area (messages or welcome)
+        Item {
+            id: contentArea
+            anchors.top: channelHeader.bottom
+            anchors.bottom: composer.top
             width: parent.width
-            height: parent.height - channelHeader.height - composer.height
-            clip: true
-            verticalLayoutDirection: ListView.BottomToTop
-            spacing: units.gu(0.3)
+            
+            // Messages list
+            ListView {
+                id: messageList
+                anchors.fill: parent
+                clip: true
+                verticalLayoutDirection: ListView.BottomToTop
+                spacing: units.gu(0.3)
             
             model: messages
             
@@ -274,8 +278,7 @@ Rectangle {
         
         // Welcome message when channel is empty
         Item {
-            width: parent.width
-            height: parent.height - channelHeader.height - composer.height
+            anchors.fill: parent
             visible: messages.length === 0 && !loading
             
             Column {
@@ -309,19 +312,21 @@ Rectangle {
                 }
             }
         }
+    }
+    
+    // Message composer
+    Components.MessageComposer {
+        id: composer
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Qt.inputMethod.visible ? Qt.inputMethod.keyboardRectangle.height : 0
+        width: parent.width
+        placeholderText: canSendMessages ? 
+                         (isDMMode ? i18n.tr("Message @%1").arg(dmRecipientName) : i18n.tr("Message #%1").arg(displayTitle)) :
+                         i18n.tr("You don't have permission to send messages")
+        enabled: canSendMessages && (isDMMode || channelType === "text")
         
-        // Message composer
-        Components.MessageComposer {
-            id: composer
-            width: parent.width
-            placeholderText: canSendMessages ? 
-                             (isDMMode ? i18n.tr("Message @%1").arg(dmRecipientName) : i18n.tr("Message #%1").arg(displayTitle)) :
-                             i18n.tr("You don't have permission to send messages")
-            enabled: canSendMessages && (isDMMode || channelType === "text")
-            
-            onSendMessage: {
-                messageView.sendMessage(message, replyToId)
-            }
+        onSendMessage: {
+            messageView.sendMessage(message, replyToId)
         }
     }
     
@@ -451,6 +456,17 @@ Rectangle {
         onAddFriendClicked: {
             // TODO: Send friend request
             console.log("Adding friend:", userId)
+        }
+    }
+    
+    // Connections for keyboard visibility changes
+    Connections {
+        target: Qt.inputMethod
+        
+        onVisibleChanged: {
+            if (Qt.inputMethod.visible) {
+                scrollToBottom()
+            }
         }
     }
     
