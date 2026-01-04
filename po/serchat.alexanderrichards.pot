@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-04 16:03+0000\n"
+"POT-Creation-Date: 2026-01-04 16:33+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -24,7 +24,7 @@ msgstr ""
 
 #: ../qml/ApiSettingsPage.qml:17 ../qml/CreateServerPage.qml:17
 #: ../qml/JoinServerPage.qml:17 ../qml/ProfilePage.qml:23
-#: ../qml/ServerSettingsPage.qml:22 ../qml/SettingsPage.qml:18
+#: ../qml/ServerSettingsPage.qml:23 ../qml/SettingsPage.qml:18
 msgid "Back"
 msgstr ""
 
@@ -95,7 +95,7 @@ msgstr ""
 msgid "Upload"
 msgstr ""
 
-#: ../qml/CreateServerPage.qml:96 ../qml/ServerSettingsPage.qml:62
+#: ../qml/CreateServerPage.qml:96 ../qml/ServerSettingsPage.qml:63
 msgid "Server Name"
 msgstr ""
 
@@ -127,7 +127,7 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: ../qml/DebugPage.qml:48 ../qml/LoginPage.qml:94
+#: ../qml/DebugPage.qml:48 ../qml/LoginPage.qml:95
 msgid "Password"
 msgstr ""
 
@@ -167,7 +167,7 @@ msgstr ""
 msgid "Get Server Details"
 msgstr ""
 
-#: ../qml/DebugPage.qml:130 ../qml/ServerSettingsPage.qml:98
+#: ../qml/DebugPage.qml:130 ../qml/ServerSettingsPage.qml:99
 msgid "Channels"
 msgstr ""
 
@@ -223,7 +223,7 @@ msgstr ""
 msgid "How you want to be known"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:136 ../qml/LoginPage.qml:79
+#: ../qml/EditProfilePage.qml:136 ../qml/LoginPage.qml:80
 #: ../qml/SettingsPage.qml:137
 msgid "Username"
 msgstr ""
@@ -265,11 +265,11 @@ msgstr ""
 msgid "Change Banner"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:280
+#: ../qml/EditProfilePage.qml:265
 msgid "Saving..."
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:310
+#: ../qml/EditProfilePage.qml:292
 msgid "Profile update not yet implemented"
 msgstr ""
 
@@ -291,10 +291,6 @@ msgstr ""
 
 #: ../qml/HomePage.qml:306
 msgid "Pick a channel from the list to start chatting"
-msgstr ""
-
-#: ../qml/HomePage.qml:599 ../qml/SettingsPage.qml:81
-msgid "Loading..."
 msgstr ""
 
 #: ../qml/JoinServerPage.qml:12
@@ -333,75 +329,75 @@ msgstr ""
 msgid "Or create your own"
 msgstr ""
 
-#: ../qml/LoginPage.qml:64
+#: ../qml/LoginPage.qml:65
 msgid "Welcome back! Sign in to continue."
 msgstr ""
 
-#: ../qml/LoginPage.qml:65
+#: ../qml/LoginPage.qml:66
 msgid "Create an account to get started."
 msgstr ""
 
-#: ../qml/LoginPage.qml:87 ../qml/SettingsPage.qml:156
+#: ../qml/LoginPage.qml:88 ../qml/SettingsPage.qml:156
 msgid "Email"
 msgstr ""
 
-#: ../qml/LoginPage.qml:87
+#: ../qml/LoginPage.qml:88
 msgid "Email or Username"
 msgstr ""
 
-#: ../qml/LoginPage.qml:109
+#: ../qml/LoginPage.qml:110
 msgid "Confirm Password"
 msgstr ""
 
-#: ../qml/LoginPage.qml:117
+#: ../qml/LoginPage.qml:118
 msgid "Invite Token (optional)"
 msgstr ""
 
-#: ../qml/LoginPage.qml:141 ../qml/LoginPage.qml:271
+#: ../qml/LoginPage.qml:142 ../qml/LoginPage.qml:258
 msgid "Creating account..."
 msgstr ""
 
-#: ../qml/LoginPage.qml:141 ../qml/LoginPage.qml:271
+#: ../qml/LoginPage.qml:142 ../qml/LoginPage.qml:258
 msgid "Signing in..."
 msgstr ""
 
-#: ../qml/LoginPage.qml:142
+#: ../qml/LoginPage.qml:143
 msgid "Create Account"
 msgstr ""
 
-#: ../qml/LoginPage.qml:142
+#: ../qml/LoginPage.qml:143
 msgid "Sign In"
 msgstr ""
 
-#: ../qml/LoginPage.qml:158
+#: ../qml/LoginPage.qml:159
 msgid "Forgot password?"
 msgstr ""
 
-#: ../qml/LoginPage.qml:189
+#: ../qml/LoginPage.qml:190
 msgid "or"
 msgstr ""
 
-#: ../qml/LoginPage.qml:207
+#: ../qml/LoginPage.qml:208
 msgid "Already have an account?"
 msgstr ""
 
-#: ../qml/LoginPage.qml:207
+#: ../qml/LoginPage.qml:208
 msgid "Create New Account"
 msgstr ""
 
-#: ../qml/LoginPage.qml:224
+#: ../qml/LoginPage.qml:225
 msgid "Connecting to:"
 msgstr ""
 
-#: ../qml/LoginPage.qml:245
+#: ../qml/LoginPage.qml:246
 msgid "Version %1"
 msgstr ""
 
-#: ../qml/LoginPage.qml:306
+#: ../qml/LoginPage.qml:285
 msgid "Passwords do not match"
 msgstr ""
 
-#: ../qml/LoginPage.qml:311
+#: ../qml/LoginPage.qml:290
 msgid "Password must be at least 6 characters"
 msgstr ""
 
@@ -418,8 +414,8 @@ msgid "Member Since"
 msgstr ""
 
 #: ../qml/ProfilePage.qml:265 ../qml/components/CreateDMDialog.qml:215
-#: ../qml/components/MembersListView.qml:209
-#: ../qml/components/MembersListView.qml:296
+#: ../qml/components/MembersListView.qml:175
+#: ../qml/components/MembersListView.qml:262
 #: ../qml/components/MessageView.qml:386 ../qml/components/MessageView.qml:391
 #: ../qml/components/SearchOverlay.qml:223
 msgid "Unknown"
@@ -433,88 +429,92 @@ msgstr ""
 msgid "Block User"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:17
+#: ../qml/ServerSettingsPage.qml:18
 msgid "Server Settings"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:49
+#: ../qml/ServerSettingsPage.qml:50
 msgid "Overview"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:81
+#: ../qml/ServerSettingsPage.qml:82
 msgid "Server Icon"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:82
+#: ../qml/ServerSettingsPage.qml:83
 msgid "Custom icon"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:82
+#: ../qml/ServerSettingsPage.qml:83
 msgid "No icon set"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:111
+#: ../qml/ServerSettingsPage.qml:112
 msgid "Manage Channels"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:112
+#: ../qml/ServerSettingsPage.qml:113
 msgid "Create, edit, and delete channels"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:128
+#: ../qml/ServerSettingsPage.qml:129
 msgid "Roles"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:141
+#: ../qml/ServerSettingsPage.qml:142
 msgid "Manage Roles"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:142
+#: ../qml/ServerSettingsPage.qml:143
 msgid "Create and configure roles"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:158 ../qml/components/MembersListView.qml:65
+#: ../qml/ServerSettingsPage.qml:159 ../qml/components/MembersListView.qml:65
 msgid "Members"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:171
+#: ../qml/ServerSettingsPage.qml:172
 msgid "View Members"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:172
+#: ../qml/ServerSettingsPage.qml:173
 msgid " members"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:190
+#: ../qml/ServerSettingsPage.qml:191
 msgid "Bans"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:191
+#: ../qml/ServerSettingsPage.qml:192
 msgid "View and manage banned users"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:207
+#: ../qml/ServerSettingsPage.qml:208
 msgid "Invites"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:220
+#: ../qml/ServerSettingsPage.qml:221
 msgid "Manage Invites"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:221
+#: ../qml/ServerSettingsPage.qml:222
 msgid "Create and view invite links"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:237
+#: ../qml/ServerSettingsPage.qml:238
 msgid "Danger Zone"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:251
+#: ../qml/ServerSettingsPage.qml:252
 msgid "Leave Server"
 msgstr ""
 
 #: ../qml/SettingsPage.qml:13
 msgid "Settings"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:81 ../qml/components/LoadingOverlay.qml:16
+msgid "Loading..."
 msgstr ""
 
 #: ../qml/SettingsPage.qml:107
@@ -585,11 +585,6 @@ msgstr ""
 msgid "Log Out"
 msgstr ""
 
-#: ../qml/components/ChannelListView.qml:157
-#: ../qml/components/DMListView.qml:308
-msgid "Online"
-msgstr ""
-
 #: ../qml/components/CreateDMDialog.qml:93
 msgid "New Message"
 msgstr ""
@@ -618,108 +613,56 @@ msgstr ""
 msgid "Add friends to start messaging!"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:100
+#: ../qml/components/DMListView.qml:72
 msgid "Find or start a conversation"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:125
+#: ../qml/components/DMListView.qml:85
 msgid "DIRECT MESSAGES"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:164
+#: ../qml/components/DMListView.qml:107
 msgid "No conversations yet"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:171
+#: ../qml/components/DMListView.qml:108
 msgid "Start a new conversation!"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:309
-msgid "Idle"
-msgstr ""
-
-#: ../qml/components/DMListView.qml:310
-msgid "Do Not Disturb"
-msgstr ""
-
-#: ../qml/components/DMListView.qml:311
-msgid "Offline"
-msgstr ""
-
-#: ../qml/components/EmojiPicker.qml:32
-msgid "Recent"
-msgstr ""
-
-#: ../qml/components/EmojiPicker.qml:33
-msgid "Smileys"
-msgstr ""
-
-#: ../qml/components/EmojiPicker.qml:34
-msgid "People"
-msgstr ""
-
-#: ../qml/components/EmojiPicker.qml:35
-msgid "Animals"
-msgstr ""
-
-#: ../qml/components/EmojiPicker.qml:36
-msgid "Food"
-msgstr ""
-
-#: ../qml/components/EmojiPicker.qml:37
-msgid "Travel"
-msgstr ""
-
-#: ../qml/components/EmojiPicker.qml:38
-msgid "Activities"
-msgstr ""
-
-#: ../qml/components/EmojiPicker.qml:39
-msgid "Objects"
-msgstr ""
-
-#: ../qml/components/EmojiPicker.qml:40
-msgid "Symbols"
-msgstr ""
-
-#: ../qml/components/EmojiPicker.qml:41
-msgid "Flags"
-msgstr ""
-
-#: ../qml/components/EmojiPicker.qml:176
+#: ../qml/components/EmojiPicker.qml:77
 msgid "Search emojis"
 msgstr ""
 
-#: ../qml/components/EmojiPicker.qml:240
+#: ../qml/components/EmojiPicker.qml:141
 msgid "Search Results"
 msgstr ""
 
-#: ../qml/components/EmojiPicker.qml:241
+#: ../qml/components/EmojiPicker.qml:142
 msgid "Custom Emojis"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:123
+#: ../qml/components/MembersListView.qml:91
 msgid "Search members"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:166
+#: ../qml/components/MembersListView.qml:132
 msgid "ONLINE — %1"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:216
-#: ../qml/components/MembersListView.qml:304
+#: ../qml/components/MembersListView.qml:182
+#: ../qml/components/MembersListView.qml:270
 msgid "(you)"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:253
+#: ../qml/components/MembersListView.qml:219
 msgid "OFFLINE — %1"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:329
+#: ../qml/components/MembersListView.qml:295
 msgid "No members"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:329
+#: ../qml/components/MembersListView.qml:295
 msgid "No members found"
 msgstr ""
 
@@ -728,7 +671,7 @@ msgid "Reply"
 msgstr ""
 
 #: ../qml/components/MessageActionSheet.qml:243
-#: ../qml/components/ReactionPickerSheet.qml:121
+#: ../qml/components/ReactionPickerSheet.qml:123
 msgid "Add Reaction"
 msgstr ""
 
@@ -788,6 +731,10 @@ msgstr ""
 msgid "You don't have permission to send messages"
 msgstr ""
 
+#: ../qml/components/SearchBox.qml:42
+msgid "Search..."
+msgstr ""
+
 #: ../qml/components/SearchOverlay.qml:68
 msgid "Search messages..."
 msgstr ""
@@ -812,6 +759,22 @@ msgstr ""
 
 #: ../qml/components/SearchOverlay.qml:176
 msgid "Enter a search term to find messages in this channel"
+msgstr ""
+
+#: ../qml/components/UserPanel.qml:54
+msgid "Online"
+msgstr ""
+
+#: ../qml/components/UserPanel.qml:55
+msgid "Idle"
+msgstr ""
+
+#: ../qml/components/UserPanel.qml:56
+msgid "Do Not Disturb"
+msgstr ""
+
+#: ../qml/components/UserPanel.qml:57
+msgid "Offline"
 msgstr ""
 
 #: ../qml/components/UserProfileSheet.qml:286

@@ -361,9 +361,7 @@ Page {
     }
     
     // Loading indicator
-    ActivityIndicator {
-        anchors.centerIn: parent
-        running: loading
+    Components.LoadingOverlay {
         visible: loading
     }
     

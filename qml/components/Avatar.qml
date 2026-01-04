@@ -44,7 +44,7 @@ Item {
             layer.enabled: true
             layer.effect: ShaderEffect {
                 property variant src: avatarImage
-                fragmentShader: "
+                fragmentShader: '
                     varying highp vec2 qt_TexCoord0;
                     uniform sampler2D src;
                     void main() {
@@ -55,7 +55,7 @@ Item {
                         } else {
                             gl_FragColor = texture2D(src, qt_TexCoord0);
                         }
-                    }"
+                    }'
             }
         }
     }

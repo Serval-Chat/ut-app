@@ -49,19 +49,9 @@ Rectangle {
                 }
                 
                 // New DM button
-                AbstractButton {
+                Components.IconButton {
                     id: addButton
-                    width: units.gu(4)
-                    height: parent.height
-                    
-                    Icon {
-                        anchors.centerIn: parent
-                        width: units.gu(2.5)
-                        height: units.gu(2.5)
-                        name: "add"
-                        color: Theme.palette.normal.backgroundSecondaryText
-                    }
-                    
+                    iconName: "add"
                     onClicked: createDMClicked()
                 }
             }
@@ -75,34 +65,11 @@ Rectangle {
             }
         }
         
-        // Search bar (optional)
-        Rectangle {
+        // Search bar
+        Components.SearchBox {
             width: parent.width - units.gu(2)
-            height: units.gu(4)
             anchors.horizontalCenter: parent.horizontalCenter
-            radius: units.gu(0.5)
-            color: Qt.darker(dmList.color, 1.1)
-            
-            Row {
-                anchors.fill: parent
-                anchors.margins: units.gu(1)
-                spacing: units.gu(0.5)
-                
-                Icon {
-                    width: units.gu(2)
-                    height: units.gu(2)
-                    name: "find"
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: Theme.palette.normal.backgroundSecondaryText
-                }
-                
-                Label {
-                    text: i18n.tr("Find or start a conversation")
-                    fontSize: "small"
-                    color: Theme.palette.normal.backgroundSecondaryText
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
+            placeholderText: i18n.tr("Find or start a conversation")
             
             MouseArea {
                 anchors.fill: parent
@@ -114,25 +81,16 @@ Rectangle {
         Item { height: units.gu(1); width: 1 }  // Spacer
         
         // Section header
-        Item {
-            width: parent.width
-            height: units.gu(3)
-            
-            Label {
-                anchors.left: parent.left
-                anchors.leftMargin: units.gu(1.5)
-                anchors.verticalCenter: parent.verticalCenter
-                text: i18n.tr("DIRECT MESSAGES")
-                fontSize: "x-small"
-                font.bold: true
-                color: Theme.palette.normal.backgroundSecondaryText
-            }
+        Components.SectionHeader {
+            title: i18n.tr("DIRECT MESSAGES")
+            fontSize: "x-small"
+            titleColor: Theme.palette.normal.backgroundSecondaryText
         }
         
         // DM conversations list
         Flickable {
             width: parent.width
-            height: parent.height - header.height - units.gu(9)
+            height: parent.height - header.height - units.gu(16)
             contentHeight: dmColumn.height
             clip: true
             
@@ -142,37 +100,12 @@ Rectangle {
                 spacing: units.gu(0.5)
                 
                 // Empty state
-                Item {
+                Components.EmptyState {
                     width: parent.width
-                    height: units.gu(15)
                     visible: conversations.length === 0
-                    
-                    Column {
-                        anchors.centerIn: parent
-                        spacing: units.gu(1)
-                        
-                        Icon {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            width: units.gu(6)
-                            height: units.gu(6)
-                            name: "message"
-                            color: Theme.palette.normal.backgroundSecondaryText
-                        }
-                        
-                        Label {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: i18n.tr("No conversations yet")
-                            fontSize: "small"
-                            color: Theme.palette.normal.backgroundSecondaryText
-                        }
-                        
-                        Label {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: i18n.tr("Start a new conversation!")
-                            fontSize: "x-small"
-                            color: Theme.palette.normal.backgroundSecondaryText
-                        }
-                    }
+                    iconName: "message"
+                    title: i18n.tr("No conversations yet")
+                    description: i18n.tr("Start a new conversation!")
                 }
                 
                 // Conversation items
@@ -267,74 +200,14 @@ Rectangle {
         }
         
         // User panel at bottom
-        Rectangle {
-            id: userPanel
+        Components.UserPanel {
             width: parent.width
-            height: units.gu(6.5)
-            color: Qt.darker(dmList.color, 1.1)
+            userName: currentUserName
+            userAvatar: currentUserAvatar
+            userStatus: currentUserStatus
             
-            Row {
-                anchors.fill: parent
-                anchors.margins: units.gu(1)
-                spacing: units.gu(1)
-                
-                // User avatar
-                Components.Avatar {
-                    id: userAvatar
-                    width: units.gu(4)
-                    height: units.gu(4)
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: currentUserName
-                    source: currentUserAvatar
-                    showStatus: true
-                    status: currentUserStatus
-                }
-                
-                // User info
-                Column {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - userAvatar.width - userActions.width - units.gu(2)
-                    spacing: units.gu(0.2)
-                    
-                    Label {
-                        text: currentUserName
-                        fontSize: "small"
-                        font.bold: true
-                        elide: Text.ElideRight
-                        width: parent.width
-                    }
-                    
-                    Label {
-                        text: currentUserStatus === "online" ? i18n.tr("Online") :
-                              currentUserStatus === "idle" ? i18n.tr("Idle") :
-                              currentUserStatus === "dnd" ? i18n.tr("Do Not Disturb") :
-                              i18n.tr("Offline")
-                        fontSize: "x-small"
-                        color: Theme.palette.normal.backgroundSecondaryText
-                        elide: Text.ElideRight
-                        width: parent.width
-                    }
-                }
-                
-                // User actions
-                Row {
-                    id: userActions
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: units.gu(0.5)
-                    
-                    AbstractButton {
-                        width: units.gu(4)
-                        height: units.gu(4)
-                        
-                        Icon {
-                            anchors.centerIn: parent
-                            width: units.gu(2)
-                            height: units.gu(2)
-                            name: "settings"
-                            color: Theme.palette.normal.backgroundSecondaryText
-                        }
-                    }
-                }
+            onSettingsClicked: {
+                pageStack.push(Qt.resolvedUrl("../SettingsPage.qml"))
             }
         }
     }

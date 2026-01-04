@@ -3,6 +3,7 @@ import Lomiri.Components 1.3
 import QtQuick.Layouts 1.3
 
 import SerchatAPI 1.0
+import "components" as Components
 
 Page {
     id: serverSettingsPage
@@ -263,9 +264,7 @@ Page {
     }
     
     // Loading overlay
-    ActivityIndicator {
-        anchors.centerIn: parent
-        running: loading
+    Components.LoadingOverlay {
         visible: loading
     }
     

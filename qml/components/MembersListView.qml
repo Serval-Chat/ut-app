@@ -69,19 +69,9 @@ Rectangle {
                     width: parent.width - closeButton.width - units.gu(2)
                 }
                 
-                AbstractButton {
+                Components.IconButton {
                     id: closeButton
-                    width: units.gu(4)
-                    height: parent.height
-                    
-                    Icon {
-                        anchors.centerIn: parent
-                        width: units.gu(2.5)
-                        height: units.gu(2.5)
-                        name: "close"
-                        color: Theme.palette.normal.backgroundSecondaryText
-                    }
-                    
+                    iconName: "close"
                     onClicked: close()
                 }
             }
@@ -95,35 +85,11 @@ Rectangle {
         }
         
         // Search box
-        Rectangle {
+        Components.SearchBox {
             width: parent.width - units.gu(2)
-            height: units.gu(4.5)
             anchors.horizontalCenter: parent.horizontalCenter
-            radius: units.gu(0.5)
-            color: Qt.darker(membersPanel.color, 1.15)
-            
-            Row {
-                anchors.fill: parent
-                anchors.leftMargin: units.gu(1)
-                anchors.rightMargin: units.gu(1)
-                spacing: units.gu(0.5)
-                
-                Icon {
-                    width: units.gu(2)
-                    height: units.gu(2)
-                    name: "search"
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: Theme.palette.normal.backgroundSecondaryText
-                }
-                
-                TextField {
-                    id: searchField
-                    width: parent.width - units.gu(3)
-                    anchors.verticalCenter: parent.verticalCenter
-                    placeholderText: i18n.tr("Search members")
-                    onTextChanged: searchQuery = text
-                }
-            }
+            placeholderText: i18n.tr("Search members")
+            onTextChanged: searchQuery = text
         }
         
         Item { width: 1; height: units.gu(1) }

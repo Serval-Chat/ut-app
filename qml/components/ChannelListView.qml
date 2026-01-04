@@ -116,76 +116,15 @@ Rectangle {
         }
         
         // User panel at bottom
-        Rectangle {
+        Components.UserPanel {
             id: userPanel
             width: parent.width
-            height: units.gu(6.5)
-            color: Qt.darker(channelList.color, 1.1)
+            userName: currentUserName
+            userAvatar: currentUserAvatar
+            userStatus: "online"
             
-            Row {
-                anchors.fill: parent
-                anchors.margins: units.gu(1)
-                spacing: units.gu(1)
-                
-                // User avatar
-                Components.Avatar {
-                    id: userAvatar
-                    width: units.gu(4)
-                    height: units.gu(4)
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: currentUserName
-                    source: currentUserAvatar
-                    showStatus: true
-                    status: "online"
-                }
-                
-                // User info
-                Column {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - userAvatar.width - userActions.width - units.gu(2)
-                    spacing: units.gu(0.2)
-                    
-                    Label {
-                        text: currentUserName
-                        fontSize: "small"
-                        font.bold: true
-                        elide: Text.ElideRight
-                        width: parent.width
-                    }
-                    
-                    Label {
-                        text: currentUserStatus || i18n.tr("Online")
-                        fontSize: "x-small"
-                        color: Theme.palette.normal.backgroundSecondaryText
-                        elide: Text.ElideRight
-                        width: parent.width
-                    }
-                }
-                
-                // Action buttons
-                Row {
-                    id: userActions
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: units.gu(0.5)
-                    
-                    AbstractButton {
-                        width: units.gu(3.5)
-                        height: units.gu(3.5)
-                        
-                        Icon {
-                            anchors.centerIn: parent
-                            width: units.gu(2)
-                            height: units.gu(2)
-                            name: "settings"
-                            color: Theme.palette.normal.backgroundSecondaryText
-                        }
-                        
-                        onClicked: {
-                            // Open user settings
-                            pageStack.push(Qt.resolvedUrl("../SettingsPage.qml"))
-                        }
-                    }
-                }
+            onSettingsClicked: {
+                pageStack.push(Qt.resolvedUrl("../SettingsPage.qml"))
             }
         }
     }

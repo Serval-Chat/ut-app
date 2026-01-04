@@ -3,6 +3,7 @@ import Lomiri.Components 1.3
 import QtQuick.Layouts 1.3
 
 import SerchatAPI 1.0
+import "components" as Components
 
 Page {
     id: loginPage
@@ -251,32 +252,10 @@ Page {
     }
     
     // Loading overlay
-    Rectangle {
+    Components.LoadingOverlay {
         anchors.fill: parent
-        color: Qt.rgba(Theme.palette.normal.background.r,
-                      Theme.palette.normal.background.g,
-                      Theme.palette.normal.background.b, 0.8)
         visible: loading
-        
-        Column {
-            anchors.centerIn: parent
-            spacing: units.gu(2)
-            
-            ActivityIndicator {
-                anchors.horizontalCenter: parent.horizontalCenter
-                running: loading
-            }
-            
-            Label {
-                text: isLoginMode ? i18n.tr("Signing in...") : i18n.tr("Creating account...")
-                anchors.horizontalCenter: parent.horizontalCenter
-            }
-        }
-        
-        MouseArea {
-            anchors.fill: parent
-            // Block interaction while loading
-        }
+        message: isLoginMode ? i18n.tr("Signing in...") : i18n.tr("Creating account...")
     }
     
     function validateForm() {

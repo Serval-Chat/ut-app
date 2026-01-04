@@ -260,27 +260,9 @@ Page {
     }
     
     // Saving overlay
-    Rectangle {
-        anchors.fill: parent
-        color: Qt.rgba(Theme.palette.normal.background.r,
-                      Theme.palette.normal.background.g,
-                      Theme.palette.normal.background.b, 0.8)
+    Components.LoadingOverlay {
         visible: saving
-        
-        Column {
-            anchors.centerIn: parent
-            spacing: units.gu(2)
-            
-            ActivityIndicator {
-                anchors.horizontalCenter: parent.horizontalCenter
-                running: saving
-            }
-            
-            Label {
-                text: i18n.tr("Saving...")
-                anchors.horizontalCenter: parent.horizontalCenter
-            }
-        }
+        text: i18n.tr("Saving...")
     }
     
     function getBannerColor() {

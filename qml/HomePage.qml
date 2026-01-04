@@ -577,29 +577,9 @@ Page {
     }
     
     // Loading overlay
-    Rectangle {
-        anchors.fill: parent
+    Components.LoadingOverlay {
         z: 100
-        color: Qt.rgba(Theme.palette.normal.background.r,
-                      Theme.palette.normal.background.g,
-                      Theme.palette.normal.background.b, 0.8)
         visible: loadingServers && servers.length === 0
-        
-        Column {
-            anchors.centerIn: parent
-            spacing: units.gu(2)
-            
-            ActivityIndicator {
-                anchors.horizontalCenter: parent.horizontalCenter
-                running: parent.parent.visible
-            }
-            
-            Label {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: i18n.tr("Loading...")
-                color: Theme.palette.normal.foreground
-            }
-        }
     }
     
     // ========================================================================

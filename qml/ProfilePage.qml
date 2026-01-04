@@ -304,15 +304,8 @@ Page {
     }
     
     // Loading overlay
-    Rectangle {
-        anchors.fill: parent
-        color: Theme.palette.normal.background
+    Components.LoadingOverlay {
         visible: loading
-        
-        ActivityIndicator {
-            anchors.centerIn: parent
-            running: loading
-        }
     }
     
     function getBannerColor() {
