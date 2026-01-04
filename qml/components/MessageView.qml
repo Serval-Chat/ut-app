@@ -230,67 +230,6 @@ Rectangle {
             property real savedContentHeight: 0
             property int savedMessageCount: 0
             
-            // Timer to restore scroll position after model change completes
-            // Using multiple stages to handle different QML update timing
-            Timer {
-                id: scrollRestoreTimer
-                interval: 16  // ~1 frame at 60fps
-                repeat: false
-                onTriggered: {
-                    if (messageList.preserveScrollPosition && messageList.savedContentHeight > 0) {
-                        // Calculate delta and adjust position
-                        var heightDelta = messageList.contentHeight - messageList.savedContentHeight
-                        messageList.contentY = messageList.savedContentY + heightDelta
-                        console.log("[MessageView] Scroll restore attempt 1: delta=" + heightDelta + " newY=" + messageList.contentY)
-                        // Schedule second attempt for layout stabilization
-                        scrollRestoreTimer2.restart()
-                    }
-                }
-            }
-            
-            Timer {
-                id: scrollRestoreTimer2
-                interval: 16
-                repeat: false
-                onTriggered: {
-                    if (messageList.preserveScrollPosition && messageList.savedContentHeight > 0) {
-                        var heightDelta = messageList.contentHeight - messageList.savedContentHeight
-                        messageList.contentY = messageList.savedContentY + heightDelta
-                        messageList.preserveScrollPosition = false
-                        console.log("[MessageView] Scroll restore final: delta=" + heightDelta + " newY=" + messageList.contentY)
-                    }
-                }
-            }
-            
-            // Save scroll position before model update
-            function saveScrollPosition() {
-                savedContentY = contentY
-                savedContentHeight = contentHeight
-                savedMessageCount = SerchatAPI.messageModel.count
-                preserveScrollPosition = true
-                console.log("[MessageView] Saved scroll: contentY=" + savedContentY + " contentHeight=" + savedContentHeight + " count=" + savedMessageCount)
-            }
-            
-            // Called when we want to scroll to bottom for new messages
-            function scrollToBottomOnNewMessage() {
-                preserveScrollPosition = false
-            }
-            
-            // Watch for model changes and trigger scroll restore
-            onCountChanged: {
-                console.log("[MessageView] Count changed to " + count + ", preserveScroll=" + preserveScrollPosition)
-                if (preserveScrollPosition) {
-                    scrollRestoreTimer.restart()
-                }
-            }
-            
-            // Also watch contentHeight as backup
-            onContentHeightChanged: {
-                if (preserveScrollPosition && savedContentHeight > 0 && !scrollRestoreTimer.running) {
-                    scrollRestoreTimer.restart()
-                }
-            }
-            
             delegate: Components.MessageBubble {
                 id: messageDelegate
                 width: messageList.width

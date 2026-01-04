@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-04 19:26+0000\n"
+"POT-Creation-Date: 2026-01-04 19:43+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -415,7 +415,7 @@ msgstr ""
 
 #: ../qml/ProfilePage.qml:265 ../qml/components/CreateDMDialog.qml:216
 #: ../qml/components/MemberListItem.qml:32
-#: ../qml/components/MessageView.qml:475 ../qml/components/MessageView.qml:480
+#: ../qml/components/MessageView.qml:414 ../qml/components/MessageView.qml:419
 #: ../qml/components/SearchOverlay.qml:224
 msgid "Unknown"
 msgstr ""
@@ -705,35 +705,35 @@ msgstr ""
 msgid "Replying to %1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:366
+#: ../qml/components/MessageView.qml:305
 msgid "Load more messages"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:394
+#: ../qml/components/MessageView.qml:333
 msgid "This is the beginning of your conversation with %1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:395
+#: ../qml/components/MessageView.qml:334
 msgid "This is the beginning of #%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:439
+#: ../qml/components/MessageView.qml:378
 msgid "Welcome to #%1!"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:446
+#: ../qml/components/MessageView.qml:385
 msgid "This is the start of the #%1 channel."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:464
+#: ../qml/components/MessageView.qml:403
 msgid "Message #%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:464
+#: ../qml/components/MessageView.qml:403
 msgid "Message @%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:465
+#: ../qml/components/MessageView.qml:404
 msgid "You don't have permission to send messages"
 msgstr ""
 
