@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-04 02:52+0000\n"
+"POT-Creation-Date: 2026-01-04 13:53+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -272,23 +272,27 @@ msgstr ""
 msgid "Profile update not yet implemented"
 msgstr ""
 
-#: ../qml/HomePage.qml:315
+#: ../qml/HomePage.qml:235 ../qml/components/DMListView.qml:63
+msgid "Direct Messages"
+msgstr ""
+
+#: ../qml/HomePage.qml:258
 msgid "Select a conversation"
 msgstr ""
 
-#: ../qml/HomePage.qml:316
+#: ../qml/HomePage.qml:259
 msgid "Select a channel"
 msgstr ""
 
-#: ../qml/HomePage.qml:324
+#: ../qml/HomePage.qml:267
 msgid "Choose a conversation from the list or start a new one"
 msgstr ""
 
-#: ../qml/HomePage.qml:325
+#: ../qml/HomePage.qml:268
 msgid "Pick a channel from the list to start chatting"
 msgstr ""
 
-#: ../qml/HomePage.qml:355 ../qml/SettingsPage.qml:81
+#: ../qml/HomePage.qml:564 ../qml/SettingsPage.qml:81
 msgid "Loading..."
 msgstr ""
 
@@ -580,10 +584,6 @@ msgstr ""
 #: ../qml/components/ChannelListView.qml:178
 #: ../qml/components/DMListView.qml:327
 msgid "Online"
-msgstr ""
-
-#: ../qml/components/DMListView.qml:63
-msgid "Direct Messages"
 msgstr ""
 
 #: ../qml/components/DMListView.qml:119

@@ -66,163 +66,85 @@ Page {
     // Responsive layout threshold
     readonly property bool isWideScreen: width >= units.gu(200)
     readonly property bool isMediumScreen: width >= units.gu(150) && !isWideScreen
+    readonly property bool isSmallScreen: !isWideScreen && !isMediumScreen
     
-    // Main layout
-    Row {
-        anchors.fill: parent
+    // Sidebar width calculations for mobile overlay mode
+    readonly property real serverListWidth: units.gu(7)
+    readonly property real channelListWidth: units.gu(26)
+    
+    // Animation duration for smooth transitions
+    readonly property int animationDuration: 250
+    
+    // Calculate sidebar positions for small screen sliding panel
+    readonly property real totalSidebarWidth: serverListWidth + channelListWidth
+    readonly property real sidebarX: {
+        if (!isSmallScreen) return 0  // Fixed position on wide/medium screens
+        switch (mobileViewMode) {
+            case "servers": return 0  // Sidebar at edge, content will overlap channel list
+            case "channels": return 0  // Show both sidebars
+            case "messages": return -totalSidebarWidth  // Hide sidebars off-screen
+            default: return 0
+        }
+    }
+    
+    // Calculate main content position for small screens - slides with sidebar
+    readonly property real mainContentX: {
+        if (!isSmallScreen) return serverListWidth + channelListWidth
+        switch (mobileViewMode) {
+            case "servers": return serverListWidth  // Shows after server list (overlaps channel)
+            case "channels": return totalSidebarWidth  // Shows after both sidebars
+            case "messages": return 0  // Full screen
+            default: return 0
+        }
+    }
+    
+    // Calculate visible sidebar width for drop shadow positioning
+    readonly property real visibleSidebarWidth: {
+        if (!isSmallScreen) return totalSidebarWidth
+        switch (mobileViewMode) {
+            case "servers": return serverListWidth
+            case "channels": return totalSidebarWidth
+            case "messages": return 0
+            default: return 0
+        }
+    }
+    
+    // Shadow position for smooth animation
+    property real shadowLeftMargin: visibleSidebarWidth
+    
+    Behavior on shadowLeftMargin {
+        NumberAnimation { duration: animationDuration; easing.type: Easing.OutCubic }
+    }
+    
+    // Main content area (message view + placeholder) - rendered first so sidebars appear on top
+    Item {
+        id: mainContentArea
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
         
-        // Server sidebar (always visible on wide screens, conditionally on mobile)
-        Components.ServerListView {
-            id: serverList
-            height: parent.height
-            visible: isWideScreen || mobileViewMode === "servers"
-            width: visible ? units.gu(7) : 0
-            
-            servers: homePage.servers
-            selectedServerId: currentServerId
-            
-            onServerSelected: {
-                currentServerId = serverId
-                currentServerName = serverName
-                currentServerOwnerId = ownerId
-                currentChannelId = ""
-                currentChannelName = ""
-                loadChannels(serverId)
-                
-                if (!isWideScreen) {
-                    mobileViewMode = "channels"
-                }
-            }
-            
-            onHomeClicked: {
-                currentServerId = ""
-                currentServerName = ""
-                currentServerOwnerId = ""
-                currentChannelId = ""
-                currentDMRecipientId = ""
-                currentDMRecipientName = ""
-                currentDMRecipientAvatar = ""
-                channels = []
-                categories = []
-                homePage.messages = []
-                
-                // On non-wide screens, go to channels view to show DM list
-                if (!isWideScreen) {
-                    mobileViewMode = "channels"
-                }
-                
-                // Load DM conversations (friends list)
-                loadDMConversations()
-            }
-            
-            onAddServerClicked: {
-                pageStack.push(Qt.resolvedUrl("JoinServerPage.qml"))
-            }
-            
-            onSettingsClicked: {
-                pageStack.push(Qt.resolvedUrl("SettingsPage.qml"))
-            }
+        // On small screens, this slides with the sidebar
+        // On wide/medium screens, it's fixed after sidebars
+        x: mainContentX
+        width: parent.width - (isSmallScreen ? 0 : (serverListWidth + channelListWidth))
+        
+        Behavior on x {
+            NumberAnimation { duration: animationDuration; easing.type: Easing.OutCubic }
         }
         
-        // DM list (visible when Home is selected instead of a server)
-        Components.DMListView {
-            id: dmListView
-            height: parent.height
-            visible: (isWideScreen || isMediumScreen || mobileViewMode === "channels") && currentServerId === ""
-            width: visible ? units.gu(26) : 0
-            
-            conversations: homePage.dmConversations
-            unreadCounts: homePage.dmUnreadCounts
-            selectedConversationId: currentDMRecipientId
-            currentUserName: homePage.currentUserName
-            currentUserAvatar: homePage.currentUserAvatar
-            showBackButton: !serverList.visible
-            
-            onConversationSelected: {
-                // Clear channel state when switching to DM
-                currentChannelId = ""
-                currentChannelName = ""
-                currentChannelType = "text"
-                
-                // Set DM state
-                currentDMRecipientId = recipientId
-                currentDMRecipientName = recipientName
-                currentDMRecipientAvatar = recipientAvatar
-                loadDMMessages(recipientId)
-                
-                if (!isWideScreen && !isMediumScreen) {
-                    mobileViewMode = "messages"
-                }
-            }
-            
-            onBackClicked: {
-                mobileViewMode = "servers"
-            }
-            
-            onCreateDMClicked: {
-                // TODO: Open create DM dialog
-                console.log("Create DM clicked")
-            }
-        }
-        
-        // Channel sidebar (visible on medium+ screens when server selected, or on mobile)
-        Components.ChannelListView {
-            id: channelList
-            height: parent.height
-            visible: (isWideScreen || isMediumScreen || mobileViewMode === "channels") && currentServerId !== ""
-            width: visible ? units.gu(26) : 0
-            
-            serverId: currentServerId
-            serverName: currentServerName
-            selectedChannelId: currentChannelId
-            channels: homePage.channels
-            categories: homePage.categories
-            currentUserName: homePage.currentUserName
-            currentUserAvatar: homePage.currentUserAvatar
-            showBackButton: !serverList.visible  // Show back button when server list is hidden
-            
-            onChannelSelected: {
-                // Leave old channel if we were in one
-                if (currentServerId && currentChannelId) {
-                    SerchatAPI.leaveChannel(currentServerId, currentChannelId)
-                }
-                
-                // Clear DM state when switching to channel
-                currentDMRecipientId = ""
-                currentDMRecipientName = ""
-                currentDMRecipientAvatar = ""
-                
-                // Clear messages immediately when switching channels
-                homePage.messages = []
-                
-                currentChannelId = channelId
-                currentChannelName = channelName
-                currentChannelType = channelType
-                loadMessages(currentServerId, channelId)
-                
-                if (!isWideScreen && !isMediumScreen) {
-                    mobileViewMode = "messages"
-                }
-            }
-            
-            onBackClicked: {
-                mobileViewMode = "servers"
-            }
-            
-            onServerSettingsClicked: {
-                pageStack.push(Qt.resolvedUrl("ServerSettingsPage.qml"), {
-                    serverId: currentServerId,
-                    serverName: currentServerName
-                })
-            }
+        Behavior on width {
+            NumberAnimation { duration: animationDuration; easing.type: Easing.OutCubic }
         }
         
         // Message view (main content area)
         Components.MessageView {
             id: messageView
-            height: parent.height
-            width: parent.width - (serverList.visible ? serverList.width : 0) - (channelList.visible ? channelList.width : 0) - (dmListView.visible ? dmListView.width : 0)
-            visible: (isWideScreen || isMediumScreen || mobileViewMode === "messages") && (currentChannelId !== "" || currentDMRecipientId !== "")
+            anchors.fill: parent
+            visible: currentChannelId !== "" || currentDMRecipientId !== ""
+            opacity: visible ? 1 : 0
+            
+            Behavior on opacity {
+                NumberAnimation { duration: animationDuration; easing.type: Easing.OutCubic }
+            }
             
             // Server channel properties
             serverId: currentServerId
@@ -240,15 +162,11 @@ Page {
             hasMoreMessages: homePage.hasMoreMessages
             currentUserId: homePage.currentUserId
             userProfiles: homePage.userProfiles
-            showBackButton: !channelList.visible && !dmListView.visible  // Show back button when sidebar is hidden
+            showBackButton: isSmallScreen && mobileViewMode === "messages"
             canSendMessages: homePage.canSendInCurrentChannel
             
             onBackClicked: {
-                if (isMediumScreen) {
-                    mobileViewMode = "channels"
-                } else {
-                    mobileViewMode = "channels"
-                }
+                mobileViewMode = "channels"
             }
             
             onSendMessage: {
@@ -272,34 +190,59 @@ Page {
             }
         }
         
-        // Empty state when no channel/DM selected
+        // Empty state placeholder (always visible when no channel/DM selected)
         Rectangle {
-            height: parent.height
-            width: {
-                // On wide screen, fill remaining space when no channel/DM selected
-                if (isWideScreen) {
-                    // Home view with no DM selected
-                    if (currentServerId === "" && currentDMRecipientId === "") {
-                        return parent.width - serverList.width - dmListView.width
-                    }
-                    // Server selected but no channel
-                    if (currentServerId !== "" && currentChannelId === "") {
-                        return parent.width - serverList.width - channelList.width
-                    }
-                    return 0
-                }
-                // On mobile/medium, show when in messages view with nothing selected
-                if (mobileViewMode === "messages" && currentChannelId === "" && currentDMRecipientId === "") {
-                    return parent.width - (serverList.visible ? serverList.width : 0) - (channelList.visible ? channelList.width : 0) - (dmListView.visible ? dmListView.width : 0)
-                }
-                return 0
-            }
-            visible: width > 0
+            id: placeholderView
+            anchors.fill: parent
+            visible: currentChannelId === "" && currentDMRecipientId === ""
+            opacity: visible ? 1 : 0
             color: Theme.palette.normal.background
+            
+            Behavior on opacity {
+                NumberAnimation { duration: animationDuration; easing.type: Easing.OutCubic }
+            }
+            
+            // Header with back button for small screens
+            Rectangle {
+                id: placeholderHeader
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: units.gu(6)
+                color: Qt.darker(parent.color, 1.02)
+                visible: isSmallScreen && mobileViewMode === "messages"
+                
+                AbstractButton {
+                    anchors.left: parent.left
+                    anchors.leftMargin: units.gu(1.5)
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: units.gu(4)
+                    height: parent.height
+                    
+                    Icon {
+                        anchors.centerIn: parent
+                        width: units.gu(2.5)
+                        height: units.gu(2.5)
+                        name: "back"
+                        color: Theme.palette.normal.baseText
+                    }
+                    
+                    onClicked: mobileViewMode = "channels"
+                }
+                
+                Label {
+                    anchors.centerIn: parent
+                    text: currentServerId === "" ? i18n.tr("Direct Messages") : currentServerName
+                    fontSize: "medium"
+                    color: Theme.palette.normal.baseText
+                }
+            }
             
             Column {
                 anchors.centerIn: parent
+                anchors.verticalCenterOffset: placeholderHeader.visible ? placeholderHeader.height / 2 : 0
                 spacing: units.gu(2)
+                width: Math.min(parent.width - units.gu(4), units.gu(40))
                 
                 Icon {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -327,15 +270,281 @@ Page {
                     color: Theme.palette.normal.backgroundSecondaryText
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap
-                    width: Math.min(parent.parent.width - units.gu(4), units.gu(40))
+                    width: parent.width
                 }
             }
+        }
+    }
+    
+    // Semi-transparent overlay for dimming content when sidebar is open on small screens
+    Rectangle {
+        id: sidebarOverlay
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        // Position overlay at the content area's x position
+        x: mainContentX
+        width: parent.width
+        color: "#000000"
+        opacity: {
+            if (!isSmallScreen) return 0
+            if (mobileViewMode === "messages") return 0
+            // Show overlay when sidebar is visible
+            return 0.5
+        }
+        visible: opacity > 0
+        z: 5
+        
+        Behavior on opacity {
+            NumberAnimation { duration: animationDuration; easing.type: Easing.OutCubic }
+        }
+        
+        Behavior on x {
+            NumberAnimation { duration: animationDuration; easing.type: Easing.OutCubic }
+        }
+        
+        MouseArea {
+            anchors.fill: parent
+            enabled: parent.visible && (currentChannelId !== "" || currentDMRecipientId !== "")
+            onClicked: {
+                mobileViewMode = "messages"
+            }
+        }
+    }
+    
+    // Sliding sidebar container
+    Item {
+        id: sidebarContainer
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: totalSidebarWidth
+        x: sidebarX
+        z: 10
+        
+        Behavior on x {
+            NumberAnimation { duration: animationDuration; easing.type: Easing.OutCubic }
+        }
+        
+        // Drop shadow for depth on small screens
+        Row {
+            anchors.left: parent.left
+            anchors.leftMargin: shadowLeftMargin
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            visible: isSmallScreen && mobileViewMode !== "messages"
+            
+            Repeater {
+                model: 8
+                Rectangle {
+                    width: units.gu(0.25)
+                    height: parent.height
+                    color: "#000000"
+                    opacity: (8 - index) * 0.02
+                }
+            }
+        }
+        
+        // Server sidebar
+        Components.ServerListView {
+            id: serverList
+            anchors.left: parent.left
+            height: parent.height
+            width: serverListWidth
+            // Always visible on wide screens, or on small screens when sidebar is showing
+            visible: isWideScreen || isMediumScreen || (isSmallScreen && mobileViewMode !== "messages")
+            opacity: visible ? 1 : 0
+            
+            Behavior on opacity {
+                NumberAnimation { duration: animationDuration; easing.type: Easing.OutCubic }
+            }
+            
+            servers: homePage.servers
+            selectedServerId: currentServerId
+            
+            onServerSelected: {
+                currentServerId = serverId
+                currentServerName = serverName
+                currentServerOwnerId = ownerId
+                currentChannelId = ""
+                currentChannelName = ""
+                loadChannels(serverId)
+                
+                if (isSmallScreen) {
+                    mobileViewMode = "channels"
+                }
+            }
+            
+            onHomeClicked: {
+                currentServerId = ""
+                currentServerName = ""
+                currentServerOwnerId = ""
+                currentChannelId = ""
+                currentDMRecipientId = ""
+                currentDMRecipientName = ""
+                currentDMRecipientAvatar = ""
+                channels = []
+                categories = []
+                homePage.messages = []
+                
+                // On small screens, go to channels view to show DM list
+                if (isSmallScreen) {
+                    mobileViewMode = "channels"
+                }
+                
+                // Load DM conversations (friends list)
+                loadDMConversations()
+            }
+            
+            onAddServerClicked: {
+                pageStack.push(Qt.resolvedUrl("JoinServerPage.qml"))
+            }
+            
+            onSettingsClicked: {
+                pageStack.push(Qt.resolvedUrl("SettingsPage.qml"))
+            }
+        }
+        
+        // DM list (visible when Home is selected instead of a server)
+        Components.DMListView {
+            id: dmListView
+            anchors.left: serverList.right
+            height: parent.height
+            width: channelListWidth
+            // Visible when no server selected (Home mode), but only in channels mode on small screens
+            visible: currentServerId === "" && (!isSmallScreen || mobileViewMode === "channels")
+            opacity: visible ? 1 : 0
+            
+            Behavior on opacity {
+                NumberAnimation { duration: animationDuration; easing.type: Easing.OutCubic }
+            }
+            
+            conversations: homePage.dmConversations
+            unreadCounts: homePage.dmUnreadCounts
+            selectedConversationId: currentDMRecipientId
+            currentUserName: homePage.currentUserName
+            currentUserAvatar: homePage.currentUserAvatar
+            showBackButton: isSmallScreen && mobileViewMode === "channels"
+            
+            onConversationSelected: {
+                // Clear channel state when switching to DM
+                currentChannelId = ""
+                currentChannelName = ""
+                currentChannelType = "text"
+                
+                // Set DM state
+                currentDMRecipientId = recipientId
+                currentDMRecipientName = recipientName
+                currentDMRecipientAvatar = recipientAvatar
+                loadDMMessages(recipientId)
+                
+                if (isSmallScreen) {
+                    mobileViewMode = "messages"
+                }
+            }
+            
+            onBackClicked: {
+                mobileViewMode = "servers"
+            }
+            
+            onCreateDMClicked: {
+                // TODO: Open create DM dialog
+                console.log("Create DM clicked")
+            }
+        }
+        
+        // Channel sidebar (visible when server selected)
+        Components.ChannelListView {
+            id: channelList
+            anchors.left: serverList.right
+            height: parent.height
+            width: channelListWidth
+            // Visible when a server is selected, but only in channels mode on small screens
+            visible: currentServerId !== "" && (!isSmallScreen || mobileViewMode === "channels")
+            opacity: visible ? 1 : 0
+            
+            Behavior on opacity {
+                NumberAnimation { duration: animationDuration; easing.type: Easing.OutCubic }
+            }
+            
+            serverId: currentServerId
+            serverName: currentServerName
+            selectedChannelId: currentChannelId
+            channels: homePage.channels
+            categories: homePage.categories
+            currentUserName: homePage.currentUserName
+            currentUserAvatar: homePage.currentUserAvatar
+            showBackButton: isSmallScreen && mobileViewMode === "channels"
+            
+            onChannelSelected: {
+                // Leave old channel if we were in one
+                if (currentServerId && currentChannelId) {
+                    SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+                }
+                
+                // Clear DM state when switching to channel
+                currentDMRecipientId = ""
+                currentDMRecipientName = ""
+                currentDMRecipientAvatar = ""
+                
+                // Clear messages immediately when switching channels
+                homePage.messages = []
+                
+                currentChannelId = channelId
+                currentChannelName = channelName
+                currentChannelType = channelType
+                loadMessages(currentServerId, channelId)
+                
+                if (isSmallScreen) {
+                    mobileViewMode = "messages"
+                }
+            }
+            
+            onBackClicked: {
+                mobileViewMode = "servers"
+            }
+            
+            onServerSettingsClicked: {
+                pageStack.push(Qt.resolvedUrl("ServerSettingsPage.qml"), {
+                    serverId: currentServerId,
+                    serverName: currentServerName
+                })
+            }
+        }
+    }
+    
+    // Edge swipe gesture handler for revealing sidebar on small screens
+    MouseArea {
+        id: edgeSwipeArea
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: units.gu(2)
+        visible: isSmallScreen && mobileViewMode === "messages"
+        z: 15
+        
+        property real startX: 0
+        property bool dragging: false
+        
+        onPressed: {
+            startX = mouse.x
+            dragging = true
+        }
+        
+        onPositionChanged: {
+            if (dragging && mouse.x - startX > units.gu(4)) {
+                mobileViewMode = "channels"
+                dragging = false
+            }
+        }
+        
+        onReleased: {
+            dragging = false
         }
     }
     
     // Loading overlay
     Rectangle {
         anchors.fill: parent
+        z: 100
         color: Qt.rgba(Theme.palette.normal.background.r,
                       Theme.palette.normal.background.g,
                       Theme.palette.normal.background.b, 0.8)
