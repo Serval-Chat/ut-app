@@ -61,7 +61,7 @@ Page {
                 Image {
                     anchors.fill: parent
                     source: userProfile.banner ? 
-                            (SerchatAPI.apiBaseUrl + "/api/v1/user/banner/" + userProfile.banner) : ""
+                            (SerchatAPI.apiBaseUrl + userProfile.banner) : ""
                     fillMode: Image.PreserveAspectCrop
                     visible: status === Image.Ready
                 }
@@ -131,13 +131,14 @@ Page {
                         text: userProfile.pronouns || ""
                         fontSize: "small"
                         color: Theme.palette.normal.backgroundSecondaryText
-                        visible: userProfile.pronouns && userProfile.pronouns !== ""
+                        visible: userProfile.pronouns !== undefined && userProfile.pronouns !== ""
                     }
                     
                     // Custom status
                     Row {
                         spacing: units.gu(0.5)
-                        visible: userProfile.customStatus && userProfile.customStatus.text
+                        visible: userProfile.customStatus !== undefined && userProfile.customStatus !== null &&
+                                 userProfile.customStatus.text !== undefined && userProfile.customStatus.text !== ""
                         
                         Label {
                             text: userProfile.customStatus ? (userProfile.customStatus.emoji || "") : ""
@@ -155,7 +156,7 @@ Page {
                     Flow {
                         width: parent.width
                         spacing: units.gu(0.5)
-                        visible: userProfile.badges && userProfile.badges.length > 0
+                        visible: userProfile.badges !== undefined && userProfile.badges !== null && userProfile.badges.length > 0
                         
                         Repeater {
                             model: userProfile.badges || []
@@ -200,7 +201,7 @@ Page {
                 width: parent.width
                 height: aboutColumn.height + units.gu(3)
                 color: Theme.palette.normal.background
-                visible: userProfile.bio && userProfile.bio !== ""
+                visible: userProfile.bio !== undefined && userProfile.bio !== null && userProfile.bio !== ""
                 
                 Column {
                     id: aboutColumn

@@ -3,6 +3,7 @@
 
 #include "serchatapi.h"
 #include "network/networkclient.h"
+#include "network/socketclient.h"
 #include "auth/authclient.h"
 #include "api/apiclient.h"
 
@@ -14,6 +15,7 @@ SerchatAPI::SerchatAPI() {
     m_networkClient = new NetworkClient(this);
     m_authClient = new AuthClient(m_networkClient, this);
     m_apiClient = new ApiClient(m_networkClient, this);
+    m_socketClient = new SocketClient(this);
 
     // Configure base URLs
     QString baseUrl = apiBaseUrl();
@@ -77,6 +79,92 @@ SerchatAPI::SerchatAPI() {
     // Connect network client for automatic 401 handling
     connect(m_networkClient, &NetworkClient::authTokenExpired,
             this, &SerchatAPI::onNetworkAuthTokenExpired);
+
+    // Connect socket client signals
+    connect(m_socketClient, &SocketClient::connectedChanged,
+            this, &SerchatAPI::socketConnectedChanged);
+    connect(m_socketClient, &SocketClient::socketIdChanged,
+            this, &SerchatAPI::socketIdChanged);
+    connect(m_socketClient, &SocketClient::connected,
+            this, &SerchatAPI::socketConnected);
+    connect(m_socketClient, &SocketClient::disconnected,
+            this, &SerchatAPI::socketDisconnected);
+    connect(m_socketClient, &SocketClient::reconnecting,
+            this, &SerchatAPI::socketReconnecting);
+    connect(m_socketClient, &SocketClient::error,
+            this, &SerchatAPI::socketError);
+    
+    // Real-time server message events
+    connect(m_socketClient, &SocketClient::serverMessageReceived,
+            this, &SerchatAPI::serverMessageReceived);
+    connect(m_socketClient, &SocketClient::serverMessageEdited,
+            this, &SerchatAPI::serverMessageEdited);
+    connect(m_socketClient, &SocketClient::serverMessageDeleted,
+            this, &SerchatAPI::serverMessageDeleted);
+    
+    // Real-time DM events
+    connect(m_socketClient, &SocketClient::directMessageReceived,
+            this, &SerchatAPI::directMessageReceived);
+    connect(m_socketClient, &SocketClient::directMessageEdited,
+            this, &SerchatAPI::directMessageEdited);
+    connect(m_socketClient, &SocketClient::directMessageDeleted,
+            this, &SerchatAPI::directMessageDeleted);
+    
+    // Real-time channel events
+    connect(m_socketClient, &SocketClient::channelUpdated,
+            this, &SerchatAPI::channelUpdated);
+    connect(m_socketClient, &SocketClient::channelCreated,
+            this, &SerchatAPI::channelCreated);
+    connect(m_socketClient, &SocketClient::channelDeleted,
+            this, &SerchatAPI::channelDeleted);
+    connect(m_socketClient, &SocketClient::channelUnread,
+            this, &SerchatAPI::channelUnread);
+    
+    // Real-time DM unread
+    connect(m_socketClient, &SocketClient::dmUnread,
+            this, &SerchatAPI::dmUnread);
+    
+    // Real-time presence events
+    connect(m_socketClient, &SocketClient::userOnline,
+            this, &SerchatAPI::userOnline);
+    connect(m_socketClient, &SocketClient::userOffline,
+            this, &SerchatAPI::userOffline);
+    connect(m_socketClient, &SocketClient::userStatusUpdate,
+            this, &SerchatAPI::userStatusUpdate);
+    
+    // Real-time reaction events
+    connect(m_socketClient, &SocketClient::reactionAdded,
+            this, &SerchatAPI::reactionAdded);
+    connect(m_socketClient, &SocketClient::reactionRemoved,
+            this, &SerchatAPI::reactionRemoved);
+    
+    // Real-time typing events
+    connect(m_socketClient, &SocketClient::userTyping,
+            this, &SerchatAPI::userTyping);
+    connect(m_socketClient, &SocketClient::dmTyping,
+            this, &SerchatAPI::dmTyping);
+    
+    // Real-time server membership events
+    connect(m_socketClient, &SocketClient::serverMemberJoined,
+            this, &SerchatAPI::serverMemberJoined);
+    connect(m_socketClient, &SocketClient::serverMemberLeft,
+            this, &SerchatAPI::serverMemberLeft);
+    
+    // Real-time friend events
+    connect(m_socketClient, &SocketClient::friendAdded,
+            this, &SerchatAPI::friendAdded);
+    connect(m_socketClient, &SocketClient::friendRemoved,
+            this, &SerchatAPI::friendRemoved);
+    connect(m_socketClient, &SocketClient::incomingRequestAdded,
+            this, &SerchatAPI::incomingRequestAdded);
+    connect(m_socketClient, &SocketClient::incomingRequestRemoved,
+            this, &SerchatAPI::incomingRequestRemoved);
+    
+    // Real-time notifications
+    connect(m_socketClient, &SocketClient::pingReceived,
+            this, &SerchatAPI::pingReceived);
+    connect(m_socketClient, &SocketClient::presenceState,
+            this, &SerchatAPI::presenceState);
 
     // Restore any existing auth state
     restoreAuthState();
@@ -293,6 +381,9 @@ void SerchatAPI::restoreAuthState() {
         // Restore token to AuthClient (which propagates to NetworkClient)
         m_authClient->setAuthToken(storedToken);
         qDebug() << "[SerchatAPI] Restored auth state from settings";
+        
+        // Auto-connect socket after restoring auth
+        connectSocket();
     } else if (isLoggedIn()) {
         // Inconsistent state - marked logged in but no token
         qWarning() << "[SerchatAPI] Inconsistent auth state, clearing";
@@ -309,6 +400,9 @@ void SerchatAPI::onAuthLoginSuccessful(const QVariantMap& userData) {
     persistAuthState(userData);
     qDebug() << "[SerchatAPI] Login successful for:" << userData.value("username").toString();
     emit loginSuccessful();
+    
+    // Auto-connect socket on login
+    connectSocket();
 }
 
 void SerchatAPI::onAuthLoginFailed(const QString& error) {
@@ -347,6 +441,144 @@ void SerchatAPI::onAuthNetworkError(const QString& error) {
 void SerchatAPI::onNetworkAuthTokenExpired() {
     // This is called when NetworkClient detects a 401 on any authenticated request
     qDebug() << "[SerchatAPI] Auth token expired, logging out";
+    disconnectSocket();
     clearAuthState();
     emit authTokenInvalid();
+}
+
+// ============================================================================
+// Socket.IO Real-time Connection
+// ============================================================================
+
+bool SerchatAPI::isSocketConnected() const {
+    return m_socketClient->isConnected();
+}
+
+QString SerchatAPI::socketId() const {
+    return m_socketClient->socketId();
+}
+
+void SerchatAPI::connectSocket() {
+    if (!isLoggedIn()) {
+        qWarning() << "[SerchatAPI] Cannot connect socket: not logged in";
+        return;
+    }
+    
+    QString token = authToken();
+    if (token.isEmpty()) {
+        qWarning() << "[SerchatAPI] Cannot connect socket: no auth token";
+        return;
+    }
+    
+    QString url = apiBaseUrl();
+    qDebug() << "[SerchatAPI] Connecting socket to:" << url;
+    m_socketClient->connect(url, token);
+}
+
+void SerchatAPI::disconnectSocket() {
+    m_socketClient->disconnect();
+}
+
+void SerchatAPI::joinServer(const QString& serverId) {
+    m_socketClient->joinServer(serverId);
+}
+
+void SerchatAPI::leaveServer(const QString& serverId) {
+    m_socketClient->leaveServer(serverId);
+}
+
+void SerchatAPI::joinChannel(const QString& serverId, const QString& channelId) {
+    m_socketClient->joinChannel(serverId, channelId);
+}
+
+void SerchatAPI::leaveChannel(const QString& serverId, const QString& channelId) {
+    m_socketClient->leaveChannel(serverId, channelId);
+}
+
+void SerchatAPI::markChannelRead(const QString& serverId, const QString& channelId) {
+    m_socketClient->markChannelRead(serverId, channelId);
+}
+
+void SerchatAPI::markDMRead(const QString& peerId) {
+    m_socketClient->markDMRead(peerId);
+}
+
+void SerchatAPI::sendTyping(const QString& serverId, const QString& channelId) {
+    m_socketClient->sendTyping(serverId, channelId);
+}
+
+void SerchatAPI::sendDMTyping(const QString& receiver) {
+    m_socketClient->sendDMTyping(receiver);
+}
+
+void SerchatAPI::sendServerMessageRT(const QString& serverId, const QString& channelId,
+                                      const QString& text, const QString& replyToId) {
+    if (!isSocketConnected()) {
+        qWarning() << "[SerchatAPI] Cannot send message: socket not connected";
+        return;
+    }
+    m_socketClient->sendServerMessage(serverId, channelId, text, replyToId);
+}
+
+void SerchatAPI::sendDirectMessageRT(const QString& receiver, const QString& text,
+                                      const QString& replyToId) {
+    if (!isSocketConnected()) {
+        qWarning() << "[SerchatAPI] Cannot send DM: socket not connected";
+        return;
+    }
+    m_socketClient->sendDirectMessage(receiver, text, replyToId);
+}
+
+void SerchatAPI::editServerMessage(const QString& serverId, const QString& channelId,
+                                    const QString& messageId, const QString& text) {
+    if (!isSocketConnected()) {
+        qWarning() << "[SerchatAPI] Cannot edit message: socket not connected";
+        return;
+    }
+    m_socketClient->editServerMessage(serverId, channelId, messageId, text);
+}
+
+void SerchatAPI::deleteServerMessage(const QString& serverId, const QString& channelId,
+                                      const QString& messageId) {
+    if (!isSocketConnected()) {
+        qWarning() << "[SerchatAPI] Cannot delete message: socket not connected";
+        return;
+    }
+    m_socketClient->deleteServerMessage(serverId, channelId, messageId);
+}
+
+void SerchatAPI::editDirectMessage(const QString& messageId, const QString& text) {
+    if (!isSocketConnected()) {
+        qWarning() << "[SerchatAPI] Cannot edit DM: socket not connected";
+        return;
+    }
+    m_socketClient->editDirectMessage(messageId, text);
+}
+
+void SerchatAPI::deleteDirectMessage(const QString& messageId) {
+    if (!isSocketConnected()) {
+        qWarning() << "[SerchatAPI] Cannot delete DM: socket not connected";
+        return;
+    }
+    m_socketClient->deleteDirectMessage(messageId);
+}
+
+void SerchatAPI::addReaction(const QString& messageId, const QString& messageType,
+                              const QString& emoji, const QString& serverId,
+                              const QString& channelId) {
+    if (!isSocketConnected()) {
+        qWarning() << "[SerchatAPI] Cannot add reaction: socket not connected";
+        return;
+    }
+    m_socketClient->addReaction(messageId, messageType, emoji, serverId, channelId);
+}
+
+void SerchatAPI::removeReaction(const QString& messageId, const QString& messageType,
+                                 const QString& emoji, const QString& serverId,
+                                 const QString& channelId) {
+    if (!isSocketConnected()) {
+        qWarning() << "[SerchatAPI] Cannot remove reaction: socket not connected";
+        return;
+    }
+    m_socketClient->removeReaction(messageId, messageType, emoji, serverId, channelId);
 }

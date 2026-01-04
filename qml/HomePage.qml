@@ -86,7 +86,7 @@ Page {
                 currentDMRecipientAvatar = ""
                 channels = []
                 categories = []
-                messages = []
+                homePage.messages = []
                 
                 // On non-wide screens, go to channels view to show DM list
                 if (!isWideScreen) {
@@ -158,6 +158,14 @@ Page {
             showBackButton: !serverList.visible  // Show back button when server list is hidden
             
             onChannelSelected: {
+                // Leave old channel if we were in one
+                if (currentServerId && currentChannelId) {
+                    SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+                }
+                
+                // Clear messages immediately when switching channels
+                homePage.messages = []
+                
                 currentChannelId = channelId
                 currentChannelName = channelName
                 currentChannelType = channelType
@@ -215,6 +223,12 @@ Page {
             }
             
             onUserProfileClicked: {
+                pageStack.push(Qt.resolvedUrl("ProfilePage.qml"), {
+                    userId: userId
+                })
+            }
+            
+            onViewFullProfile: {
                 pageStack.push(Qt.resolvedUrl("ProfilePage.qml"), {
                     userId: userId
                 })
@@ -398,20 +412,29 @@ Page {
         }
         
         // Messages
-        onMessagesFetched: {
+        onMessagesFetched: function(requestId, serverId, channelId, fetchedMessages) {
+            console.log("[HomePage] Messages fetched for channel:", channelId, "current:", currentChannelId, "count:", fetchedMessages.length)
             if (channelId === currentChannelId) {
                 loadingMessages = false
                 
-                // Append to existing messages for pagination
-                if (homePage.messages.length === 0) {
-                    homePage.messages = messages
+                // API returns oldest first, but we need newest first (index 0 = bottom with BottomToTop)
+                var reversedMessages = fetchedMessages.slice().reverse()
+                
+                // Check if this is a pagination request (loading older messages)
+                // by seeing if we already have messages and this is from "before" query
+                if (homePage.messages.length > 0 && reversedMessages.length > 0) {
+                    // This is pagination - append older messages at the end
+                    homePage.messages = homePage.messages.concat(reversedMessages)
                 } else {
-                    // Older messages - append at end (messages displayed bottom-to-top)
-                    homePage.messages = homePage.messages.concat(messages)
+                    // Initial load - replace all messages
+                    homePage.messages = reversedMessages
                 }
+                console.log("[HomePage] Messages updated, total:", homePage.messages.length)
                 
                 // Check if there are more messages
-                hasMoreMessages = messages.length >= 50
+                hasMoreMessages = fetchedMessages.length >= 50
+            } else {
+                console.log("[HomePage] Ignoring messages for old channel:", channelId)
             }
         }
         
@@ -423,41 +446,307 @@ Page {
         }
         
         onMessageSent: {
-            // Replace temp message with real one
-            var newMessages = []
-            var found = false
+            console.log("[HomePage] Message sent via HTTP:", message._id)
             
-            for (var i = 0; i < messages.length; i++) {
-                var msg = messages[i]
-                if (msg._id && msg._id.toString().indexOf("temp_") === 0 && 
-                    msg.text === message.text && !found) {
-                    // Replace temp with actual message
-                    newMessages.push(message)
-                    found = true
+            // The HTTP response contains the real message. We need to:
+            // 1. Remove any temp message with matching text
+            // 2. Check if Socket.IO already delivered this message
+            var msgId = String(message._id || message.id || "")
+            var newMessages = []
+            var foundTempMessage = false
+            var alreadyHasRealMessage = false
+            
+            // First pass: check if we already have the real message from Socket.IO
+            for (var i = 0; i < homePage.messages.length; i++) {
+                var existingId = String(homePage.messages[i]._id || homePage.messages[i].id || "")
+                if (existingId === msgId) {
+                    alreadyHasRealMessage = true
+                    break
+                }
+            }
+            
+            // Second pass: build new array, replacing temp message if needed
+            for (var j = 0; j < homePage.messages.length; j++) {
+                var msg = homePage.messages[j]
+                var id = String(msg._id || msg.id || "")
+                
+                // Skip the temp message
+                if (id.indexOf("temp_") === 0 && msg.text === message.text && !foundTempMessage) {
+                    foundTempMessage = true
+                    // Only add real message if Socket.IO hasn't delivered it yet
+                    if (!alreadyHasRealMessage) {
+                        newMessages.push(message)
+                    }
                 } else {
                     newMessages.push(msg)
                 }
             }
             
-            // If not found (rare), prepend
-            if (!found) {
+            // If no temp message was found and we don't have it from Socket.IO, prepend
+            if (!foundTempMessage && !alreadyHasRealMessage) {
                 newMessages = [message].concat(newMessages)
             }
             
-            messages = newMessages
+            homePage.messages = newMessages
         }
         
         onMessageSendFailed: {
             console.log("Failed to send message:", error)
             // Remove temp message
             var newMessages = []
-            for (var i = 0; i < messages.length; i++) {
-                var msg = messages[i]
+            for (var i = 0; i < homePage.messages.length; i++) {
+                var msg = homePage.messages[i]
                 if (!(msg._id && msg._id.toString().indexOf("temp_") === 0)) {
                     newMessages.push(msg)
                 }
             }
-            messages = newMessages
+            homePage.messages = newMessages
+        }
+        
+        // ====================================================================
+        // Real-time Socket.IO Events
+        // ====================================================================
+        
+        onSocketConnected: {
+            console.log("[HomePage] Socket connected")
+            // Join all servers we're a member of
+            for (var i = 0; i < servers.length; i++) {
+                var serverId = servers[i]._id || servers[i].id
+                SerchatAPI.joinServer(serverId)
+            }
+            
+            // Join current channel if any
+            if (currentServerId && currentChannelId) {
+                SerchatAPI.joinChannel(currentServerId, currentChannelId)
+            }
+        }
+        
+        onSocketDisconnected: {
+            console.log("[HomePage] Socket disconnected")
+        }
+        
+        onSocketReconnecting: {
+            console.log("[HomePage] Socket reconnecting, attempt:", attempt)
+        }
+        
+        onSocketError: {
+            console.log("[HomePage] Socket error:", message)
+        }
+        
+        // Real-time server messages
+        onServerMessageReceived: {
+            console.log("[HomePage] Server message received:", message._id, "channelId:", message.channelId)
+            
+            // Only add if it's for the current channel
+            // channelId might be an ObjectId string or plain string - compare as strings
+            var msgChannelId = String(message.channelId || "")
+            var currChannelId = String(currentChannelId || "")
+            console.log("[HomePage] Comparing channels - message:", msgChannelId, "current:", currChannelId)
+            
+            if (msgChannelId === currChannelId && msgChannelId !== "") {
+                // Check if we already have this message (from HTTP response or duplicate Socket.IO)
+                var isDuplicate = false
+                var newId = String(message._id || message.id || "")
+                var tempMessageIndex = -1
+                
+                for (var i = 0; i < homePage.messages.length; i++) {
+                    var existingId = String(homePage.messages[i]._id || homePage.messages[i].id || "")
+                    if (existingId === newId) {
+                        isDuplicate = true
+                        break
+                    }
+                    // Also track if there's a temp message with same text (our own message)
+                    if (existingId.indexOf("temp_") === 0 && 
+                        homePage.messages[i].text === message.text &&
+                        tempMessageIndex === -1) {
+                        tempMessageIndex = i
+                    }
+                }
+                
+                if (!isDuplicate) {
+                    // If we found a matching temp message, replace it
+                    if (tempMessageIndex !== -1) {
+                        var newMessages = homePage.messages.slice()
+                        newMessages[tempMessageIndex] = message
+                        homePage.messages = newMessages
+                        console.log("[HomePage] Replaced temp message with real message")
+                    } else {
+                        // Add new message at index 0 (displayed at bottom with BottomToTop)
+                        homePage.messages = [message].concat(homePage.messages)
+                        console.log("[HomePage] Added message to list, new count:", homePage.messages.length)
+                    }
+                } else {
+                    console.log("[HomePage] Skipping duplicate message:", newId)
+                }
+            }
+        }
+        
+        onServerMessageEdited: {
+            console.log("[HomePage] Server message edited:", message._id)
+            
+            // Update message in the list
+            var msgId = message._id || message.id
+            var newMessages = []
+            for (var i = 0; i < messages.length; i++) {
+                var existingId = messages[i]._id || messages[i].id
+                if (existingId === msgId) {
+                    newMessages.push(message)
+                } else {
+                    newMessages.push(messages[i])
+                }
+            }
+            homePage.messages = newMessages
+        }
+        
+        onServerMessageDeleted: {
+            console.log("[HomePage] Server message deleted:", messageId)
+            
+            // Remove message from the list
+            var newMessages = []
+            for (var i = 0; i < messages.length; i++) {
+                var existingId = messages[i]._id || messages[i].id
+                if (existingId !== messageId) {
+                    newMessages.push(messages[i])
+                }
+            }
+            homePage.messages = newMessages
+        }
+        
+        // Channel unread notifications
+        onChannelUnread: {
+            console.log("[HomePage] Channel unread:", serverId, channelId)
+            
+            // Update unread counts
+            var newCounts = Object.assign({}, unreadCounts)
+            var key = serverId + ":" + channelId
+            newCounts[key] = (newCounts[key] || 0) + 1
+            unreadCounts = newCounts
+        }
+        
+        // DM unread notifications
+        onDmUnread: {
+            console.log("[HomePage] DM unread:", peer, count)
+            
+            var newCounts = Object.assign({}, dmUnreadCounts)
+            newCounts[peer] = count
+            dmUnreadCounts = newCounts
+        }
+        
+        // Direct message events
+        onDirectMessageReceived: {
+            console.log("[HomePage] DM received:", message._id)
+            
+            // If currently in DM with this user, add message
+            var senderId = String(message.senderId || "")
+            var receiverId = String(message.receiverId || "")
+            var currRecipient = String(currentDMRecipientId || "")
+            
+            if (currRecipient !== "" && (currRecipient === senderId || currRecipient === receiverId)) {
+                var isDuplicate = false
+                var newId = String(message._id || message.id || "")
+                for (var i = 0; i < messages.length; i++) {
+                    var existingId = String(messages[i]._id || messages[i].id || "")
+                    if (existingId === newId) {
+                        isDuplicate = true
+                        break
+                    }
+                }
+                
+                if (!isDuplicate) {
+                    // Add new message at index 0 (displayed at bottom with BottomToTop)
+                    homePage.messages = [message].concat(homePage.messages)
+                    console.log("[HomePage] Added DM to list, new count:", homePage.messages.length)
+                }
+            }
+        }
+        
+        // User presence
+        onUserOnline: {
+            console.log("[HomePage] User online:", username)
+            // TODO: Update user status in UI
+        }
+        
+        onUserOffline: {
+            console.log("[HomePage] User offline:", username)
+            // TODO: Update user status in UI
+        }
+        
+        // Typing indicators
+        onUserTyping: {
+            if (serverId === currentServerId && channelId === currentChannelId) {
+                console.log("[HomePage] User typing in channel:", username)
+                // TODO: Show typing indicator in MessageView
+            }
+        }
+        
+        onDmTyping: {
+            console.log("[HomePage] User typing in DM:", username)
+            // TODO: Show typing indicator in DM view
+        }
+        
+        // Channel updates
+        onChannelCreated: {
+            console.log("[HomePage] Channel created in server:", serverId)
+            if (serverId === currentServerId) {
+                // Refresh channels list
+                loadChannels(serverId)
+            }
+        }
+        
+        onChannelDeleted: {
+            console.log("[HomePage] Channel deleted:", channelId)
+            if (serverId === currentServerId) {
+                // If we're viewing the deleted channel, go back
+                if (channelId === currentChannelId) {
+                    currentChannelId = ""
+                    currentChannelName = ""
+                    homePage.messages = []
+                }
+                // Refresh channels list
+                loadChannels(serverId)
+            }
+        }
+        
+        onChannelUpdated: {
+            console.log("[HomePage] Channel updated in server:", serverId)
+            if (serverId === currentServerId) {
+                // Refresh channels list
+                loadChannels(serverId)
+            }
+        }
+        
+        // Reaction updates
+        onReactionAdded: {
+            console.log("[HomePage] Reaction added to message:", messageId)
+            updateMessageReactions(messageId, reactions)
+        }
+        
+        onReactionRemoved: {
+            console.log("[HomePage] Reaction removed from message:", messageId)
+            updateMessageReactions(messageId, reactions)
+        }
+        
+        // Friend events
+        onFriendAdded: {
+            console.log("[HomePage] Friend added:", friendData.username)
+            // TODO: Update friends list if visible
+            // Could refresh DM conversations list
+        }
+        
+        onFriendRemoved: {
+            console.log("[HomePage] Friend removed:", username)
+            // TODO: Update friends list if visible
+            // If currently in DM with this friend, may want to notify user
+        }
+        
+        onIncomingRequestAdded: {
+            console.log("[HomePage] Incoming friend request from:", request.from)
+            // TODO: Show notification or update friend requests badge
+        }
+        
+        onIncomingRequestRemoved: {
+            console.log("[HomePage] Friend request removed from:", from)
+            // TODO: Update friend requests list if visible
         }
     }
     
@@ -471,8 +760,13 @@ Page {
     }
     
     function loadChannels(serverId) {
+        // Leave current channel if any
+        if (currentServerId && currentChannelId) {
+            SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+        }
+        
         loadingChannels = true
-        messages = []
+        homePage.messages = []  // Clear messages when loading new server
         currentChannelId = ""
         currentChannelName = ""
         SerchatAPI.getChannels(serverId)
@@ -482,19 +776,22 @@ Page {
         if (!serverId || !channelId) return
         
         loadingMessages = true
-        messages = []
+        homePage.messages = []  // Clear messages when loading new channel
         hasMoreMessages = true
+        
+        // Join the channel room for real-time updates
+        SerchatAPI.joinChannel(serverId, channelId)
         
         SerchatAPI.getMessages(serverId, channelId, 50, "")
     }
     
     function loadOlderMessages() {
-        if (loadingMessages || !hasMoreMessages || messages.length === 0) return
+        if (loadingMessages || !hasMoreMessages || homePage.messages.length === 0) return
         
         loadingMessages = true
         
         // Get the oldest message ID
-        var oldestId = messages[messages.length - 1]._id || messages[messages.length - 1].id
+        var oldestId = homePage.messages[homePage.messages.length - 1]._id || homePage.messages[homePage.messages.length - 1].id
         SerchatAPI.getMessages(currentServerId, currentChannelId, 50, oldestId)
     }
     
@@ -512,7 +809,7 @@ Page {
             replyToId: replyToId || null
         }
         
-        messages = [newMessage].concat(messages)
+        homePage.messages = [newMessage].concat(homePage.messages)
         
         // Send via API
         SerchatAPI.sendMessage(currentServerId, currentChannelId, text, replyToId || "")
@@ -522,13 +819,33 @@ Page {
         if (!recipientId) return
         
         loadingMessages = true
-        messages = []
+        homePage.messages = []
         hasMoreMessages = true
         
         // TODO: Implement DM message fetching when API is ready
         // SerchatAPI.getDMMessages(recipientId, 50, "")
         loadingMessages = false
     }
+    
+    // Update reactions for a message
+    function updateMessageReactions(messageId, reactions) {
+        var newMessages = []
+        for (var i = 0; i < homePage.messages.length; i++) {
+            var msg = homePage.messages[i]
+            var existingId = msg._id || msg.id
+            if (existingId === messageId) {
+                // Create new object with updated reactions
+                var updatedMsg = Object.assign({}, msg)
+                updatedMsg.reactions = reactions
+                newMessages.push(updatedMsg)
+            } else {
+                newMessages.push(msg)
+            }
+        }
+        homePage.messages = newMessages
+    }
+    
+    // Note: Channel room joining is handled in loadMessages() function
     
     // ========================================================================
     // Initialization

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-04 00:03+0000\n"
+"POT-Creation-Date: 2026-01-04 01:24+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -247,7 +247,8 @@ msgstr ""
 msgid "e.g., they/them, she/her, he/him"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:171 ../qml/ProfilePage.qml:216
+#: ../qml/EditProfilePage.qml:171 ../qml/ProfilePage.qml:217
+#: ../qml/components/UserProfileSheet.qml:252
 msgid "About Me"
 msgstr ""
 
@@ -275,23 +276,23 @@ msgstr ""
 msgid "Profile update not yet implemented"
 msgstr ""
 
-#: ../qml/HomePage.qml:264
+#: ../qml/HomePage.qml:278
 msgid "Select a conversation"
 msgstr ""
 
-#: ../qml/HomePage.qml:265
+#: ../qml/HomePage.qml:279
 msgid "Select a channel"
 msgstr ""
 
-#: ../qml/HomePage.qml:273
+#: ../qml/HomePage.qml:287
 msgid "Choose a conversation from the list or start a new one"
 msgstr ""
 
-#: ../qml/HomePage.qml:274
+#: ../qml/HomePage.qml:288
 msgid "Pick a channel from the list to start chatting"
 msgstr ""
 
-#: ../qml/HomePage.qml:304 ../qml/SettingsPage.qml:81
+#: ../qml/HomePage.qml:318 ../qml/SettingsPage.qml:81
 msgid "Loading..."
 msgstr ""
 
@@ -411,24 +412,24 @@ msgstr ""
 msgid "Message"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:116
+#: ../qml/ProfilePage.qml:116 ../qml/components/UserProfileSheet.qml:142
 msgid "Unknown User"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:247
+#: ../qml/ProfilePage.qml:248
 msgid "Member Since"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:255 ../qml/components/MessageView.qml:291
-#: ../qml/components/MessageView.qml:296
+#: ../qml/ProfilePage.qml:256 ../qml/components/MessageView.qml:295
+#: ../qml/components/MessageView.qml:300
 msgid "Unknown"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:281
+#: ../qml/ProfilePage.qml:282
 msgid "Send Friend Request"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:288
+#: ../qml/ProfilePage.qml:289
 msgid "Block User"
 msgstr ""
 
@@ -621,15 +622,15 @@ msgstr ""
 msgid "Offline"
 msgstr ""
 
-#: ../qml/components/MessageBubble.qml:153
+#: ../qml/components/MessageBubble.qml:159
 msgid "(edited)"
 msgstr ""
 
-#: ../qml/components/MessageBubble.qml:218
+#: ../qml/components/MessageBubble.qml:224
 msgid "Today at %1"
 msgstr ""
 
-#: ../qml/components/MessageBubble.qml:220
+#: ../qml/components/MessageBubble.qml:226
 msgid "Yesterday at %1"
 msgstr ""
 
@@ -641,20 +642,40 @@ msgstr ""
 msgid "Replying to %1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:205
+#: ../qml/components/MessageView.qml:209
 msgid "Load more messages"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:259
+#: ../qml/components/MessageView.qml:263
 msgid "Welcome to #%1!"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:266
+#: ../qml/components/MessageView.qml:270
 msgid "This is the start of the #%1 channel."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:280
+#: ../qml/components/MessageView.qml:284
 msgid "Message #%1"
+msgstr ""
+
+#: ../qml/components/UserProfileSheet.qml:286
+msgid "View Full Profile"
+msgstr ""
+
+#: ../qml/components/UserProfileSheet.qml:297
+msgid "Send Message"
+msgstr ""
+
+#: ../qml/components/UserProfileSheet.qml:308
+msgid "Add Friend"
+msgstr ""
+
+#: ../qml/components/UserProfileSheet.qml:399
+msgid "Error"
+msgstr ""
+
+#: ../qml/components/UserProfileSheet.qml:400
+msgid "Could not load profile"
 msgstr ""
 
 #: serchat.desktop.in.h:1

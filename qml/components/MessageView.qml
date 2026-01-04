@@ -24,11 +24,15 @@ Rectangle {
     // User profile cache for sender names/avatars
     property var userProfiles: ({})
     
+    // Track pending profile requests to avoid duplicates
+    property var pendingProfileRequests: ({})
+    
     signal sendMessage(string text, string replyToId)
     signal loadMoreMessages()
     signal messageReplyClicked(string messageId)
     signal userProfileClicked(string userId)
     signal backClicked()
+    signal viewFullProfile(string userId)
     
     color: Theme.palette.normal.background
     
@@ -180,7 +184,7 @@ Rectangle {
                 replyToSender: modelData.repliedMessage ? getSenderName(modelData.repliedMessage.senderId) : ""
                 reactions: modelData.reactions || []
                 
-                onAvatarClicked: userProfileClicked(senderId)
+                onAvatarClicked: openProfileSheet(senderId)
                 onLongPressed: showMessageOptions(modelData)
                 onReplyClicked: {
                     if (modelData.repliedMessage) {
@@ -376,5 +380,98 @@ Rectangle {
     // Scroll to bottom
     function scrollToBottom() {
         messageList.positionViewAtBeginning()
+    }
+    
+    // Fetch profile for a sender if not cached
+    function fetchProfileIfNeeded(senderId) {
+        if (!senderId) return
+        if (userProfiles[senderId]) return
+        if (pendingProfileRequests[senderId]) return
+        
+        var requestId = SerchatAPI.getProfile(senderId)
+        var newPending = pendingProfileRequests
+        newPending[senderId] = requestId
+        pendingProfileRequests = newPending
+    }
+    
+    // Open profile sheet for a user
+    function openProfileSheet(userId) {
+        userProfileSheet.open(userId, userId === currentUserId)
+    }
+    
+    // User profile sheet (bottom sheet popup)
+    Components.UserProfileSheet {
+        id: userProfileSheet
+        anchors.fill: parent
+        
+        onViewFullProfileClicked: {
+            viewFullProfile(userId)
+        }
+        
+        onSendMessageClicked: {
+            // TODO: Open DM conversation with user
+            console.log("Opening DM with user:", userId)
+        }
+        
+        onAddFriendClicked: {
+            // TODO: Send friend request
+            console.log("Adding friend:", userId)
+        }
+    }
+    
+    // Connections for profile loading
+    Connections {
+        target: SerchatAPI
+        
+        onProfileFetched: {
+            // Find which sender this profile belongs to
+            for (var senderId in pendingProfileRequests) {
+                if (pendingProfileRequests[senderId] === requestId) {
+                    // Update cache
+                    var newProfiles = userProfiles
+                    newProfiles[senderId] = profile
+                    userProfiles = newProfiles
+                    
+                    // Remove from pending
+                    var newPending = pendingProfileRequests
+                    delete newPending[senderId]
+                    pendingProfileRequests = newPending
+                    
+                    // Note: The ListView will update automatically when userProfiles changes
+                    // No need to force refresh messages array
+                    break
+                }
+            }
+        }
+        
+        onProfileFetchFailed: {
+            // Remove from pending on failure
+            for (var senderId in pendingProfileRequests) {
+                if (pendingProfileRequests[senderId] === requestId) {
+                    var newPending = pendingProfileRequests
+                    delete newPending[senderId]
+                    pendingProfileRequests = newPending
+                    break
+                }
+            }
+        }
+    }
+    
+    // Fetch profiles when messages change
+    onMessagesChanged: {
+        console.log("[MessageView] Messages changed, count:", messages.length)
+        // Collect unique sender IDs
+        var senderIds = {}
+        for (var i = 0; i < messages.length; i++) {
+            var senderId = messages[i].senderId
+            if (senderId && !userProfiles[senderId] && !senderIds[senderId]) {
+                senderIds[senderId] = true
+            }
+        }
+        
+        // Fetch profiles for unknown senders
+        for (var id in senderIds) {
+            fetchProfileIfNeeded(id)
+        }
     }
 }

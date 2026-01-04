@@ -11,6 +11,7 @@
 class NetworkClient;
 class AuthClient;
 class ApiClient;
+class SocketClient;
 
 /**
  * @brief Main API facade exposed to QML.
@@ -32,6 +33,8 @@ class SerchatAPI : public QObject {
 
     Q_PROPERTY(QString apiBaseUrl READ apiBaseUrl WRITE setApiBaseUrl NOTIFY apiBaseUrlChanged)
     Q_PROPERTY(bool loggedIn READ isLoggedIn NOTIFY loggedInChanged)
+    Q_PROPERTY(bool socketConnected READ isSocketConnected NOTIFY socketConnectedChanged)
+    Q_PROPERTY(QString socketId READ socketId NOTIFY socketIdChanged)
 
 public:
     SerchatAPI();
@@ -171,6 +174,78 @@ public:
     Q_INVOKABLE bool isRequestPending(int requestId) const;
 
     // ========================================================================
+    // Socket.IO Real-time Connection
+    // ========================================================================
+    
+    /// Check if socket is connected
+    Q_INVOKABLE bool isSocketConnected() const;
+    
+    /// Get socket ID
+    Q_INVOKABLE QString socketId() const;
+    
+    /// Connect to the real-time socket server (called automatically on login)
+    Q_INVOKABLE void connectSocket();
+    
+    /// Disconnect from the socket server
+    Q_INVOKABLE void disconnectSocket();
+    
+    /// Join a server room to receive server events
+    Q_INVOKABLE void joinServer(const QString& serverId);
+    
+    /// Leave a server room
+    Q_INVOKABLE void leaveServer(const QString& serverId);
+    
+    /// Join a channel room to receive channel events
+    Q_INVOKABLE void joinChannel(const QString& serverId, const QString& channelId);
+    
+    /// Leave a channel room
+    Q_INVOKABLE void leaveChannel(const QString& serverId, const QString& channelId);
+    
+    /// Mark a channel as read
+    Q_INVOKABLE void markChannelRead(const QString& serverId, const QString& channelId);
+    
+    /// Mark DM as read
+    Q_INVOKABLE void markDMRead(const QString& peerId);
+    
+    /// Send typing indicator for server channel
+    Q_INVOKABLE void sendTyping(const QString& serverId, const QString& channelId);
+    
+    /// Send typing indicator for DM
+    Q_INVOKABLE void sendDMTyping(const QString& receiver);
+    
+    /// Send server message via Socket.IO (real-time, preferred over HTTP)
+    Q_INVOKABLE void sendServerMessageRT(const QString& serverId, const QString& channelId,
+                                         const QString& text, const QString& replyToId = QString());
+    
+    /// Send direct message via Socket.IO (real-time)
+    Q_INVOKABLE void sendDirectMessageRT(const QString& receiver, const QString& text,
+                                         const QString& replyToId = QString());
+    
+    /// Edit server message via Socket.IO
+    Q_INVOKABLE void editServerMessage(const QString& serverId, const QString& channelId,
+                                       const QString& messageId, const QString& text);
+    
+    /// Delete server message via Socket.IO
+    Q_INVOKABLE void deleteServerMessage(const QString& serverId, const QString& channelId,
+                                         const QString& messageId);
+    
+    /// Edit direct message via Socket.IO
+    Q_INVOKABLE void editDirectMessage(const QString& messageId, const QString& text);
+    
+    /// Delete direct message via Socket.IO
+    Q_INVOKABLE void deleteDirectMessage(const QString& messageId);
+    
+    /// Add reaction to a message via Socket.IO
+    Q_INVOKABLE void addReaction(const QString& messageId, const QString& messageType,
+                                 const QString& emoji, const QString& serverId = QString(),
+                                 const QString& channelId = QString());
+    
+    /// Remove reaction from a message via Socket.IO
+    Q_INVOKABLE void removeReaction(const QString& messageId, const QString& messageType,
+                                    const QString& emoji, const QString& serverId = QString(),
+                                    const QString& channelId = QString());
+
+    // ========================================================================
     // Configuration
     // ========================================================================
     
@@ -224,6 +299,64 @@ signals:
                              const QString& error);
     void messageSent(int requestId, const QVariantMap& message);
     void messageSendFailed(int requestId, const QString& error);
+    
+    // Socket.IO connection signals
+    void socketConnectedChanged();
+    void socketIdChanged();
+    void socketConnected();
+    void socketDisconnected();
+    void socketReconnecting(int attempt);
+    void socketError(const QString& message);
+    
+    // Real-time server message signals
+    void serverMessageReceived(const QVariantMap& message);
+    void serverMessageEdited(const QVariantMap& message);
+    void serverMessageDeleted(const QString& messageId, const QString& channelId);
+    
+    // Real-time direct message signals
+    void directMessageReceived(const QVariantMap& message);
+    void directMessageEdited(const QVariantMap& message);
+    void directMessageDeleted(const QString& messageId);
+    
+    // Real-time channel signals
+    void channelUpdated(const QString& serverId, const QVariantMap& channel);
+    void channelCreated(const QString& serverId, const QVariantMap& channel);
+    void channelDeleted(const QString& serverId, const QString& channelId);
+    void channelUnread(const QString& serverId, const QString& channelId,
+                       const QString& lastMessageAt, const QString& senderId);
+    
+    // Real-time DM signals
+    void dmUnread(const QString& peer, int count);
+    
+    // Real-time presence signals
+    void userOnline(const QString& username);
+    void userOffline(const QString& username);
+    void userStatusUpdate(const QString& username, const QVariantMap& status);
+    
+    // Real-time reaction signals
+    void reactionAdded(const QString& messageId, const QString& messageType,
+                       const QVariantList& reactions);
+    void reactionRemoved(const QString& messageId, const QString& messageType,
+                         const QVariantList& reactions);
+    
+    // Real-time typing signals
+    void userTyping(const QString& serverId, const QString& channelId,
+                    const QString& username);
+    void dmTyping(const QString& username);
+    
+    // Real-time server membership signals
+    void serverMemberJoined(const QString& serverId, const QString& userId);
+    void serverMemberLeft(const QString& serverId, const QString& userId);
+    
+    // Real-time friend signals
+    void friendAdded(const QVariantMap& friendData);
+    void friendRemoved(const QString& username, const QString& userId);
+    void incomingRequestAdded(const QVariantMap& request);
+    void incomingRequestRemoved(const QString& from, const QString& fromId);
+    
+    // Real-time notification signals
+    void pingReceived(const QVariantMap& ping);
+    void presenceState(const QVariantMap& presence);
 
 private slots:
     // Auth client handlers
@@ -244,6 +377,7 @@ private:
     NetworkClient* m_networkClient;
     AuthClient* m_authClient;
     ApiClient* m_apiClient;
+    SocketClient* m_socketClient;
 
     // State tracking for network error handling
     bool m_loginInProgress = false;

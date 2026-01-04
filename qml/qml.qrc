@@ -22,5 +22,6 @@
     <file>components/ChannelListView.qml</file>
     <file>components/MessageView.qml</file>
     <file>components/DMListView.qml</file>
+    <file>components/UserProfileSheet.qml</file>
   </qresource>
 </RCC>

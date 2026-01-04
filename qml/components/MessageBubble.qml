@@ -75,6 +75,12 @@ Item {
                     font.bold: true
                     fontSize: "small"
                     color: isOwn ? LomiriColors.blue : Theme.palette.normal.baseText
+                    
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: avatarClicked(senderId)
+                    }
                 }
                 
                 Label {
