@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-04 21:53+0000\n"
+"POT-Creation-Date: 2026-01-04 21:56+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -767,19 +767,19 @@ msgstr ""
 msgid "Enter a search term to find messages in this channel"
 msgstr ""
 
-#: ../qml/components/UserPanel.qml:54
+#: ../qml/components/UserPanel.qml:53
 msgid "Online"
 msgstr ""
 
-#: ../qml/components/UserPanel.qml:55
+#: ../qml/components/UserPanel.qml:54
 msgid "Idle"
 msgstr ""
 
-#: ../qml/components/UserPanel.qml:56
+#: ../qml/components/UserPanel.qml:55
 msgid "Do Not Disturb"
 msgstr ""
 
-#: ../qml/components/UserPanel.qml:57
+#: ../qml/components/UserPanel.qml:56
 msgid "Offline"
 msgstr ""
 

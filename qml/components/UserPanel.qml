@@ -12,7 +12,6 @@ Rectangle {
     property string userName: ""
     property string userAvatar: ""
     property string userStatus: "online"
-    property alias actions: actionsRow.children
     
     signal settingsClicked()
     
@@ -39,7 +38,7 @@ Rectangle {
         // User info
         Column {
             anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - avatarItem.width - actionsRow.width - units.gu(2)
+            width: parent.width - avatarItem.width - units.gu(2)
             spacing: units.gu(0.2)
             
             Label {
@@ -59,30 +58,6 @@ Rectangle {
                 color: Theme.palette.normal.backgroundSecondaryText
                 elide: Text.ElideRight
                 width: parent.width
-            }
-        }
-        
-        // Action buttons container
-        Row {
-            id: actionsRow
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: units.gu(0.5)
-            
-            // Default settings button if no custom actions provided
-            AbstractButton {
-                width: units.gu(3.5)
-                height: units.gu(3.5)
-                visible: actionsRow.children.length <= 1  // Show only if no other actions
-                
-                Icon {
-                    anchors.centerIn: parent
-                    width: units.gu(2)
-                    height: units.gu(2)
-                    name: "settings"
-                    color: Theme.palette.normal.backgroundSecondaryText
-                }
-                
-                onClicked: settingsClicked()
             }
         }
     }
