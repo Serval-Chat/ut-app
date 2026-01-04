@@ -226,6 +226,16 @@ Item {
             return placeholder
         })
         
+        // Extract at-everyone mentions, and format them like user mentions
+        // Format: <everyone>
+        html = html.replace(/<everyone>/g, function(match) {
+            var placeholder = "___USERMENTION_" + userMentionPlaceholders.length + "___"
+            var displayName = "@everyone"
+            // At-everyone does not need to be clickable, but does need to look identical to other user mentions
+            userMentionPlaceholders.push('<span style="color: ' + linkColor + '; font-weight: bold; background-color: rgba(88, 101, 242, 0.2); padding: 0 2px; border-radius: 3px;">' + displayName + '</span>')
+            return placeholder
+        })
+
         // Extract URLs before escaping to preserve them
         var urlPlaceholders = []
         html = html.replace(/(https?:\/\/[^\s<>"]+)/g, function(match, url) {
