@@ -410,9 +410,7 @@ Page {
                 SerchatAPI.lastChannelId = ""
                 SerchatAPI.lastDMRecipientId = ""
                 
-                if (isSmallScreen) {
-                    mobileViewMode = "channels"
-                }
+                mobileViewMode = "channels"
             }
             
             onHomeClicked: {
@@ -431,11 +429,7 @@ Page {
                 SerchatAPI.lastServerId = ""
                 SerchatAPI.lastChannelId = ""
                 SerchatAPI.lastDMRecipientId = ""
-                
-                // On small screens, go to channels view to show DM list
-                if (isSmallScreen) {
-                    mobileViewMode = "channels"
-                }
+                mobileViewMode = "channels"
                 
                 // Load DM conversations (friends list)
                 loadDMConversations()
@@ -487,9 +481,7 @@ Page {
                 SerchatAPI.lastServerId = ""
                 SerchatAPI.lastChannelId = ""
                 
-                if (isSmallScreen) {
-                    mobileViewMode = "messages"
-                }
+                mobileViewMode = "messages"
             }
             
             onBackClicked: {
@@ -544,10 +536,7 @@ Page {
                 
                 // Save state
                 SerchatAPI.lastChannelId = channelId
-                
-                if (isSmallScreen) {
-                    mobileViewMode = "messages"
-                }
+                mobileViewMode = "messages"
             }
             
             onBackClicked: {
@@ -701,10 +690,8 @@ Page {
                             currentChannelType = ch.type
                             loadMessages(currentServerId, currentChannelId)
                             
-                            // Set mobile view mode for small screens
-                            if (isSmallScreen) {
-                                mobileViewMode = "messages"
-                            }
+                            // Set mobile view mode for convergence - always show messages when channel restored
+                            mobileViewMode = "messages"
                             
                             return // Exit early, don't do auto-selection
                         }
@@ -902,10 +889,8 @@ Page {
                         currentDMRecipientAvatar = friend.profilePicture ? SerchatAPI.apiBaseUrl + friend.profilePicture : ""
                         loadDMMessages(friendId)
                         
-                        // Set mobile view mode for small screens
-                        if (isSmallScreen) {
-                            mobileViewMode = "messages"
-                        }
+                        // Set mobile view mode for convergence - always show messages when DM restored
+                        mobileViewMode = "messages"
                         
                         return // Exit early
                     }
