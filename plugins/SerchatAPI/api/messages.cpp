@@ -77,7 +77,6 @@ int ApiClient::sendMessage(const QString& serverId, const QString& channelId,
     // Build JSON body
     QJsonObject body;
     body["content"] = text.trimmed();
-    body["text"] = text.trimmed();  // API accepts both
     if (!replyToId.isEmpty()) {
         body["replyToId"] = replyToId;
     }
@@ -175,7 +174,6 @@ int ApiClient::sendDMMessage(const QString& userId, const QString& text, const Q
     // Build JSON body
     QJsonObject body;
     body["content"] = text.trimmed();
-    body["text"] = text.trimmed();  // API accepts both
     if (!replyToId.isEmpty()) {
         body["replyToId"] = replyToId;
     }

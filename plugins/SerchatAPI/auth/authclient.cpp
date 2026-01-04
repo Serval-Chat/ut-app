@@ -24,13 +24,8 @@ void AuthClient::setAuthToken(const QString& token) {
 }
 
 void AuthClient::clearAuthToken() {
+    // setAuthToken already handles updating NetworkClient
     setAuthToken(QString());
-
-    if (m_networkClient) {
-        m_networkClient->setAuthToken(QString());
-    } else {
-        qWarning() << "[AuthClient] Warning: NetworkClient is null, cannot clear auth token";
-    }
 }
 
 void AuthClient::cancelPendingRequests() {
