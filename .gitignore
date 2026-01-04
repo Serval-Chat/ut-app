@@ -3,3 +3,5 @@
 
 # Development documentation files I write to make clankering easier
 *.dev.md
+
+venv
