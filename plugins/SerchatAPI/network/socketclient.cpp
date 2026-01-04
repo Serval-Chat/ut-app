@@ -687,6 +687,85 @@ void SocketClient::handleEvent(const QString& nsp, const QJsonArray& args)
         qWarning() << "[SocketClient] User banned:" << data;
         emit error("Account banned: " + data["reason"].toString());
     }
+    // Channel/Category permission events
+    else if (event == "channel_permissions_updated") {
+        emit channelPermissionsUpdated(data["serverId"].toString(),
+                                       data["channelId"].toString(),
+                                       data["permissions"].toMap());
+    }
+    else if (event == "category_permissions_updated") {
+        emit categoryPermissionsUpdated(data["serverId"].toString(),
+                                        data["categoryId"].toString(),
+                                        data["permissions"].toMap());
+    }
+    // Server events
+    else if (event == "server_updated") {
+        emit serverUpdated(data["serverId"].toString(),
+                          data["server"].toMap());
+    }
+    else if (event == "server_deleted") {
+        emit serverDeleted(data["serverId"].toString());
+    }
+    else if (event == "server_ownership_transferred") {
+        emit serverOwnershipTransferred(data["serverId"].toString(),
+                                        data["previousOwnerId"].toString(),
+                                        data["newOwnerId"].toString(),
+                                        data["newOwnerUsername"].toString());
+    }
+    // Role events
+    else if (event == "role_created") {
+        emit roleCreated(data["serverId"].toString(),
+                        data["role"].toMap());
+    }
+    else if (event == "role_updated") {
+        emit roleUpdated(data["serverId"].toString(),
+                        data["role"].toMap());
+    }
+    else if (event == "role_deleted") {
+        emit roleDeleted(data["serverId"].toString(),
+                        data["roleId"].toString());
+    }
+    else if (event == "roles_reordered") {
+        emit rolesReordered(data["serverId"].toString(),
+                           data["rolePositions"].toList());
+    }
+    // Member events (REST-triggered)
+    else if (event == "member_added") {
+        emit memberAdded(data["serverId"].toString(),
+                        data["userId"].toString());
+    }
+    else if (event == "member_removed") {
+        emit memberRemoved(data["serverId"].toString(),
+                          data["userId"].toString());
+    }
+    else if (event == "member_updated") {
+        emit memberUpdated(data["serverId"].toString(),
+                          data["userId"].toString(),
+                          data["member"].toMap());
+    }
+    // User profile events
+    else if (event == "user_updated") {
+        emit userUpdated(data["userId"].toString(), data);
+    }
+    else if (event == "user_banner_updated") {
+        emit userBannerUpdated(data["username"].toString(), data);
+    }
+    else if (event == "username_changed") {
+        emit usernameChanged(data["oldUsername"].toString(),
+                            data["newUsername"].toString(),
+                            data["userId"].toString());
+    }
+    // Admin events
+    else if (event == "warning") {
+        emit warningReceived(data);
+    }
+    else if (event == "account_deleted") {
+        emit accountDeleted(data["reason"].toString());
+    }
+    // Emoji events
+    else if (event == "emoji_updated") {
+        emit emojiUpdated(data["serverId"].toString());
+    }
     else {
         qDebug() << "[SocketClient] Unknown event:" << event << data;
     }

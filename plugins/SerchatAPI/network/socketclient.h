@@ -123,11 +123,32 @@ signals:
     void channelDeleted(const QString& serverId, const QString& channelId);
     void channelUnread(const QString& serverId, const QString& channelId, 
                        const QString& lastMessageAt, const QString& senderId);
+    void channelPermissionsUpdated(const QString& serverId, const QString& channelId,
+                                   const QVariantMap& permissions);
     
     // Category events
     void categoryCreated(const QString& serverId, const QVariantMap& category);
     void categoryUpdated(const QString& serverId, const QVariantMap& category);
     void categoryDeleted(const QString& serverId, const QString& categoryId);
+    void categoryPermissionsUpdated(const QString& serverId, const QString& categoryId,
+                                    const QVariantMap& permissions);
+    
+    // Server events
+    void serverUpdated(const QString& serverId, const QVariantMap& server);
+    void serverDeleted(const QString& serverId);
+    void serverOwnershipTransferred(const QString& serverId, const QString& previousOwnerId,
+                                    const QString& newOwnerId, const QString& newOwnerUsername);
+    
+    // Role events
+    void roleCreated(const QString& serverId, const QVariantMap& role);
+    void roleUpdated(const QString& serverId, const QVariantMap& role);
+    void roleDeleted(const QString& serverId, const QString& roleId);
+    void rolesReordered(const QString& serverId, const QVariantList& rolePositions);
+    
+    // Server member events (REST-triggered events)
+    void memberAdded(const QString& serverId, const QString& userId);
+    void memberRemoved(const QString& serverId, const QString& userId);
+    void memberUpdated(const QString& serverId, const QString& userId, const QVariantMap& member);
     
     // DM events
     void dmUnread(const QString& peer, int count);
@@ -163,6 +184,19 @@ signals:
     
     // Presence state (initial connection)
     void presenceState(const QVariantMap& presence);
+    
+    // User profile events
+    void userUpdated(const QString& userId, const QVariantMap& updates);
+    void userBannerUpdated(const QString& username, const QVariantMap& updates);
+    void usernameChanged(const QString& oldUsername, const QString& newUsername,
+                         const QString& userId);
+    
+    // Admin events
+    void warningReceived(const QVariantMap& warning);
+    void accountDeleted(const QString& reason);
+    
+    // Emoji events
+    void emojiUpdated(const QString& serverId);
 
 private slots:
     void onWebSocketConnected();
