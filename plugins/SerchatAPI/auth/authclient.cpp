@@ -14,14 +14,23 @@ AuthClient::~AuthClient() {
 
 void AuthClient::setAuthToken(const QString& token) {
     m_authToken = token;
+
     // Also update NetworkClient so authenticated requests include the token
     if (m_networkClient) {
         m_networkClient->setAuthToken(token);
+    } else {
+        qWarning() << "[AuthClient] Warning: NetworkClient is null, cannot set auth token";
     }
 }
 
 void AuthClient::clearAuthToken() {
     setAuthToken(QString());
+
+    if (m_networkClient) {
+        m_networkClient->setAuthToken(QString());
+    } else {
+        qWarning() << "[AuthClient] Warning: NetworkClient is null, cannot clear auth token";
+    }
 }
 
 void AuthClient::cancelPendingRequests() {
@@ -120,7 +129,7 @@ void AuthClient::onLoginReplyFinished() {
         return;
     }
 
-    m_authToken = result.data["token"].toString();
+    setAuthToken(result.data["token"].toString());
     emit loginSuccessful(result.data);
 }
 
