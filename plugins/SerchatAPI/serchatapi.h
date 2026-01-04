@@ -6,6 +6,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 #include <QMap>
+#include <QSet>
 #include <QSettings>
 
 class NetworkClient;
@@ -48,6 +49,7 @@ class SerchatAPI : public QObject {
     Q_PROPERTY(GenericListModel* channelsModel READ channelsModel CONSTANT)
     Q_PROPERTY(GenericListModel* membersModel READ membersModel CONSTANT)
     Q_PROPERTY(GenericListModel* friendsModel READ friendsModel CONSTANT)
+    Q_PROPERTY(GenericListModel* rolesModel READ rolesModel CONSTANT)
     Q_PROPERTY(ChannelListModel* channelListModel READ channelListModel CONSTANT)
 
 public:
@@ -176,6 +178,35 @@ public:
      * @return Request ID for matching with serverMembersFetched signal
      */
     Q_INVOKABLE int getServerMembers(const QString& serverId, bool useCache = true);
+    
+    // ========================================================================
+    // Server Roles API
+    // ========================================================================
+    
+    /**
+     * @brief Fetch all roles for a server.
+     * @param serverId The server ID
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with serverRolesFetched signal
+     */
+    Q_INVOKABLE int getServerRoles(const QString& serverId, bool useCache = true);
+    
+    // ========================================================================
+    // Presence Tracking
+    // ========================================================================
+    
+    /**
+     * @brief Check if a user is currently online.
+     * @param username The username to check
+     * @return true if user is online
+     */
+    Q_INVOKABLE bool isUserOnline(const QString& username) const;
+    
+    /**
+     * @brief Get list of all online usernames.
+     * @return List of usernames currently online
+     */
+    Q_INVOKABLE QStringList getOnlineUsers() const;
     
     // ========================================================================
     // Server Emojis API
@@ -420,6 +451,13 @@ signals:
     void serverMembersFetched(int requestId, const QString& serverId, const QVariantList& members);
     void serverMembersFetchFailed(int requestId, const QString& serverId, const QString& error);
     
+    // Server roles signals
+    void serverRolesFetched(int requestId, const QString& serverId, const QVariantList& roles);
+    void serverRolesFetchFailed(int requestId, const QString& serverId, const QString& error);
+    
+    // Presence signals
+    void onlineUsersChanged();
+    
     // Server emojis signals
     void serverEmojisFetched(int requestId, const QString& serverId, const QVariantList& emojis);
     void serverEmojisFetchFailed(int requestId, const QString& serverId, const QString& error);
@@ -587,6 +625,11 @@ public:
     GenericListModel* friendsModel() const { return m_friendsModel; }
     
     /**
+     * @brief Get the roles model for the current server.
+     */
+    GenericListModel* rolesModel() const { return m_rolesModel; }
+    
+    /**
      * @brief Get the channel list model with category grouping.
      * This model provides a hierarchical view of channels organized by category.
      */
@@ -619,7 +662,11 @@ private:
     GenericListModel* m_channelsModel;
     GenericListModel* m_membersModel;
     GenericListModel* m_friendsModel;
+    GenericListModel* m_rolesModel;
     ChannelListModel* m_channelListModel;
+    
+    // Presence tracking
+    QSet<QString> m_onlineUsers;
 
     // State tracking for network error handling
     bool m_loginInProgress = false;
@@ -631,6 +678,15 @@ private:
     void clearAuthState();
     // Restore auth state from QSettings on startup
     void restoreAuthState();
+    
+    // Presence event handlers
+    void handlePresenceState(const QVariantMap& presence);
+    void handleUserOnline(const QString& username);
+    void handleUserOffline(const QString& username);
+    
+    // Model population handlers
+    void handleServerMembersFetched(int requestId, const QString& serverId, const QVariantList& members);
+    void handleServerRolesFetched(int requestId, const QString& serverId, const QVariantList& roles);
 };
 
 #endif

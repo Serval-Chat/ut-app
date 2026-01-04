@@ -30,6 +30,7 @@ SerchatAPI::SerchatAPI() {
     m_channelsModel = new GenericListModel("_id", this);
     m_membersModel = new GenericListModel("_id", this);
     m_friendsModel = new GenericListModel("_id", this);
+    m_rolesModel = new GenericListModel("_id", this);
     m_channelListModel = new ChannelListModel(this);
 
     // Configure base URLs
@@ -89,9 +90,15 @@ SerchatAPI::SerchatAPI() {
     
     // Connect server members signals
     connect(m_apiClient, &ApiClient::serverMembersFetched,
-            this, &SerchatAPI::serverMembersFetched);
+            this, &SerchatAPI::handleServerMembersFetched);
     connect(m_apiClient, &ApiClient::serverMembersFetchFailed,
             this, &SerchatAPI::serverMembersFetchFailed);
+    
+    // Connect server roles signals
+    connect(m_apiClient, &ApiClient::serverRolesFetched,
+            this, &SerchatAPI::handleServerRolesFetched);
+    connect(m_apiClient, &ApiClient::serverRolesFetchFailed,
+            this, &SerchatAPI::serverRolesFetchFailed);
     
     // Connect server emojis signals
     connect(m_apiClient, &ApiClient::serverEmojisFetched,
@@ -210,6 +217,14 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::userOffline);
     connect(m_socketClient, &SocketClient::userStatusUpdate,
             this, &SerchatAPI::userStatusUpdate);
+    
+    // Internal presence tracking handlers (update m_onlineUsers set)
+    connect(m_socketClient, &SocketClient::userOnline,
+            this, &SerchatAPI::handleUserOnline);
+    connect(m_socketClient, &SocketClient::userOffline,
+            this, &SerchatAPI::handleUserOffline);
+    connect(m_socketClient, &SocketClient::presenceState,
+            this, &SerchatAPI::handlePresenceState);
     
     // Real-time reaction events
     connect(m_socketClient, &SocketClient::reactionAdded,
@@ -803,4 +818,75 @@ void SerchatAPI::removeReaction(const QString& messageId, const QString& message
         return;
     }
     m_socketClient->removeReaction(messageId, messageType, emoji, serverId, channelId);
+}
+
+// ============================================================================
+// Server Roles API
+// ============================================================================
+
+int SerchatAPI::getServerRoles(const QString& serverId, bool useCache) {
+    return m_apiClient->getServerRoles(serverId, useCache);
+}
+
+// ============================================================================
+// Presence Tracking
+// ============================================================================
+
+bool SerchatAPI::isUserOnline(const QString& username) const {
+    return m_onlineUsers.contains(username);
+}
+
+QStringList SerchatAPI::getOnlineUsers() const {
+    return m_onlineUsers.values();
+}
+
+void SerchatAPI::handlePresenceState(const QVariantMap& presence) {
+    // presence_state event provides initial list of online users
+    // Format: { "online": ["username1", "username2", ...] }
+    m_onlineUsers.clear();
+    
+    QVariantList users = presence.value("online").toList();
+    for (const QVariant& user : users) {
+        m_onlineUsers.insert(user.toString());
+    }
+    
+    qDebug() << "[SerchatAPI] Presence state received:" << m_onlineUsers.size() << "users online";
+    emit onlineUsersChanged();
+}
+
+void SerchatAPI::handleUserOnline(const QString& username) {
+    if (!m_onlineUsers.contains(username)) {
+        m_onlineUsers.insert(username);
+        qDebug() << "[SerchatAPI] User came online:" << username;
+        emit onlineUsersChanged();
+    }
+}
+
+void SerchatAPI::handleUserOffline(const QString& username) {
+    if (m_onlineUsers.remove(username)) {
+        qDebug() << "[SerchatAPI] User went offline:" << username;
+        emit onlineUsersChanged();
+    }
+}
+
+// ============================================================================
+// Model Population Handlers
+// ============================================================================
+
+void SerchatAPI::handleServerMembersFetched(int requestId, const QString& serverId, const QVariantList& members) {
+    // Populate the members model with the fetched data
+    m_membersModel->setItems(members);
+    qDebug() << "[SerchatAPI] Members model populated with" << members.size() << "members for server:" << serverId;
+    
+    // Forward the signal to QML for any additional handling
+    emit serverMembersFetched(requestId, serverId, members);
+}
+
+void SerchatAPI::handleServerRolesFetched(int requestId, const QString& serverId, const QVariantList& roles) {
+    // Populate the roles model with the fetched data
+    m_rolesModel->setItems(roles);
+    qDebug() << "[SerchatAPI] Roles model populated with" << roles.size() << "roles for server:" << serverId;
+    
+    // Forward the signal to QML for any additional handling
+    emit serverRolesFetched(requestId, serverId, roles);
 }

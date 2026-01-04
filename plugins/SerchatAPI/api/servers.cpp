@@ -121,6 +121,30 @@ int ApiClient::getServerMembers(const QString& serverId, bool useCache) {
 }
 
 // ============================================================================
+// Server Roles API
+// ============================================================================
+
+int ApiClient::getServerRoles(const QString& serverId, bool useCache) {
+    if (serverId.isEmpty()) {
+        int requestId = generateRequestId();
+        QMetaObject::invokeMethod(this, [this, requestId]() {
+            PendingRequest req;
+            req.type = RequestType::ServerRoles;
+            emitFailure(requestId, req, "Server ID is required");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    QString cacheKey = QStringLiteral("roles:%1").arg(serverId);
+    QString endpoint = QStringLiteral("/api/v1/servers/%1/roles").arg(serverId);
+    
+    QVariantMap context;
+    context["serverId"] = serverId;
+    
+    return startGetRequest(RequestType::ServerRoles, endpoint, cacheKey, useCache, context);
+}
+
+// ============================================================================
 // Server Emojis API
 // ============================================================================
 

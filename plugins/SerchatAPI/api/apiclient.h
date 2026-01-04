@@ -33,6 +33,7 @@ enum class RequestType {
     Servers,
     ServerDetails,
     ServerMembers,
+    ServerRoles,
     ServerEmojis,
     AllEmojis,
     SingleEmoji,
@@ -149,6 +150,18 @@ public:
      * @return Request ID for matching with serverMembersFetched signal
      */
     int getServerMembers(const QString& serverId, bool useCache = true);
+    
+    // ========================================================================
+    // Server Roles API (implemented in servers.cpp)
+    // ========================================================================
+    
+    /**
+     * @brief Fetch all roles for a specific server.
+     * @param serverId The server ID to fetch roles for
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with serverRolesFetched signal
+     */
+    int getServerRoles(const QString& serverId, bool useCache = true);
     
     // ========================================================================
     // Server Emojis API (implemented in servers.cpp)
@@ -313,6 +326,12 @@ signals:
     // ========================================================================
     void serverMembersFetched(int requestId, const QString& serverId, const QVariantList& members);
     void serverMembersFetchFailed(int requestId, const QString& serverId, const QString& error);
+    
+    // ========================================================================
+    // Server Roles Signals
+    // ========================================================================
+    void serverRolesFetched(int requestId, const QString& serverId, const QVariantList& roles);
+    void serverRolesFetchFailed(int requestId, const QString& serverId, const QString& error);
     
     // ========================================================================
     // Server Emojis Signals

@@ -256,6 +256,11 @@ void ApiClient::emitSuccess(int requestId, const PendingRequest& req, const QVar
                                       data.value("items").toList());
             break;
             
+        case RequestType::ServerRoles:
+            emit serverRolesFetched(requestId, req.context.value("serverId").toString(),
+                                    data.value("items").toList());
+            break;
+            
         case RequestType::ServerEmojis:
             emit serverEmojisFetched(requestId, req.context.value("serverId").toString(),
                                      data.value("items").toList());
@@ -334,6 +339,10 @@ void ApiClient::emitFailure(int requestId, const PendingRequest& req, const QStr
             
         case RequestType::ServerMembers:
             emit serverMembersFetchFailed(requestId, req.context.value("serverId").toString(), error);
+            break;
+            
+        case RequestType::ServerRoles:
+            emit serverRolesFetchFailed(requestId, req.context.value("serverId").toString(), error);
             break;
             
         case RequestType::ServerEmojis:
