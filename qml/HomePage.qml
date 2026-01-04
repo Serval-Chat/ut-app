@@ -66,9 +66,8 @@ Page {
     // hasMoreMessages is now managed by SerchatAPI.messageModel.hasMoreMessages
     
     // Responsive layout threshold
-    readonly property bool isWideScreen: width >= units.gu(200)
-    readonly property bool isMediumScreen: width >= units.gu(150) && !isWideScreen
-    readonly property bool isSmallScreen: !isWideScreen && !isMediumScreen
+    readonly property bool isWideScreen: width >= units.gu(150)
+    readonly property bool isSmallScreen: !isWideScreen
     
     // Sidebar width calculations for mobile overlay mode
     readonly property real serverListWidth: units.gu(7)
@@ -387,7 +386,7 @@ Page {
             height: parent.height
             width: serverListWidth
             // Always visible on wide screens, or on small screens when sidebar is showing
-            visible: isWideScreen || isMediumScreen || (isSmallScreen && mobileViewMode !== "messages")
+            visible: isWideScreen || (isSmallScreen && mobileViewMode !== "messages")
             opacity: visible ? 1 : 0
             
             Behavior on opacity {
