@@ -486,6 +486,12 @@ signals:
     void categoryUpdated(const QString& serverId, const QVariantMap& category);
     void categoryDeleted(const QString& serverId, const QString& categoryId);
     
+    // Real-time permission signals
+    void channelPermissionsUpdated(const QString& serverId, const QString& channelId,
+                                   const QVariantMap& permissions);
+    void categoryPermissionsUpdated(const QString& serverId, const QString& categoryId,
+                                    const QVariantMap& permissions);
+    
     // Real-time DM signals
     void dmUnread(const QString& peer, int count);
     
@@ -518,6 +524,36 @@ signals:
     // Real-time notification signals
     void pingReceived(const QVariantMap& ping);
     void presenceState(const QVariantMap& presence);
+    
+    // Real-time server management signals
+    void serverUpdated(const QString& serverId, const QVariantMap& server);
+    void serverDeleted(const QString& serverId);
+    void serverOwnershipTransferred(const QString& serverId, const QString& previousOwnerId,
+                                    const QString& newOwnerId, const QString& newOwnerUsername);
+    
+    // Real-time role signals
+    void roleCreated(const QString& serverId, const QVariantMap& role);
+    void roleUpdated(const QString& serverId, const QVariantMap& role);
+    void roleDeleted(const QString& serverId, const QString& roleId);
+    void rolesReordered(const QString& serverId, const QVariantList& rolePositions);
+    
+    // Real-time member update signals (from REST operations)
+    void memberAdded(const QString& serverId, const QString& userId);
+    void memberRemoved(const QString& serverId, const QString& userId);
+    void memberUpdated(const QString& serverId, const QString& userId, const QVariantMap& member);
+    
+    // Real-time user profile signals
+    void userUpdated(const QString& userId, const QVariantMap& updates);
+    void userBannerUpdated(const QString& username, const QVariantMap& updates);
+    void usernameChanged(const QString& oldUsername, const QString& newUsername,
+                         const QString& userId);
+    
+    // Real-time admin signals
+    void warningReceived(const QVariantMap& warning);
+    void accountDeleted(const QString& reason);
+    
+    // Real-time emoji signals
+    void emojiUpdated(const QString& serverId);
 
 public:
     // ========================================================================

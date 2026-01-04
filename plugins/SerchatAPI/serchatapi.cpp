@@ -244,6 +244,56 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::pingReceived);
     connect(m_socketClient, &SocketClient::presenceState,
             this, &SerchatAPI::presenceState);
+    
+    // Real-time permission events
+    connect(m_socketClient, &SocketClient::channelPermissionsUpdated,
+            this, &SerchatAPI::channelPermissionsUpdated);
+    connect(m_socketClient, &SocketClient::categoryPermissionsUpdated,
+            this, &SerchatAPI::categoryPermissionsUpdated);
+    
+    // Real-time server management events
+    connect(m_socketClient, &SocketClient::serverUpdated,
+            this, &SerchatAPI::serverUpdated);
+    connect(m_socketClient, &SocketClient::serverDeleted,
+            this, &SerchatAPI::serverDeleted);
+    connect(m_socketClient, &SocketClient::serverOwnershipTransferred,
+            this, &SerchatAPI::serverOwnershipTransferred);
+    
+    // Real-time role events
+    connect(m_socketClient, &SocketClient::roleCreated,
+            this, &SerchatAPI::roleCreated);
+    connect(m_socketClient, &SocketClient::roleUpdated,
+            this, &SerchatAPI::roleUpdated);
+    connect(m_socketClient, &SocketClient::roleDeleted,
+            this, &SerchatAPI::roleDeleted);
+    connect(m_socketClient, &SocketClient::rolesReordered,
+            this, &SerchatAPI::rolesReordered);
+    
+    // Real-time member update events
+    connect(m_socketClient, &SocketClient::memberAdded,
+            this, &SerchatAPI::memberAdded);
+    connect(m_socketClient, &SocketClient::memberRemoved,
+            this, &SerchatAPI::memberRemoved);
+    connect(m_socketClient, &SocketClient::memberUpdated,
+            this, &SerchatAPI::memberUpdated);
+    
+    // Real-time user profile events
+    connect(m_socketClient, &SocketClient::userUpdated,
+            this, &SerchatAPI::userUpdated);
+    connect(m_socketClient, &SocketClient::userBannerUpdated,
+            this, &SerchatAPI::userBannerUpdated);
+    connect(m_socketClient, &SocketClient::usernameChanged,
+            this, &SerchatAPI::usernameChanged);
+    
+    // Real-time admin events
+    connect(m_socketClient, &SocketClient::warningReceived,
+            this, &SerchatAPI::warningReceived);
+    connect(m_socketClient, &SocketClient::accountDeleted,
+            this, &SerchatAPI::accountDeleted);
+    
+    // Real-time emoji events
+    connect(m_socketClient, &SocketClient::emojiUpdated,
+            this, &SerchatAPI::emojiUpdated);
 
     // Restore any existing auth state
     restoreAuthState();

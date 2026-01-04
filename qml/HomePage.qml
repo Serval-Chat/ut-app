@@ -1248,6 +1248,144 @@ Page {
             console.log("[HomePage] Friend request removed from:", from)
             // TODO: Update friend requests list if visible
         }
+        
+        // Server management events
+        onServerUpdated: {
+            console.log("[HomePage] Server updated:", serverId)
+            SerchatAPI.serversModel.updateItem(serverId, server)
+            // Update local state if it's the current server
+            if (serverId === currentServerId && server.name) {
+                currentServerName = server.name
+            }
+        }
+        
+        onServerDeleted: {
+            console.log("[HomePage] Server deleted:", serverId)
+            SerchatAPI.serversModel.removeItem(serverId)
+            // If we're viewing the deleted server, go back to server list
+            if (serverId === currentServerId) {
+                currentServerId = ""
+                currentServerName = ""
+                currentChannelId = ""
+                currentChannelName = ""
+                SerchatAPI.channelListModel.clear()
+                SerchatAPI.messageModel.clear()
+            }
+        }
+        
+        onServerOwnershipTransferred: {
+            console.log("[HomePage] Server ownership transferred:", serverId, 
+                        "from", previousOwnerId, "to", newOwnerId)
+            // Update the server's owner in the model
+            SerchatAPI.serversModel.updateItemProperty(serverId, "ownerId", newOwnerId)
+        }
+        
+        // Role events
+        onRoleCreated: {
+            console.log("[HomePage] Role created in server:", serverId, role.name)
+            // TODO: Update roles model if we have one
+        }
+        
+        onRoleUpdated: {
+            console.log("[HomePage] Role updated in server:", serverId, role.name)
+            // TODO: Update roles model if we have one
+            // May need to update member list colors if role colors changed
+        }
+        
+        onRoleDeleted: {
+            console.log("[HomePage] Role deleted in server:", serverId, roleId)
+            // TODO: Update roles model if we have one
+        }
+        
+        onRolesReordered: {
+            console.log("[HomePage] Roles reordered in server:", serverId)
+            // TODO: Update roles model order if we have one
+        }
+        
+        // Member events (from REST operations)
+        onMemberAdded: {
+            console.log("[HomePage] Member added to server:", serverId, userId)
+            if (serverId === currentServerId) {
+                // Refresh members list to include the new member
+                SerchatAPI.getServerMembers(serverId, false)
+            }
+        }
+        
+        onMemberRemoved: {
+            console.log("[HomePage] Member removed from server:", serverId, userId)
+            if (serverId === currentServerId) {
+                SerchatAPI.membersModel.removeItem(userId)
+            }
+        }
+        
+        onMemberUpdated: {
+            console.log("[HomePage] Member updated in server:", serverId, userId)
+            if (serverId === currentServerId) {
+                SerchatAPI.membersModel.updateItem(userId, member)
+            }
+        }
+        
+        // Permission events
+        onChannelPermissionsUpdated: {
+            console.log("[HomePage] Channel permissions updated:", serverId, channelId)
+            if (serverId === currentServerId) {
+                // Update channel in the model with new permissions
+                var channel = SerchatAPI.channelListModel.getChannel(channelId)
+                if (channel) {
+                    channel.permissions = permissions
+                    SerchatAPI.channelListModel.updateChannel(channelId, channel)
+                }
+            }
+        }
+        
+        onCategoryPermissionsUpdated: {
+            console.log("[HomePage] Category permissions updated:", serverId, categoryId)
+            if (serverId === currentServerId) {
+                // Update category in the model with new permissions
+                var category = SerchatAPI.channelListModel.getCategory(categoryId)
+                if (category) {
+                    category.permissions = permissions
+                    SerchatAPI.channelListModel.updateCategory(categoryId, category)
+                }
+            }
+        }
+        
+        // User profile events
+        onUserUpdated: function(userId, updates) {
+            console.log("[HomePage] User updated:", userId)
+            // TODO: Update user info in member list or elsewhere if visible
+        }
+        
+        onUserBannerUpdated: {
+            console.log("[HomePage] User banner updated:", username)
+            // TODO: Update user banner if profile is visible
+        }
+        
+        onUsernameChanged: {
+            console.log("[HomePage] Username changed:", oldUsername, "->", newUsername)
+            // TODO: Update username in all relevant places
+        }
+        
+        // Admin events
+        onWarningReceived: {
+            console.log("[HomePage] Warning received:", warning.reason)
+            // TODO: Show warning dialog to user
+        }
+        
+        onAccountDeleted: {
+            console.log("[HomePage] Account deleted:", reason)
+            // Force logout
+            SerchatAPI.logout()
+        }
+        
+        // Emoji events
+        onEmojiUpdated: {
+            console.log("[HomePage] Emojis updated for server:", serverId)
+            if (serverId === currentServerId) {
+                // Refresh server emojis
+                SerchatAPI.getServerEmojis(serverId, false)
+            }
+        }
     }
     
     // ========================================================================
