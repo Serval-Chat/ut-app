@@ -1,5 +1,6 @@
 #include <QDebug>
 #include <QDateTime>
+#include <QStandardPaths>
 
 #include "serchatapi.h"
 #include "network/networkclient.h"
@@ -9,7 +10,9 @@
 
 SerchatAPI::SerchatAPI() {
     // Initialize persistent storage
-    m_settings = new QSettings("alexanderrichards", "serchat", this);
+    QString settingsPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/settings.ini";
+    qDebug() << "[SerchatAPI] Using settings file:" << settingsPath;
+    m_settings = new QSettings(settingsPath, QSettings::IniFormat, this);
 
     // Initialize network and API clients
     m_networkClient = new NetworkClient(this);
