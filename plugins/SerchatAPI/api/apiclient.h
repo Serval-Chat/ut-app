@@ -35,7 +35,10 @@ enum class RequestType {
     Channels,
     ChannelDetails,
     Messages,
-    SendMessage
+    SendMessage,
+    Friends,
+    JoinServer,
+    CreateServer
 };
 
 /**
@@ -147,6 +150,35 @@ public:
                     const QString& text, const QString& replyToId = QString());
 
     // ========================================================================
+    // Friends API (implemented in servers.cpp)
+    // ========================================================================
+    
+    /**
+     * @brief Get the list of friends (for DM conversations).
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with friendsFetched signal
+     */
+    int getFriends(bool useCache = true);
+    
+    // ========================================================================
+    // Server Management API (implemented in servers.cpp)
+    // ========================================================================
+    
+    /**
+     * @brief Join a server via invite code.
+     * @param inviteCode The invite code (without URL prefix)
+     * @return Request ID for matching with serverJoined signal
+     */
+    int joinServerByInvite(const QString& inviteCode);
+    
+    /**
+     * @brief Create a new server.
+     * @param name The server name
+     * @return Request ID for matching with serverCreated signal
+     */
+    int createServer(const QString& name);
+
+    // ========================================================================
     // Cache Management (implemented in cache.cpp)
     // ========================================================================
     
@@ -202,6 +234,20 @@ signals:
                              const QString& error);
     void messageSent(int requestId, const QVariantMap& message);
     void messageSendFailed(int requestId, const QString& error);
+    
+    // ========================================================================
+    // Friends Signals
+    // ========================================================================
+    void friendsFetched(int requestId, const QVariantList& friends);
+    void friendsFetchFailed(int requestId, const QString& error);
+    
+    // ========================================================================
+    // Server Management Signals
+    // ========================================================================
+    void serverJoined(int requestId, const QString& serverId);
+    void serverJoinFailed(int requestId, const QString& error);
+    void serverCreated(int requestId, const QVariantMap& server);
+    void serverCreateFailed(int requestId, const QString& error);
 
 protected:
     // ========================================================================

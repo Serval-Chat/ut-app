@@ -49,8 +49,7 @@ Item {
             height: units.gu(2.2)
             anchors.verticalCenter: parent.verticalCenter
             name: getChannelIcon()
-            color: selected || unreadCount > 0 ? Theme.palette.normal.foreground : 
-                   Theme.palette.normal.backgroundSecondaryText
+            color: Theme.palette.normal.backgroundSecondaryText
         }
         
         // Channel name
@@ -59,8 +58,7 @@ Item {
             text: channelName
             fontSize: "small"
             anchors.verticalCenter: parent.verticalCenter
-            color: selected || unreadCount > 0 ? Theme.palette.normal.foreground : 
-                   Theme.palette.normal.backgroundSecondaryText
+            color: Theme.palette.normal.backgroundSecondaryText
             font.bold: unreadCount > 0
             elide: Text.ElideRight
             width: parent.width - channelTypeIcon.width - badgeContainer.width - units.gu(3)

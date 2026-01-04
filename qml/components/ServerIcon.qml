@@ -1,5 +1,6 @@
 import QtQuick 2.7
 import Lomiri.Components 1.3
+import QtGraphicalEffects 1.0
 
 /*
  * ServerIcon - A clickable server icon with selection indicator
@@ -41,7 +42,7 @@ Item {
         width: units.gu(5)
         height: units.gu(5)
         radius: selected || mouseArea.containsMouse ? units.gu(1.5) : width / 2
-        color: iconUrl ? "transparent" : getServerColor(serverName)
+        color: iconUrl && serverImage.status === Image.Ready ? "transparent" : getServerColor(serverName)
         
         Behavior on radius {
             NumberAnimation { duration: 150; easing.type: Easing.OutQuad }
@@ -53,38 +54,32 @@ Item {
             text: getServerInitials(serverName)
             fontSize: "large"
             color: "white"
-            visible: !serverImage.visible
+            visible: !iconUrl || serverImage.status !== Image.Ready
         }
         
-        // Server icon image
+        // Server icon image with rounded corners
         Image {
             id: serverImage
             anchors.fill: parent
             source: iconUrl
             fillMode: Image.PreserveAspectCrop
-            visible: status === Image.Ready
-            
-            layer.enabled: true
-            layer.effect: ShaderEffect {
-                property variant src: serverImage
-                property real radius: iconBackground.radius / iconBackground.width
-            }
+            visible: false  // Hidden - we show masked version
         }
         
-        // Clip mask for rounded corners
+        // Mask for rounded corners
         Rectangle {
+            id: mask
             anchors.fill: parent
-            radius: parent.radius
-            color: "transparent"
-            border.width: 0
-            clip: true
-            
-            Image {
-                anchors.fill: parent
-                source: iconUrl
-                fillMode: Image.PreserveAspectCrop
-                visible: serverImage.status === Image.Ready
-            }
+            radius: iconBackground.radius
+            visible: false
+        }
+        
+        // Apply rounded mask to image
+        OpacityMask {
+            anchors.fill: parent
+            source: serverImage
+            maskSource: mask
+            visible: serverImage.status === Image.Ready
         }
     }
     

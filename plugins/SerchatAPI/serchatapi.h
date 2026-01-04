@@ -96,6 +96,31 @@ public:
      */
     Q_INVOKABLE int getServerDetails(const QString& serverId, bool useCache = true);
     
+    /**
+     * @brief Join a server via invite code.
+     * @param inviteCode The invite code (without URL prefix)
+     * @return Request ID for matching with serverJoined signal
+     */
+    Q_INVOKABLE int joinServerByInvite(const QString& inviteCode);
+    
+    /**
+     * @brief Create a new server.
+     * @param name The server name
+     * @return Request ID for matching with serverCreated signal
+     */
+    Q_INVOKABLE int createNewServer(const QString& name);
+    
+    // ========================================================================
+    // Friends API (for DM conversations)
+    // ========================================================================
+    
+    /**
+     * @brief Get the list of friends (for DM conversations).
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with friendsFetched signal
+     */
+    Q_INVOKABLE int getFriends(bool useCache = true);
+    
     // ========================================================================
     // Channels API
     // ========================================================================
@@ -299,6 +324,16 @@ signals:
                              const QString& error);
     void messageSent(int requestId, const QVariantMap& message);
     void messageSendFailed(int requestId, const QString& error);
+    
+    // Friends signals
+    void friendsFetched(int requestId, const QVariantList& friends);
+    void friendsFetchFailed(int requestId, const QString& error);
+    
+    // Server management signals
+    void serverJoined(int requestId, const QString& serverId);
+    void serverJoinFailed(int requestId, const QString& error);
+    void serverCreated(int requestId, const QVariantMap& server);
+    void serverCreateFailed(int requestId, const QString& error);
     
     // Socket.IO connection signals
     void socketConnectedChanged();

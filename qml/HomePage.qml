@@ -14,9 +14,11 @@ Page {
     // State management
     property string currentServerId: ""
     property string currentServerName: ""
+    property string currentServerOwnerId: ""
     property string currentChannelId: ""
     property string currentChannelName: ""
     property string currentChannelType: "text"
+    property var currentChannelPermissions: ({})  // Channel-specific permission overrides
     property string currentUserId: ""
     property string currentUserName: ""
     property string currentUserAvatar: ""
@@ -25,6 +27,20 @@ Page {
     property string currentDMRecipientId: ""
     property string currentDMRecipientName: ""
     property string currentDMRecipientAvatar: ""
+    
+    // Computed permission for current channel
+    // For now, simple check: owner always can send, channels without explicit deny allow sending
+    readonly property bool canSendInCurrentChannel: {
+        // DMs always allow sending
+        if (currentDMRecipientId !== "") return true
+        // No server/channel selected
+        if (currentServerId === "" || currentChannelId === "") return false
+        // Server owner can always send
+        if (currentUserId === currentServerOwnerId) return true
+        // For now, allow sending in all channels (proper permission checking needs member roles)
+        // The server will reject unauthorized messages anyway
+        return true
+    }
     
     // View mode for mobile: "servers", "channels", "messages"
     property string mobileViewMode: "servers"
@@ -68,6 +84,7 @@ Page {
             onServerSelected: {
                 currentServerId = serverId
                 currentServerName = serverName
+                currentServerOwnerId = ownerId
                 currentChannelId = ""
                 currentChannelName = ""
                 loadChannels(serverId)
@@ -80,6 +97,7 @@ Page {
             onHomeClicked: {
                 currentServerId = ""
                 currentServerName = ""
+                currentServerOwnerId = ""
                 currentChannelId = ""
                 currentDMRecipientId = ""
                 currentDMRecipientName = ""
@@ -93,8 +111,8 @@ Page {
                     mobileViewMode = "channels"
                 }
                 
-                // TODO: Load DM conversations from API
-                // loadDMConversations()
+                // Load DM conversations (friends list)
+                loadDMConversations()
             }
             
             onAddServerClicked: {
@@ -121,6 +139,12 @@ Page {
             showBackButton: !serverList.visible
             
             onConversationSelected: {
+                // Clear channel state when switching to DM
+                currentChannelId = ""
+                currentChannelName = ""
+                currentChannelType = "text"
+                
+                // Set DM state
                 currentDMRecipientId = recipientId
                 currentDMRecipientName = recipientName
                 currentDMRecipientAvatar = recipientAvatar
@@ -163,6 +187,11 @@ Page {
                     SerchatAPI.leaveChannel(currentServerId, currentChannelId)
                 }
                 
+                // Clear DM state when switching to channel
+                currentDMRecipientId = ""
+                currentDMRecipientName = ""
+                currentDMRecipientAvatar = ""
+                
                 // Clear messages immediately when switching channels
                 homePage.messages = []
                 
@@ -195,16 +224,24 @@ Page {
             width: parent.width - (serverList.visible ? serverList.width : 0) - (channelList.visible ? channelList.width : 0) - (dmListView.visible ? dmListView.width : 0)
             visible: (isWideScreen || isMediumScreen || mobileViewMode === "messages") && (currentChannelId !== "" || currentDMRecipientId !== "")
             
+            // Server channel properties
             serverId: currentServerId
             channelId: currentChannelId
             channelName: currentChannelName
             channelType: currentChannelType
+            
+            // DM properties
+            dmRecipientId: currentDMRecipientId
+            dmRecipientName: currentDMRecipientName
+            dmRecipientAvatar: currentDMRecipientAvatar
+            
             messages: homePage.messages
             loading: loadingMessages
             hasMoreMessages: homePage.hasMoreMessages
             currentUserId: homePage.currentUserId
             userProfiles: homePage.userProfiles
-            showBackButton: !channelList.visible  // Show back button when channel list is hidden
+            showBackButton: !channelList.visible && !dmListView.visible  // Show back button when sidebar is hidden
+            canSendMessages: homePage.canSendInCurrentChannel
             
             onBackClicked: {
                 if (isMediumScreen) {
@@ -503,6 +540,55 @@ Page {
             homePage.messages = newMessages
         }
         
+        // Friends (for DM list)
+        onFriendsFetched: {
+            console.log("[HomePage] Friends fetched:", friends.length)
+            // Transform friends list into DM conversations format
+            var conversations = []
+            for (var i = 0; i < friends.length; i++) {
+                var friend = friends[i]
+                conversations.push({
+                    recipientId: friend._id || friend.id,
+                    recipientName: friend.displayName || friend.username,
+                    recipientAvatar: friend.profilePicture ? SerchatAPI.apiBaseUrl + friend.profilePicture : "",
+                    lastMessageAt: friend.latestMessageAt || "",
+                    customStatus: friend.customStatus
+                })
+            }
+            // Sort by most recent message
+            conversations.sort(function(a, b) {
+                if (!a.lastMessageAt) return 1
+                if (!b.lastMessageAt) return -1
+                return new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
+            })
+            dmConversations = conversations
+        }
+        
+        onFriendsFetchFailed: {
+            console.log("[HomePage] Failed to fetch friends:", error)
+        }
+        
+        // Server management
+        onServerJoined: {
+            console.log("[HomePage] Joined server:", serverId)
+            // Refresh servers list
+            SerchatAPI.getServers(false)
+        }
+        
+        onServerJoinFailed: {
+            console.log("[HomePage] Failed to join server:", error)
+        }
+        
+        onServerCreated: {
+            console.log("[HomePage] Created server:", server.name)
+            // Refresh servers list
+            SerchatAPI.getServers(false)
+        }
+        
+        onServerCreateFailed: {
+            console.log("[HomePage] Failed to create server:", error)
+        }
+        
         // ====================================================================
         // Real-time Socket.IO Events
         // ====================================================================
@@ -757,6 +843,11 @@ Page {
     function loadServers() {
         loadingServers = true
         SerchatAPI.getServers()
+    }
+    
+    function loadDMConversations() {
+        // Load friends list which serves as DM conversations
+        SerchatAPI.getFriends()
     }
     
     function loadChannels(serverId) {

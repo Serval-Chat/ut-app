@@ -233,6 +233,18 @@ void ApiClient::emitSuccess(int requestId, const PendingRequest& req, const QVar
         case RequestType::SendMessage:
             emit messageSent(requestId, data);
             break;
+            
+        case RequestType::Friends:
+            emit friendsFetched(requestId, data.value("items").toList());
+            break;
+            
+        case RequestType::JoinServer:
+            emit serverJoined(requestId, data.value("serverId").toString());
+            break;
+            
+        case RequestType::CreateServer:
+            emit serverCreated(requestId, data.value("server").toMap());
+            break;
     }
 }
 
@@ -270,6 +282,18 @@ void ApiClient::emitFailure(int requestId, const PendingRequest& req, const QStr
             
         case RequestType::SendMessage:
             emit messageSendFailed(requestId, error);
+            break;
+            
+        case RequestType::Friends:
+            emit friendsFetchFailed(requestId, error);
+            break;
+            
+        case RequestType::JoinServer:
+            emit serverJoinFailed(requestId, error);
+            break;
+            
+        case RequestType::CreateServer:
+            emit serverCreateFailed(requestId, error);
             break;
     }
 }

@@ -75,6 +75,22 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::messageSent);
     connect(m_apiClient, &ApiClient::messageSendFailed,
             this, &SerchatAPI::messageSendFailed);
+    
+    // Connect friends signals
+    connect(m_apiClient, &ApiClient::friendsFetched,
+            this, &SerchatAPI::friendsFetched);
+    connect(m_apiClient, &ApiClient::friendsFetchFailed,
+            this, &SerchatAPI::friendsFetchFailed);
+    
+    // Connect server management signals
+    connect(m_apiClient, &ApiClient::serverJoined,
+            this, &SerchatAPI::serverJoined);
+    connect(m_apiClient, &ApiClient::serverJoinFailed,
+            this, &SerchatAPI::serverJoinFailed);
+    connect(m_apiClient, &ApiClient::serverCreated,
+            this, &SerchatAPI::serverCreated);
+    connect(m_apiClient, &ApiClient::serverCreateFailed,
+            this, &SerchatAPI::serverCreateFailed);
 
     // Connect network client for automatic 401 handling
     connect(m_networkClient, &NetworkClient::authTokenExpired,
@@ -277,6 +293,22 @@ int SerchatAPI::getServerDetails(const QString& serverId, bool useCache) {
     return m_apiClient->getServerDetails(serverId, useCache);
 }
 
+int SerchatAPI::joinServerByInvite(const QString& inviteCode) {
+    return m_apiClient->joinServerByInvite(inviteCode);
+}
+
+int SerchatAPI::createNewServer(const QString& name) {
+    return m_apiClient->createServer(name);
+}
+
+// ============================================================================
+// API Methods - Friends
+// ============================================================================
+
+int SerchatAPI::getFriends(bool useCache) {
+    return m_apiClient->getFriends(useCache);
+}
+
 // ============================================================================
 // API Methods - Channels
 // ============================================================================
@@ -348,11 +380,15 @@ void SerchatAPI::persistAuthState(const QVariantMap& userData) {
     
     if (userData.contains("username")) {
         m_settings->setValue("username", userData["username"].toString());
+    } else {
+        qDebug() << "[SerchatAPI] Warning: userData missing 'username' field";
     }
 
     // Store token - AuthClient already has it, but we persist for app restart
     if (userData.contains("token")) {
         m_settings->setValue("authToken", userData["token"].toString());
+    } else {
+        qDebug() << "[SerchatAPI] Warning: userData missing 'token' field";
     }
 
     m_settings->sync();

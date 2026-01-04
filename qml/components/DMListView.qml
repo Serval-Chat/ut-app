@@ -53,7 +53,7 @@ Rectangle {
                         width: units.gu(2.5)
                         height: units.gu(2.5)
                         name: "back"
-                        color: Theme.palette.normal.foreground
+                        color: Theme.palette.normal.baseText
                     }
                     
                     onClicked: backClicked()

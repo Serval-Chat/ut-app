@@ -1,5 +1,8 @@
 #include "apiclient.h"
+#include "../network/networkclient.h"
 #include <QDebug>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 // ============================================================================
 // Servers API
@@ -71,4 +74,110 @@ int ApiClient::getChannelDetails(const QString& serverId, const QString& channel
     context["channelId"] = channelId;
     
     return startGetRequest(RequestType::ChannelDetails, endpoint, cacheKey, useCache, context);
+}
+
+// ============================================================================
+// Friends API (for DM conversations)
+// ============================================================================
+
+int ApiClient::getFriends(bool useCache) {
+    QString cacheKey = QStringLiteral("friends:list");
+    QString endpoint = "/api/v1/friends";
+    
+    return startGetRequest(RequestType::Friends, endpoint, cacheKey, useCache);
+}
+
+// ============================================================================
+// Server Management API
+// ============================================================================
+
+int ApiClient::joinServerByInvite(const QString& inviteCode) {
+    int requestId = generateRequestId();
+    
+    if (inviteCode.isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, requestId]() {
+            PendingRequest req;
+            req.type = RequestType::JoinServer;
+            emitFailure(requestId, req, "Invite code is required");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    if (m_baseUrl.isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, requestId]() {
+            PendingRequest req;
+            req.type = RequestType::JoinServer;
+            emitFailure(requestId, req, "API base URL not configured");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    QString endpoint = QStringLiteral("/api/v1/invites/%1/join").arg(inviteCode);
+    
+    // POST with empty body
+    QUrl url = buildUrl(m_baseUrl, endpoint);
+    QNetworkReply* reply = m_networkClient->post(url, QByteArray("{}"));
+    
+    // Track the request
+    PendingRequest pending;
+    pending.reply = reply;
+    pending.endpoint = endpoint;
+    pending.cacheKey = QString();  // No caching for POST
+    pending.type = RequestType::JoinServer;
+    m_pendingRequests[requestId] = pending;
+    
+    reply->setProperty("requestId", requestId);
+    connect(reply, &QNetworkReply::finished, this, &ApiClient::onReplyFinished);
+    
+    qDebug() << "[ApiClient] Started join server request" << requestId << "with code:" << inviteCode;
+    return requestId;
+}
+
+int ApiClient::createServer(const QString& name) {
+    int requestId = generateRequestId();
+    
+    if (name.trimmed().isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, requestId]() {
+            PendingRequest req;
+            req.type = RequestType::CreateServer;
+            emitFailure(requestId, req, "Server name is required");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    if (m_baseUrl.isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, requestId]() {
+            PendingRequest req;
+            req.type = RequestType::CreateServer;
+            emitFailure(requestId, req, "API base URL not configured");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    QString endpoint = "/api/v1/servers";
+    
+    // Build JSON body
+    QJsonObject body;
+    body["name"] = name.trimmed();
+    
+    QJsonDocument doc(body);
+    QByteArray jsonData = doc.toJson(QJsonDocument::Compact);
+    
+    // POST request
+    QUrl url = buildUrl(m_baseUrl, endpoint);
+    QNetworkReply* reply = m_networkClient->post(url, jsonData);
+    
+    // Track the request
+    PendingRequest pending;
+    pending.reply = reply;
+    pending.endpoint = endpoint;
+    pending.cacheKey = QString();  // No caching for POST
+    pending.type = RequestType::CreateServer;
+    m_pendingRequests[requestId] = pending;
+    
+    reply->setProperty("requestId", requestId);
+    connect(reply, &QNetworkReply::finished, this, &ApiClient::onReplyFinished);
+    
+    qDebug() << "[ApiClient] Started create server request" << requestId << "with name:" << name;
+    return requestId;
 }

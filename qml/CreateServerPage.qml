@@ -141,13 +141,20 @@ Page {
     function createServer(name) {
         creating = true
         errorLabel.text = ""
-        // TODO: Implement actual create server API call
-        console.log("Creating server:", name)
+        SerchatAPI.createNewServer(name)
+    }
+    
+    Connections {
+        target: SerchatAPI
         
-        // Simulate for now
-        Qt.callLater(function() {
+        onServerCreated: {
             creating = false
-            errorLabel.text = i18n.tr("Server creation not yet implemented")
-        })
+            pageStack.pop()
+        }
+        
+        onServerCreateFailed: {
+            creating = false
+            errorLabel.text = error
+        }
     }
 }

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-04 01:24+0000\n"
+"POT-Creation-Date: 2026-01-04 02:23+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -112,10 +112,6 @@ msgstr ""
 
 #: ../qml/CreateServerPage.qml:130
 msgid "Creating..."
-msgstr ""
-
-#: ../qml/CreateServerPage.qml:150
-msgid "Server creation not yet implemented"
 msgstr ""
 
 #: ../qml/DebugPage.qml:9 ../qml/SettingsPage.qml:292
@@ -276,23 +272,23 @@ msgstr ""
 msgid "Profile update not yet implemented"
 msgstr ""
 
-#: ../qml/HomePage.qml:278
+#: ../qml/HomePage.qml:315
 msgid "Select a conversation"
 msgstr ""
 
-#: ../qml/HomePage.qml:279
+#: ../qml/HomePage.qml:316
 msgid "Select a channel"
 msgstr ""
 
-#: ../qml/HomePage.qml:287
+#: ../qml/HomePage.qml:324
 msgid "Choose a conversation from the list or start a new one"
 msgstr ""
 
-#: ../qml/HomePage.qml:288
+#: ../qml/HomePage.qml:325
 msgid "Pick a channel from the list to start chatting"
 msgstr ""
 
-#: ../qml/HomePage.qml:318 ../qml/SettingsPage.qml:81
+#: ../qml/HomePage.qml:355 ../qml/SettingsPage.qml:81
 msgid "Loading..."
 msgstr ""
 
@@ -330,10 +326,6 @@ msgstr ""
 
 #: ../qml/JoinServerPage.qml:119
 msgid "Or create your own"
-msgstr ""
-
-#: ../qml/JoinServerPage.qml:147
-msgid "Server join not yet implemented"
 msgstr ""
 
 #: ../qml/LoginPage.qml:64
@@ -420,8 +412,8 @@ msgstr ""
 msgid "Member Since"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:256 ../qml/components/MessageView.qml:295
-#: ../qml/components/MessageView.qml:300
+#: ../qml/ProfilePage.qml:256 ../qml/components/MessageView.qml:330
+#: ../qml/components/MessageView.qml:335
 msgid "Unknown"
 msgstr ""
 
@@ -642,20 +634,28 @@ msgstr ""
 msgid "Replying to %1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:209
+#: ../qml/components/MessageView.qml:242
 msgid "Load more messages"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:263
+#: ../qml/components/MessageView.qml:296
 msgid "Welcome to #%1!"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:270
+#: ../qml/components/MessageView.qml:303
 msgid "This is the start of the #%1 channel."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:284
+#: ../qml/components/MessageView.qml:318
 msgid "Message #%1"
+msgstr ""
+
+#: ../qml/components/MessageView.qml:318
+msgid "Message @%1"
+msgstr ""
+
+#: ../qml/components/MessageView.qml:319
+msgid "You don't have permission to send messages"
 msgstr ""
 
 #: ../qml/components/UserProfileSheet.qml:286

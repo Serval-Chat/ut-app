@@ -6,20 +6,37 @@ import "." as Components
 
 /*
  * MessageView - Chat message display with input composer
+ * Supports both server channels and DMs
  */
 Rectangle {
     id: messageView
     
+    // Server channel properties
     property string serverId: ""
     property string channelId: ""
     property string channelName: ""
     property string channelType: "text"
     property string channelDescription: ""
+    
+    // DM properties
+    property string dmRecipientId: ""
+    property string dmRecipientName: ""
+    property string dmRecipientAvatar: ""
+    
+    // Computed property to check if we're in DM mode
+    readonly property bool isDMMode: dmRecipientId !== "" && serverId === ""
+    
+    // Display title - shows DM recipient name or channel name
+    readonly property string displayTitle: isDMMode ? dmRecipientName : channelName
+    
     property var messages: []
     property bool loading: false
     property bool hasMoreMessages: true
     property string currentUserId: ""
     property bool showBackButton: false  // Whether to show back button for navigation
+    
+    // Permission checking
+    property bool canSendMessages: true  // Default to true, can be overridden
     
     // User profile cache for sender names/avatars
     property var userProfiles: ({})
@@ -64,30 +81,46 @@ Rectangle {
                         width: units.gu(2.5)
                         height: units.gu(2.5)
                         name: "back"
-                        color: Theme.palette.normal.foreground
+                        color: Theme.palette.normal.baseText
                     }
                     
                     onClicked: backClicked()
                 }
                 
-                // Channel icon
-                Icon {
-                    id: channelIcon
+                // Channel/DM icon or avatar
+                Item {
+                    id: headerIconContainer
                     width: units.gu(2.5)
                     height: units.gu(2.5)
                     anchors.verticalCenter: parent.verticalCenter
-                    name: channelType === "voice" ? "audio-speakers-symbolic" : "edit"
-                    color: Theme.palette.normal.backgroundSecondaryText
+                    
+                    // Avatar for DMs
+                    Components.Avatar {
+                        anchors.fill: parent
+                        visible: isDMMode
+                        name: dmRecipientName
+                        source: dmRecipientAvatar
+                        showStatus: false
+                    }
+                    
+                    // Icon for channels
+                    Icon {
+                        id: channelIcon
+                        anchors.fill: parent
+                        visible: !isDMMode
+                        name: channelType === "voice" ? "audio-speakers-symbolic" : "edit"
+                        color: Theme.palette.normal.backgroundSecondaryText
+                    }
                 }
                 
                 // Channel name and description
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - (backButton.visible ? backButton.width : 0) - channelIcon.width - headerActions.width - units.gu(4)
+                    width: parent.width - (backButton.visible ? backButton.width : 0) - headerIconContainer.width - headerActions.width - units.gu(4)
                     spacing: units.gu(0.2)
                     
                     Label {
-                        text: channelName
+                        text: displayTitle
                         font.bold: true
                         fontSize: "medium"
                         elide: Text.ElideRight
@@ -95,12 +128,12 @@ Rectangle {
                     }
                     
                     Label {
-                        text: channelDescription
+                        text: isDMMode ? "" : channelDescription
                         fontSize: "x-small"
                         color: Theme.palette.normal.backgroundSecondaryText
                         elide: Text.ElideRight
                         width: parent.width
-                        visible: channelDescription !== ""
+                        visible: !isDMMode && channelDescription !== ""
                     }
                 }
                 
@@ -193,8 +226,8 @@ Rectangle {
                 }
             }
             
-            // Loading indicator at top
-            header: Item {
+            // Loading indicator / load more at visual top (footer in BottomToTop ListView)
+            footer: Item {
                 width: messageList.width
                 height: loading ? units.gu(6) : (hasMoreMessages ? units.gu(4) : 0)
                 
@@ -281,8 +314,10 @@ Rectangle {
         Components.MessageComposer {
             id: composer
             width: parent.width
-            placeholderText: i18n.tr("Message #%1").arg(channelName)
-            enabled: channelType === "text"
+            placeholderText: canSendMessages ? 
+                             (isDMMode ? i18n.tr("Message @%1").arg(dmRecipientName) : i18n.tr("Message #%1").arg(displayTitle)) :
+                             i18n.tr("You don't have permission to send messages")
+            enabled: canSendMessages && (isDMMode || channelType === "text")
             
             onSendMessage: {
                 messageView.sendMessage(message, replyToId)

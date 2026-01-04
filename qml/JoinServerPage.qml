@@ -137,14 +137,20 @@ Page {
     function joinServer(code) {
         joining = true
         errorLabel.text = ""
-        // TODO: Implement actual join server API call
-        console.log("Joining server with code:", code)
+        SerchatAPI.joinServerByInvite(code)
+    }
+    
+    Connections {
+        target: SerchatAPI
         
-        // Simulate for now
-        Qt.callLater(function() {
+        onServerJoined: {
             joining = false
-            // On success: pageStack.pop()
-            errorLabel.text = i18n.tr("Server join not yet implemented")
-        })
+            pageStack.pop()
+        }
+        
+        onServerJoinFailed: {
+            joining = false
+            errorLabel.text = error
+        }
     }
 }

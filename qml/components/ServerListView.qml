@@ -15,7 +15,7 @@ Rectangle {
     property var unreadCounts: ({})  // serverId -> count
     property var mentionServers: ({})  // serverId -> hasMention
     
-    signal serverSelected(string serverId, string serverName)
+    signal serverSelected(string serverId, string serverName, string ownerId)
     signal homeClicked()
     signal addServerClicked()
     signal settingsClicked()
@@ -118,9 +118,11 @@ Rectangle {
                     hasMention: mentionServers[serverId] || false
                     anchors.horizontalCenter: parent.horizontalCenter
                     
+                    property string serverOwnerId: modelData.ownerId || ""
+                    
                     onClicked: {
                         selectedServerId = serverId
-                        serverSelected(serverId, serverName)
+                        serverSelected(serverId, serverName, serverOwnerId)
                     }
                 }
             }
