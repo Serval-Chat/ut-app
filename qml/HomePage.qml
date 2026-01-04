@@ -84,7 +84,7 @@ Page {
         switch (mobileViewMode) {
             case "servers": return 0  // Sidebar at edge, content will overlap channel list
             case "channels": return 0  // Show both sidebars
-            case "messages": return -totalSidebarWidth  // Hide sidebars off-screen
+            case "messages": return -sidebarContainer.width  // Hide sidebars off-screen
             default: return 0
         }
     }
@@ -94,7 +94,7 @@ Page {
         if (!isSmallScreen) return serverListWidth + channelListWidth
         switch (mobileViewMode) {
             case "servers": return serverListWidth  // Shows after server list (overlaps channel)
-            case "channels": return totalSidebarWidth  // Shows after both sidebars
+            case "channels": return sidebarContainer.width  // Shows after sidebar
             case "messages": return 0  // Full screen
             default: return 0
         }
@@ -105,7 +105,7 @@ Page {
         if (!isSmallScreen) return totalSidebarWidth
         switch (mobileViewMode) {
             case "servers": return serverListWidth
-            case "channels": return totalSidebarWidth
+            case "channels": return parent.width * 0.85
             case "messages": return 0
             default: return 0
         }
@@ -353,7 +353,7 @@ Page {
         id: sidebarContainer
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        width: totalSidebarWidth
+        width: isSmallScreen && mobileViewMode === "channels" ? parent.width * 0.85 : totalSidebarWidth
         x: sidebarX
         z: 10
         
@@ -445,7 +445,7 @@ Page {
             id: dmListView
             anchors.left: serverList.right
             height: parent.height
-            width: channelListWidth
+            width: isSmallScreen && mobileViewMode === "channels" && currentServerId === "" ? parent.width - serverList.width : channelListWidth
             // Visible when no server selected (Home mode), but only in channels mode on small screens
             visible: currentServerId === "" && (!isSmallScreen || mobileViewMode === "channels")
             opacity: visible ? 1 : 0
@@ -491,7 +491,7 @@ Page {
             id: channelList
             anchors.left: serverList.right
             height: parent.height
-            width: channelListWidth
+            width: isSmallScreen && mobileViewMode === "channels" ? parent.width - serverList.width : channelListWidth
             // Visible when a server is selected, but only in channels mode on small screens
             visible: currentServerId !== "" && (!isSmallScreen || mobileViewMode === "channels")
             opacity: visible ? 1 : 0
