@@ -63,6 +63,16 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::channelDetailsFetched);
     connect(m_apiClient, &ApiClient::channelDetailsFetchFailed,
             this, &SerchatAPI::channelDetailsFetchFailed);
+    
+    // Connect message signals
+    connect(m_apiClient, &ApiClient::messagesFetched,
+            this, &SerchatAPI::messagesFetched);
+    connect(m_apiClient, &ApiClient::messagesFetchFailed,
+            this, &SerchatAPI::messagesFetchFailed);
+    connect(m_apiClient, &ApiClient::messageSent,
+            this, &SerchatAPI::messageSent);
+    connect(m_apiClient, &ApiClient::messageSendFailed,
+            this, &SerchatAPI::messageSendFailed);
 
     // Connect network client for automatic 401 handling
     connect(m_networkClient, &NetworkClient::authTokenExpired,
@@ -189,6 +199,20 @@ int SerchatAPI::getChannels(const QString& serverId, bool useCache) {
 
 int SerchatAPI::getChannelDetails(const QString& serverId, const QString& channelId, bool useCache) {
     return m_apiClient->getChannelDetails(serverId, channelId, useCache);
+}
+
+// ============================================================================
+// API Methods - Messages
+// ============================================================================
+
+int SerchatAPI::getMessages(const QString& serverId, const QString& channelId,
+                            int limit, const QString& before) {
+    return m_apiClient->getMessages(serverId, channelId, limit, before);
+}
+
+int SerchatAPI::sendMessage(const QString& serverId, const QString& channelId,
+                            const QString& text, const QString& replyToId) {
+    return m_apiClient->sendMessage(serverId, channelId, text, replyToId);
 }
 
 // ============================================================================

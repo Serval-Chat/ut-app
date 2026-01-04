@@ -114,6 +114,32 @@ public:
      */
     Q_INVOKABLE int getChannelDetails(const QString& serverId, const QString& channelId, 
                                        bool useCache = true);
+    
+    // ========================================================================
+    // Messages API
+    // ========================================================================
+    
+    /**
+     * @brief Fetch messages for a channel.
+     * @param serverId The server ID
+     * @param channelId The channel ID
+     * @param limit Maximum number of messages to fetch (default: 50)
+     * @param before Fetch messages before this message ID (for pagination)
+     * @return Request ID for matching with messagesFetched signal
+     */
+    Q_INVOKABLE int getMessages(const QString& serverId, const QString& channelId,
+                                int limit = 50, const QString& before = QString());
+    
+    /**
+     * @brief Send a message to a channel.
+     * @param serverId The server ID
+     * @param channelId The channel ID
+     * @param text The message text
+     * @param replyToId Optional message ID to reply to
+     * @return Request ID for matching with messageSent signal
+     */
+    Q_INVOKABLE int sendMessage(const QString& serverId, const QString& channelId,
+                                const QString& text, const QString& replyToId = QString());
 
     // ========================================================================
     // Cache Management
@@ -190,6 +216,14 @@ signals:
     void channelsFetchFailed(int requestId, const QString& serverId, const QString& error);
     void channelDetailsFetched(int requestId, const QVariantMap& channel);
     void channelDetailsFetchFailed(int requestId, const QString& error);
+    
+    // Message signals
+    void messagesFetched(int requestId, const QString& serverId, const QString& channelId,
+                         const QVariantList& messages);
+    void messagesFetchFailed(int requestId, const QString& serverId, const QString& channelId,
+                             const QString& error);
+    void messageSent(int requestId, const QVariantMap& message);
+    void messageSendFailed(int requestId, const QString& error);
 
 private slots:
     // Auth client handlers

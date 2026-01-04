@@ -12,6 +12,7 @@ set(
     api/cache.cpp
     api/profile.cpp
     api/servers.cpp
+    api/messages.cpp
 )
 
 set(CMAKE_AUTOMOC ON)

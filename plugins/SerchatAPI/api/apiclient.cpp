@@ -223,6 +223,16 @@ void ApiClient::emitSuccess(int requestId, const PendingRequest& req, const QVar
         case RequestType::ChannelDetails:
             emit channelDetailsFetched(requestId, data);
             break;
+            
+        case RequestType::Messages:
+            emit messagesFetched(requestId, req.context.value("serverId").toString(),
+                                 req.context.value("channelId").toString(),
+                                 data.value("items").toList());
+            break;
+            
+        case RequestType::SendMessage:
+            emit messageSent(requestId, data);
+            break;
     }
 }
 
@@ -251,6 +261,15 @@ void ApiClient::emitFailure(int requestId, const PendingRequest& req, const QStr
             
         case RequestType::ChannelDetails:
             emit channelDetailsFetchFailed(requestId, error);
+            break;
+            
+        case RequestType::Messages:
+            emit messagesFetchFailed(requestId, req.context.value("serverId").toString(),
+                                     req.context.value("channelId").toString(), error);
+            break;
+            
+        case RequestType::SendMessage:
+            emit messageSendFailed(requestId, error);
             break;
     }
 }

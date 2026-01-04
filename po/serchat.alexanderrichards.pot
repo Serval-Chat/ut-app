@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-03 22:16+0000\n"
+"POT-Creation-Date: 2026-01-04 00:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,108 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../qml/DebugPage.qml:9 ../qml/HomePage.qml:17
+#: ../qml/ApiSettingsPage.qml:12 ../qml/SettingsPage.qml:273
+msgid "API Settings"
+msgstr ""
+
+#: ../qml/ApiSettingsPage.qml:17 ../qml/CreateServerPage.qml:17
+#: ../qml/JoinServerPage.qml:17 ../qml/ProfilePage.qml:23
+#: ../qml/ServerSettingsPage.qml:22 ../qml/SettingsPage.qml:18
+msgid "Back"
+msgstr ""
+
+#: ../qml/ApiSettingsPage.qml:34
+msgid "Server URL"
+msgstr ""
+
+#: ../qml/ApiSettingsPage.qml:43
+msgid "https://api.serchat.app"
+msgstr ""
+
+#: ../qml/ApiSettingsPage.qml:48
+msgid ""
+"Only change this if you're connecting to a self-hosted Serchat instance."
+msgstr ""
+
+#: ../qml/ApiSettingsPage.qml:56 ../qml/EditProfilePage.qml:29
+msgid "Save"
+msgstr ""
+
+#: ../qml/ApiSettingsPage.qml:76
+msgid "Quick Presets"
+msgstr ""
+
+#: ../qml/ApiSettingsPage.qml:82
+msgid "Official Server"
+msgstr ""
+
+#: ../qml/ApiSettingsPage.qml:90
+msgid "Local Development"
+msgstr ""
+
+#: ../qml/ApiSettingsPage.qml:101
+msgid "Connection Status"
+msgstr ""
+
+#: ../qml/ApiSettingsPage.qml:121
+msgid "Connected"
+msgstr ""
+
+#: ../qml/ApiSettingsPage.qml:122
+msgid "Connecting..."
+msgstr ""
+
+#: ../qml/ApiSettingsPage.qml:123
+msgid "Not connected"
+msgstr ""
+
+#: ../qml/ApiSettingsPage.qml:130
+msgid "Test Connection"
+msgstr ""
+
+#: ../qml/CreateServerPage.qml:12 ../qml/JoinServerPage.qml:126
+msgid "Create a Server"
+msgstr ""
+
+#: ../qml/CreateServerPage.qml:37
+msgid "Customize your server"
+msgstr ""
+
+#: ../qml/CreateServerPage.qml:44
+msgid ""
+"Give your new server a personality with a name and an icon. You can always "
+"change these later."
+msgstr ""
+
+#: ../qml/CreateServerPage.qml:78
+msgid "Upload"
+msgstr ""
+
+#: ../qml/CreateServerPage.qml:96 ../qml/ServerSettingsPage.qml:62
+msgid "Server Name"
+msgstr ""
+
+#: ../qml/CreateServerPage.qml:104
+msgid "My Awesome Server"
+msgstr ""
+
+#: ../qml/CreateServerPage.qml:108
+msgid "By creating a server, you agree to Serchat's Community Guidelines"
+msgstr ""
+
+#: ../qml/CreateServerPage.qml:130
+msgid "Create Server"
+msgstr ""
+
+#: ../qml/CreateServerPage.qml:130
+msgid "Creating..."
+msgstr ""
+
+#: ../qml/CreateServerPage.qml:150
+msgid "Server creation not yet implemented"
+msgstr ""
+
+#: ../qml/DebugPage.qml:9 ../qml/SettingsPage.qml:292
 msgid "Debug"
 msgstr ""
 
@@ -25,12 +126,11 @@ msgstr ""
 msgid "Authentication"
 msgstr ""
 
-#: ../qml/DebugPage.qml:42 ../qml/DebugPage.qml:55 ../qml/LoginPage.qml:11
-#: ../qml/LoginPage.qml:49
+#: ../qml/DebugPage.qml:42 ../qml/DebugPage.qml:55
 msgid "Login"
 msgstr ""
 
-#: ../qml/DebugPage.qml:48 ../qml/LoginPage.qml:42
+#: ../qml/DebugPage.qml:48 ../qml/LoginPage.qml:94
 msgid "Password"
 msgstr ""
 
@@ -42,7 +142,7 @@ msgstr ""
 msgid "Validate Token"
 msgstr ""
 
-#: ../qml/DebugPage.qml:76
+#: ../qml/DebugPage.qml:76 ../qml/ProfilePage.qml:18
 msgid "Profile"
 msgstr ""
 
@@ -70,7 +170,7 @@ msgstr ""
 msgid "Get Server Details"
 msgstr ""
 
-#: ../qml/DebugPage.qml:130
+#: ../qml/DebugPage.qml:130 ../qml/ServerSettingsPage.qml:98
 msgid "Channels"
 msgstr ""
 
@@ -82,7 +182,7 @@ msgstr ""
 msgid "Cache"
 msgstr ""
 
-#: ../qml/DebugPage.qml:161
+#: ../qml/DebugPage.qml:161 ../qml/SettingsPage.qml:311
 msgid "Clear Cache"
 msgstr ""
 
@@ -106,18 +206,457 @@ msgstr ""
 msgid "API responses will appear here..."
 msgstr ""
 
-#: ../qml/HomePage.qml:11 serchat.desktop.in.h:1
-msgid "Serchat"
+#: ../qml/EditProfilePage.qml:16
+msgid "Edit Profile"
 msgstr ""
 
-#: ../qml/HomePage.qml:41
+#: ../qml/EditProfilePage.qml:21
+msgid "Cancel"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:102
+msgid "Change"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:122
+msgid "Display Name"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:131
+msgid "How you want to be known"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:136 ../qml/LoginPage.qml:79
+#: ../qml/SettingsPage.qml:137
+msgid "Username"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:146
+msgid "Your unique username"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:150
+msgid "Username changes are not yet supported"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:157
+msgid "Pronouns"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:166
+msgid "e.g., they/them, she/her, he/him"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:171 ../qml/ProfilePage.qml:216
+msgid "About Me"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:181
+msgid "Tell others about yourself"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:185
+msgid "You can use markdown formatting"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:192
+msgid "Profile Banner"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:235
+msgid "Change Banner"
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:280
+msgid "Saving..."
+msgstr ""
+
+#: ../qml/EditProfilePage.qml:310
+msgid "Profile update not yet implemented"
+msgstr ""
+
+#: ../qml/HomePage.qml:264
+msgid "Select a conversation"
+msgstr ""
+
+#: ../qml/HomePage.qml:265
+msgid "Select a channel"
+msgstr ""
+
+#: ../qml/HomePage.qml:273
+msgid "Choose a conversation from the list or start a new one"
+msgstr ""
+
+#: ../qml/HomePage.qml:274
+msgid "Pick a channel from the list to start chatting"
+msgstr ""
+
+#: ../qml/HomePage.qml:304 ../qml/SettingsPage.qml:81
+msgid "Loading..."
+msgstr ""
+
+#: ../qml/JoinServerPage.qml:12
+msgid "Add a Server"
+msgstr ""
+
+#: ../qml/JoinServerPage.qml:37
+msgid "Join a Server"
+msgstr ""
+
+#: ../qml/JoinServerPage.qml:44
+msgid "Enter an invite code or link to join an existing server"
+msgstr ""
+
+#: ../qml/JoinServerPage.qml:56
+msgid "Invite Code"
+msgstr ""
+
+#: ../qml/JoinServerPage.qml:64
+msgid "Enter invite code or link"
+msgstr ""
+
+#: ../qml/JoinServerPage.qml:69
+msgid "Invites look like: abc123 or https://serchat.app/invite/abc123"
+msgstr ""
+
+#: ../qml/JoinServerPage.qml:79
+msgid "Join Server"
+msgstr ""
+
+#: ../qml/JoinServerPage.qml:79
+msgid "Joining..."
+msgstr ""
+
+#: ../qml/JoinServerPage.qml:119
+msgid "Or create your own"
+msgstr ""
+
+#: ../qml/JoinServerPage.qml:147
+msgid "Server join not yet implemented"
+msgstr ""
+
+#: ../qml/LoginPage.qml:64
+msgid "Welcome back! Sign in to continue."
+msgstr ""
+
+#: ../qml/LoginPage.qml:65
+msgid "Create an account to get started."
+msgstr ""
+
+#: ../qml/LoginPage.qml:87 ../qml/SettingsPage.qml:156
+msgid "Email"
+msgstr ""
+
+#: ../qml/LoginPage.qml:87
+msgid "Email or Username"
+msgstr ""
+
+#: ../qml/LoginPage.qml:109
+msgid "Confirm Password"
+msgstr ""
+
+#: ../qml/LoginPage.qml:117
+msgid "Invite Token (optional)"
+msgstr ""
+
+#: ../qml/LoginPage.qml:141 ../qml/LoginPage.qml:271
+msgid "Creating account..."
+msgstr ""
+
+#: ../qml/LoginPage.qml:141 ../qml/LoginPage.qml:271
+msgid "Signing in..."
+msgstr ""
+
+#: ../qml/LoginPage.qml:142
+msgid "Create Account"
+msgstr ""
+
+#: ../qml/LoginPage.qml:142
+msgid "Sign In"
+msgstr ""
+
+#: ../qml/LoginPage.qml:158
+msgid "Forgot password?"
+msgstr ""
+
+#: ../qml/LoginPage.qml:189
+msgid "or"
+msgstr ""
+
+#: ../qml/LoginPage.qml:207
+msgid "Already have an account?"
+msgstr ""
+
+#: ../qml/LoginPage.qml:207
+msgid "Create New Account"
+msgstr ""
+
+#: ../qml/LoginPage.qml:224
+msgid "Connecting to:"
+msgstr ""
+
+#: ../qml/LoginPage.qml:245
 msgid "Version %1"
 msgstr ""
 
-#: ../qml/LoginPage.qml:29
-msgid "Welcome to Serchat"
+#: ../qml/LoginPage.qml:306
+msgid "Passwords do not match"
 msgstr ""
 
-#: ../qml/LoginPage.qml:36
-msgid "Email/Login"
+#: ../qml/LoginPage.qml:311
+msgid "Password must be at least 6 characters"
+msgstr ""
+
+#: ../qml/ProfilePage.qml:31
+msgid "Message"
+msgstr ""
+
+#: ../qml/ProfilePage.qml:116
+msgid "Unknown User"
+msgstr ""
+
+#: ../qml/ProfilePage.qml:247
+msgid "Member Since"
+msgstr ""
+
+#: ../qml/ProfilePage.qml:255 ../qml/components/MessageView.qml:291
+#: ../qml/components/MessageView.qml:296
+msgid "Unknown"
+msgstr ""
+
+#: ../qml/ProfilePage.qml:281
+msgid "Send Friend Request"
+msgstr ""
+
+#: ../qml/ProfilePage.qml:288
+msgid "Block User"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:17
+msgid "Server Settings"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:49
+msgid "Overview"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:81
+msgid "Server Icon"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:82
+msgid "Custom icon"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:82
+msgid "No icon set"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:111
+msgid "Manage Channels"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:112
+msgid "Create, edit, and delete channels"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:128
+msgid "Roles"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:141
+msgid "Manage Roles"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:142
+msgid "Create and configure roles"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:158
+msgid "Members"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:171
+msgid "View Members"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:172
+msgid " members"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:190
+msgid "Bans"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:191
+msgid "View and manage banned users"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:207
+msgid "Invites"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:220
+msgid "Manage Invites"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:221
+msgid "Create and view invite links"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:237
+msgid "Danger Zone"
+msgstr ""
+
+#: ../qml/ServerSettingsPage.qml:251
+msgid "Leave Server"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:13
+msgid "Settings"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:107
+msgid "Edit"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:124
+msgid "Account"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:157
+msgid "Not set"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:175
+msgid "Change Password"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:191
+msgid "Appearance"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:201
+msgid "Theme"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:202
+msgid "System default"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:218
+msgid "Notifications"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:228
+msgid "Enable Notifications"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:243
+msgid "Mention Notifications Only"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:244
+msgid "Only notify for @mentions"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:260
+msgid "Advanced"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:293
+msgid "Developer tools"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:312
+msgid "Clear locally stored data"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:328
+msgid "About"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:338
+msgid "Version"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:351
+msgid "Log Out"
+msgstr ""
+
+#: ../qml/components/ChannelListView.qml:178
+#: ../qml/components/DMListView.qml:327
+msgid "Online"
+msgstr ""
+
+#: ../qml/components/DMListView.qml:63
+msgid "Direct Messages"
+msgstr ""
+
+#: ../qml/components/DMListView.qml:119
+msgid "Find or start a conversation"
+msgstr ""
+
+#: ../qml/components/DMListView.qml:144
+msgid "DIRECT MESSAGES"
+msgstr ""
+
+#: ../qml/components/DMListView.qml:183
+msgid "No conversations yet"
+msgstr ""
+
+#: ../qml/components/DMListView.qml:190
+msgid "Start a new conversation!"
+msgstr ""
+
+#: ../qml/components/DMListView.qml:328
+msgid "Idle"
+msgstr ""
+
+#: ../qml/components/DMListView.qml:329
+msgid "Do Not Disturb"
+msgstr ""
+
+#: ../qml/components/DMListView.qml:330
+msgid "Offline"
+msgstr ""
+
+#: ../qml/components/MessageBubble.qml:153
+msgid "(edited)"
+msgstr ""
+
+#: ../qml/components/MessageBubble.qml:218
+msgid "Today at %1"
+msgstr ""
+
+#: ../qml/components/MessageBubble.qml:220
+msgid "Yesterday at %1"
+msgstr ""
+
+#: ../qml/components/MessageComposer.qml:10
+msgid "Send a message..."
+msgstr ""
+
+#: ../qml/components/MessageComposer.qml:66
+msgid "Replying to %1"
+msgstr ""
+
+#: ../qml/components/MessageView.qml:205
+msgid "Load more messages"
+msgstr ""
+
+#: ../qml/components/MessageView.qml:259
+msgid "Welcome to #%1!"
+msgstr ""
+
+#: ../qml/components/MessageView.qml:266
+msgid "This is the start of the #%1 channel."
+msgstr ""
+
+#: ../qml/components/MessageView.qml:280
+msgid "Message #%1"
+msgstr ""
+
+#: serchat.desktop.in.h:1
+msgid "Serchat"
 msgstr ""

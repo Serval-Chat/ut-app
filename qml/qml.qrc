@@ -5,5 +5,22 @@
     <file>HomePage.qml</file>
     <file>LoginPage.qml</file>
     <file>DebugPage.qml</file>
+    <file>SettingsPage.qml</file>
+    <file>ProfilePage.qml</file>
+    <file>EditProfilePage.qml</file>
+    <file>JoinServerPage.qml</file>
+    <file>CreateServerPage.qml</file>
+    <file>ServerSettingsPage.qml</file>
+    <file>ApiSettingsPage.qml</file>
+    <file>components/Avatar.qml</file>
+    <file>components/ServerIcon.qml</file>
+    <file>components/MessageBubble.qml</file>
+    <file>components/ChannelItem.qml</file>
+    <file>components/CategoryHeader.qml</file>
+    <file>components/MessageComposer.qml</file>
+    <file>components/ServerListView.qml</file>
+    <file>components/ChannelListView.qml</file>
+    <file>components/MessageView.qml</file>
+    <file>components/DMListView.qml</file>
   </qresource>
 </RCC>
