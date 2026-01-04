@@ -23,11 +23,14 @@ Rectangle {
     color: Qt.darker(Theme.palette.normal.background, 1.15)
     width: units.gu(7)
     
+    // Calculate required bottom margin to prevent overlap with settings area
+    readonly property real requiredBottomMargin: bottomSettingsArea.height + bottomSettingsArea.anchors.bottomMargin
+    
     Flickable {
         id: serverFlickable
         anchors.fill: parent
         anchors.topMargin: units.gu(1)
-        anchors.bottomMargin: units.gu(1)
+        anchors.bottomMargin: requiredBottomMargin  // Dynamic calculation to prevent overlap
         contentHeight: serverColumn.height
         clip: true
         
@@ -174,6 +177,7 @@ Rectangle {
     
     // Bottom user/settings area
     Column {
+        id: bottomSettingsArea
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottomMargin: units.gu(1)
