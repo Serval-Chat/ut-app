@@ -33,7 +33,7 @@ msgid "Server URL"
 msgstr ""
 
 #: ../qml/ApiSettingsPage.qml:43
-msgid "https://api.serchat.app"
+msgid "https://catfla.re"
 msgstr ""
 
 #: ../qml/ApiSettingsPage.qml:48
