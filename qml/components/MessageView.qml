@@ -29,9 +29,6 @@ Rectangle {
     // Display title - shows DM recipient name or channel name
     readonly property string displayTitle: isDMMode ? dmRecipientName : channelName
     
-    // Messages now come from C++ MessageModel (SerchatAPI.messageModel)
-    // These properties are for backwards compatibility during transition
-    property alias messages: messageList.model
     property bool loading: false
     property bool hasMoreMessages: SerchatAPI.messageModel.hasMoreMessages
     property string currentUserId: ""
@@ -57,7 +54,6 @@ Rectangle {
     
     signal sendMessage(string text, string replyToId)
     signal loadMoreMessages()
-    signal messageReplyClicked(string messageId)
     signal userProfileClicked(string userId)
     signal backClicked()
     signal viewFullProfile(string userId)
@@ -484,8 +480,7 @@ Rectangle {
                    i18n.tr("Unknown")
         }
         
-        // Request profile if not cached
-        // SerchatAPI.getProfile(senderId)
+        // Return truncated ID as fallback (profile will be fetched by fetchProfileIfNeeded)
         return senderId.substring(0, 8) + "..."
     }
     

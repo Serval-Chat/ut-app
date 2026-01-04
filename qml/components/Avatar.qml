@@ -2,6 +2,7 @@ import QtQuick 2.7
 import Lomiri.Components 1.3
 
 import SerchatAPI 1.0
+import "." as Components
 
 /*
  * Avatar component - displays a user/server avatar with fallback initials
@@ -100,11 +101,11 @@ Item {
         anchors.rightMargin: units.gu(0.2)
         anchors.bottomMargin: units.gu(0.2)
         visible: avatar.showStatus && avatar.status !== ""
-        color: getStatusColor(avatar.status)
-        border.width: units.dp(2)
+        color: Components.ColorUtils.statusColor(avatar.status)
+        // border.width: units.gu(0.2)
         border.color: Theme.palette.normal.background
     }
-    
+
     function getInitials(name) {
         if (!name) return "?"
         var parts = name.trim().split(" ")
@@ -112,14 +113,5 @@ Item {
             return (parts[0][0] + parts[1][0]).toUpperCase()
         }
         return name.substring(0, 2).toUpperCase()
-    }
-    
-    function getStatusColor(status) {
-        switch(status) {
-            case "online": return "#43b581"
-            case "idle": return "#faa61a"
-            case "dnd": return "#f04747"
-            default: return "#747f8d"
-        }
     }
 }

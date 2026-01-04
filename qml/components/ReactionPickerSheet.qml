@@ -13,7 +13,6 @@ Item {
     
     property string messageId: ""
     property var customEmojis: ({})
-    property var emojiData: Components.EmojiData {}
     property bool opened: false
     
     signal reactionSelected(string messageId, string emoji, string emojiType, string emojiId)
@@ -133,7 +132,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: units.gu(2)
             
-            property var quickEmojis: emojiData.quickReactions
+            property var quickEmojis: EmojiData.quickReactions
             
             Repeater {
                 model: quickReactionsRow.quickEmojis
@@ -345,7 +344,7 @@ Item {
         }
         
         // Use EmojiData component for unicode emojis
-        var emojis = emojiData.getEmojisByCategory(category) || []
+        var emojis = EmojiData.getEmojisByCategory(category) || []
         return emojis.map(function(e) {
             return { emoji: e, isCustom: false }
         })

@@ -1,4 +1,4 @@
-// This file is used by the QML engine to treat EmojiData as a component
 module Components
 
-EmojiData 1.0 EmojiData.qml
+singleton EmojiData 1.0 EmojiData.qml
+singleton ColorUtils 1.0 ColorUtils.qml

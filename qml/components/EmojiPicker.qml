@@ -29,17 +29,16 @@ Rectangle {
     border.width: units.dp(1)
     border.color: Theme.palette.normal.base
     
-    // Use categories from EmojiData component
-    property var emojiData: Components.EmojiData {}
-    property var emojiCategories: emojiData.categories
-    
+    // Use categories from EmojiData singleton
+    property var emojiCategories: EmojiData.categories
+
     // Recently used emojis (would be persisted in settings)
     property var recentEmojis: ["😀", "👍", "❤️", "🎉", "🔥"]
-    
-    // Get emoji data for selected category from component
+
+    // Get emoji data for selected category from singleton
     function getEmojiDataForCategory(categoryId) {
         if (categoryId === "recent") return recentEmojis
-        return emojiData.getEmojisByCategory(categoryId)
+        return EmojiData.getEmojisByCategory(categoryId)
     }
     
     // Search functionality
@@ -165,7 +164,7 @@ Rectangle {
             model: {
                 if (searchQuery) {
                     // Search across all categories using EmojiData
-                    return emojiData.searchEmojis(searchQuery)
+                    return EmojiData.searchEmojis(searchQuery)
                 }
                 if (selectedCategory === "custom") {
                     return customEmojis

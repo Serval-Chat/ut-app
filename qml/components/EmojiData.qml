@@ -1,8 +1,9 @@
+pragma Singleton
 import QtQuick 2.7
 
 /*
  * EmojiData - Centralized emoji data storage to avoid duplication
- * 
+ *
  * Contains all standard emoji data used by EmojiPicker and ReactionPickerSheet
  */
 QtObject {

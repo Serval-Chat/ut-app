@@ -37,6 +37,8 @@
     <file>components/LoadingOverlay.qml</file>
     <file>components/EmptyState.qml</file>
     <file>components/EmojiData.qml</file>
+    <file>components/ColorUtils.qml</file>
+    <file>components/qmldir</file>
     <file>components/BottomSheet.qml</file>
     <file>components/MemberListItem.qml</file>
     <file>components/ListHeader.qml</file>
