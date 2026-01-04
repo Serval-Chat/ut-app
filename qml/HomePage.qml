@@ -405,6 +405,11 @@ Page {
                 currentChannelName = ""
                 loadChannels(serverId)
                 
+                // Save state
+                SerchatAPI.lastServerId = serverId
+                SerchatAPI.lastChannelId = ""
+                SerchatAPI.lastDMRecipientId = ""
+                
                 if (isSmallScreen) {
                     mobileViewMode = "channels"
                 }
@@ -421,6 +426,11 @@ Page {
                 channels = []
                 categories = []
                 SerchatAPI.messageModel.clear()
+                
+                // Save state - clear all last IDs when going home
+                SerchatAPI.lastServerId = ""
+                SerchatAPI.lastChannelId = ""
+                SerchatAPI.lastDMRecipientId = ""
                 
                 // On small screens, go to channels view to show DM list
                 if (isSmallScreen) {
@@ -471,6 +481,11 @@ Page {
                 currentDMRecipientName = recipientName
                 currentDMRecipientAvatar = recipientAvatar
                 loadDMMessages(recipientId)
+                
+                // Save state
+                SerchatAPI.lastDMRecipientId = recipientId
+                SerchatAPI.lastServerId = ""
+                SerchatAPI.lastChannelId = ""
                 
                 if (isSmallScreen) {
                     mobileViewMode = "messages"
@@ -526,6 +541,9 @@ Page {
                 currentChannelName = channelName
                 currentChannelType = channelType
                 loadMessages(currentServerId, channelId)
+                
+                // Save state
+                SerchatAPI.lastChannelId = channelId
                 
                 if (isSmallScreen) {
                     mobileViewMode = "messages"
@@ -616,7 +634,25 @@ Page {
             loadingServers = false
             homePage.servers = servers
             
-            // Auto-select first server if none selected
+            // Check for saved server state and restore if valid
+            var savedServerId = SerchatAPI.lastServerId
+            if (savedServerId && savedServerId !== "") {
+                // Find the saved server in the list
+                for (var i = 0; i < servers.length; i++) {
+                    var server = servers[i]
+                    var serverId = server._id || server.id
+                    if (serverId === savedServerId) {
+                        // Restore server selection
+                        currentServerId = serverId
+                        currentServerName = server.name
+                        currentServerOwnerId = server.ownerId || ""
+                        loadChannels(serverId)
+                        return // Exit early, don't do auto-selection
+                    }
+                }
+            }
+            
+            // Fallback: Auto-select first server if none selected
             if (servers.length > 0 && currentServerId === "") {
                 var firstServer = servers[0]
                 currentServerId = firstServer._id || firstServer.id
@@ -651,14 +687,38 @@ Page {
                 homePage.channels = chans
                 homePage.categories = cats
                 
-                // Auto-select first text channel
-                if (channels.length > 0 && currentChannelId === "") {
+                // Check for saved channel state and restore if valid
+                var savedChannelId = SerchatAPI.lastChannelId
+                if (savedChannelId && savedChannelId !== "") {
+                    // Find the saved channel in the list
                     for (var j = 0; j < channels.length; j++) {
-                        if (channels[j].type === "text") {
-                            var ch = channels[j]
-                            currentChannelId = ch._id || ch.id
+                        var ch = channels[j]
+                        var chId = ch._id || ch.id
+                        if (chId === savedChannelId && ch.type === "text") {
+                            // Restore channel selection
+                            currentChannelId = chId
                             currentChannelName = ch.name
                             currentChannelType = ch.type
+                            loadMessages(currentServerId, currentChannelId)
+                            
+                            // Set mobile view mode for small screens
+                            if (isSmallScreen) {
+                                mobileViewMode = "messages"
+                            }
+                            
+                            return // Exit early, don't do auto-selection
+                        }
+                    }
+                }
+                
+                // Fallback: Auto-select first text channel
+                if (channels.length > 0 && currentChannelId === "") {
+                    for (var k = 0; k < channels.length; k++) {
+                        if (channels[k].type === "text") {
+                            var channel = channels[k]
+                            currentChannelId = channel._id || channel.id
+                            currentChannelName = channel.name
+                            currentChannelType = channel.type
                             loadMessages(currentServerId, currentChannelId)
                             break
                         }
@@ -827,6 +887,30 @@ Page {
                 return new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
             })
             dmConversations = conversations
+            
+            // Check for saved DM state and restore if valid (only if no server/channel selected)
+            var savedDMRecipientId = SerchatAPI.lastDMRecipientId
+            if (savedDMRecipientId && savedDMRecipientId !== "" && currentServerId === "" && currentChannelId === "") {
+                // Find the saved DM recipient in the friends list
+                for (var j = 0; j < friends.length; j++) {
+                    var friend = friends[j]
+                    var friendId = friend._id || friend.id
+                    if (friendId === savedDMRecipientId) {
+                        // Restore DM selection
+                        currentDMRecipientId = friendId
+                        currentDMRecipientName = friend.displayName || friend.username
+                        currentDMRecipientAvatar = friend.profilePicture ? SerchatAPI.apiBaseUrl + friend.profilePicture : ""
+                        loadDMMessages(friendId)
+                        
+                        // Set mobile view mode for small screens
+                        if (isSmallScreen) {
+                            mobileViewMode = "messages"
+                        }
+                        
+                        return // Exit early
+                    }
+                }
+            }
         }
         
         onFriendsFetchFailed: {
@@ -1348,6 +1432,9 @@ Page {
         
         // Load servers
         loadServers()
+        
+        // Load DM conversations (friends list) for potential restore
+        loadDMConversations()
         
         // Load all emojis from all servers for cross-server emoji rendering
         SerchatAPI.getAllEmojis()

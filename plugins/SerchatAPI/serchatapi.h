@@ -34,6 +34,9 @@ class SerchatAPI : public QObject {
     Q_OBJECT
 
     Q_PROPERTY(QString apiBaseUrl READ apiBaseUrl WRITE setApiBaseUrl NOTIFY apiBaseUrlChanged)
+    Q_PROPERTY(QString lastServerId READ lastServerId WRITE setLastServerId NOTIFY lastServerIdChanged)
+    Q_PROPERTY(QString lastChannelId READ lastChannelId WRITE setLastChannelId NOTIFY lastChannelIdChanged)
+    Q_PROPERTY(QString lastDMRecipientId READ lastDMRecipientId WRITE setLastDMRecipientId NOTIFY lastDMRecipientIdChanged)
     Q_PROPERTY(bool loggedIn READ isLoggedIn NOTIFY loggedInChanged)
     Q_PROPERTY(bool socketConnected READ isSocketConnected NOTIFY socketConnectedChanged)
     Q_PROPERTY(QString socketId READ socketId NOTIFY socketIdChanged)
@@ -351,6 +354,14 @@ public:
     // API URL configuration
     QString apiBaseUrl() const;
     void setApiBaseUrl(const QString& baseUrl);
+    
+    // Last opened state persistence
+    QString lastServerId() const;
+    void setLastServerId(const QString& id);
+    QString lastChannelId() const;
+    void setLastChannelId(const QString& id);
+    QString lastDMRecipientId() const;
+    void setLastDMRecipientId(const QString& id);
 
     // Token accessors (mainly for debugging)
     QString authToken() const;
@@ -367,6 +378,9 @@ signals:
 
     // Configuration signals
     void apiBaseUrlChanged();
+    void lastServerIdChanged();
+    void lastChannelIdChanged();
+    void lastDMRecipientIdChanged();
 
     // Profile signals (with request ID for parallel request tracking)
     void profileFetched(int requestId, const QVariantMap& profile);

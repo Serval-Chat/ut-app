@@ -263,6 +263,39 @@ void SerchatAPI::setApiBaseUrl(const QString& baseUrl) {
     }
 }
 
+QString SerchatAPI::lastServerId() const {
+    return m_settings->value("lastServerId", "").toString();
+}
+
+void SerchatAPI::setLastServerId(const QString& id) {
+    if (lastServerId() != id) {
+        m_settings->setValue("lastServerId", id);
+        emit lastServerIdChanged();
+    }
+}
+
+QString SerchatAPI::lastChannelId() const {
+    return m_settings->value("lastChannelId", "").toString();
+}
+
+void SerchatAPI::setLastChannelId(const QString& id) {
+    if (lastChannelId() != id) {
+        m_settings->setValue("lastChannelId", id);
+        emit lastChannelIdChanged();
+    }
+}
+
+QString SerchatAPI::lastDMRecipientId() const {
+    return m_settings->value("lastDMRecipientId", "").toString();
+}
+
+void SerchatAPI::setLastDMRecipientId(const QString& id) {
+    if (lastDMRecipientId() != id) {
+        m_settings->setValue("lastDMRecipientId", id);
+        emit lastDMRecipientIdChanged();
+    }
+}
+
 void SerchatAPI::setDebug(bool debug) {
     m_networkClient->setDebug(debug);
 }
