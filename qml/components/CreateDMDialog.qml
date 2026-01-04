@@ -181,6 +181,7 @@ Item {
                 height: Math.min(contentHeight, units.gu(40))
                 clip: true
                 visible: !loading && filteredFriends.length > 0
+                cacheBuffer: units.gu(20)  // Performance optimization
                 
                 model: filteredFriends
                 

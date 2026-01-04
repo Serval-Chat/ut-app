@@ -29,20 +29,27 @@ Rectangle {
         }
         var query = searchQuery.toLowerCase()
         return members.filter(function(member) {
-            var displayName = (member.displayName || member.username || "").toLowerCase()
-            var username = (member.username || "").toLowerCase()
+            // API returns: { user: { displayName, username, ... } }
+            var user = member.user || {}
+            var displayName = (user.displayName || user.username || "").toLowerCase()
+            var username = (user.username || "").toLowerCase()
             return displayName.indexOf(query) !== -1 || username.indexOf(query) !== -1
         })
     }
     
     // Group members by status
+    // API returns: { user: { customStatus: { status: "online|offline|..." } } }
     property var onlineMembers: filteredMembers.filter(function(m) {
-        var status = m.customStatus ? m.customStatus.status : "online"
+        var user = m.user || {}
+        var customStatus = user.customStatus || {}
+        var status = customStatus.status || "offline"  // Default to offline if no status
         return status !== "offline" && status !== "invisible"
     })
     
     property var offlineMembers: filteredMembers.filter(function(m) {
-        var status = m.customStatus ? m.customStatus.status : "online"
+        var user = m.user || {}
+        var customStatus = user.customStatus || {}
+        var status = customStatus.status || "offline"  // Default to offline if no status
         return status === "offline" || status === "invisible"
     })
     
@@ -139,70 +146,14 @@ Rectangle {
                 Repeater {
                     model: onlineMembers
                     
-                    Rectangle {
+                    Components.MemberListItem {
                         width: membersColumn.width
-                        height: units.gu(5)
-                        color: memberMouseArea.pressed ? Qt.darker(membersPanel.color, 1.2) : "transparent"
+                        member: modelData
+                        currentUserId: membersPanel.currentUserId
+                        isOffline: false
+                        panelColor: membersPanel.color
                         
-                        property var member: modelData
-                        property bool isCurrentUser: (modelData._id || modelData.id) === currentUserId
-                        
-                        Row {
-                            anchors.fill: parent
-                            anchors.leftMargin: units.gu(1.5)
-                            anchors.rightMargin: units.gu(1.5)
-                            spacing: units.gu(1)
-                            
-                            Components.Avatar {
-                                width: units.gu(4)
-                                height: units.gu(4)
-                                anchors.verticalCenter: parent.verticalCenter
-                                name: member.displayName || member.username || ""
-                                source: member.profilePicture ? SerchatAPI.apiBaseUrl + member.profilePicture : ""
-                                showStatus: true
-                                status: member.customStatus ? (member.customStatus.status || "online") : "online"
-                            }
-                            
-                            Column {
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: parent.width - units.gu(6)
-                                spacing: units.gu(0.2)
-                                
-                                Row {
-                                    spacing: units.gu(0.5)
-                                    
-                                    Label {
-                                        text: member.displayName || member.username || i18n.tr("Unknown")
-                                        fontSize: "small"
-                                        font.bold: true
-                                        elide: Text.ElideRight
-                                    }
-                                    
-                                    Label {
-                                        text: isCurrentUser ? i18n.tr("(you)") : ""
-                                        fontSize: "x-small"
-                                        color: Theme.palette.normal.backgroundSecondaryText
-                                        visible: isCurrentUser
-                                    }
-                                }
-                                
-                                Label {
-                                    text: member.customStatus && member.customStatus.text ? 
-                                          member.customStatus.text : ""
-                                    fontSize: "x-small"
-                                    color: Theme.palette.normal.backgroundSecondaryText
-                                    elide: Text.ElideRight
-                                    width: parent.width
-                                    visible: text !== ""
-                                }
-                            }
-                        }
-                        
-                        MouseArea {
-                            id: memberMouseArea
-                            anchors.fill: parent
-                            onClicked: memberClicked(modelData._id || modelData.id)
-                        }
+                        onClicked: memberClicked(memberId)
                     }
                 }
                 
@@ -226,61 +177,14 @@ Rectangle {
                 Repeater {
                     model: offlineMembers
                     
-                    Rectangle {
+                    Components.MemberListItem {
                         width: membersColumn.width
-                        height: units.gu(5)
-                        color: offlineMouseArea.pressed ? Qt.darker(membersPanel.color, 1.2) : "transparent"
+                        member: modelData
+                        currentUserId: membersPanel.currentUserId
+                        isOffline: true
+                        panelColor: membersPanel.color
                         
-                        property var member: modelData
-                        property bool isCurrentUser: (modelData._id || modelData.id) === currentUserId
-                        
-                        Row {
-                            anchors.fill: parent
-                            anchors.leftMargin: units.gu(1.5)
-                            anchors.rightMargin: units.gu(1.5)
-                            spacing: units.gu(1)
-                            
-                            Components.Avatar {
-                                width: units.gu(4)
-                                height: units.gu(4)
-                                anchors.verticalCenter: parent.verticalCenter
-                                name: member.displayName || member.username || ""
-                                source: member.profilePicture ? SerchatAPI.apiBaseUrl + member.profilePicture : ""
-                                showStatus: true
-                                status: "offline"
-                            }
-                            
-                            Column {
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: parent.width - units.gu(6)
-                                spacing: units.gu(0.2)
-                                
-                                Row {
-                                    spacing: units.gu(0.5)
-                                    
-                                    Label {
-                                        text: member.displayName || member.username || i18n.tr("Unknown")
-                                        fontSize: "small"
-                                        font.bold: true
-                                        elide: Text.ElideRight
-                                        color: Theme.palette.normal.backgroundSecondaryText
-                                    }
-                                    
-                                    Label {
-                                        text: isCurrentUser ? i18n.tr("(you)") : ""
-                                        fontSize: "x-small"
-                                        color: Theme.palette.normal.backgroundSecondaryText
-                                        visible: isCurrentUser
-                                    }
-                                }
-                            }
-                        }
-                        
-                        MouseArea {
-                            id: offlineMouseArea
-                            anchors.fill: parent
-                            onClicked: memberClicked(modelData._id || modelData.id)
-                        }
+                        onClicked: memberClicked(memberId)
                     }
                 }
                 
@@ -302,12 +206,20 @@ Rectangle {
     
     // Fetch members when serverId changes
     onServerIdChanged: {
-        if (serverId) {
+        if (serverId && visible) {
+            fetchMembers()
+        }
+    }
+    
+    // Also fetch when the panel becomes visible (first open)
+    onVisibleChanged: {
+        if (visible && serverId && members.length === 0 && !loading) {
             fetchMembers()
         }
     }
     
     function fetchMembers() {
+        if (!serverId) return
         loading = true
         SerchatAPI.getServerMembers(serverId)
     }

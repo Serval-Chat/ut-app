@@ -112,88 +112,14 @@ Rectangle {
                 Repeater {
                     model: conversations
                     
-                    delegate: ListItem {
-                        id: dmItem
+                    Components.ConversationListItem {
                         width: parent.width
-                        height: units.gu(6)
-                        color: selected ? Qt.darker(dmList.color, 1.15) : 
-                               (dmMouseArea.containsMouse ? Qt.darker(dmList.color, 1.08) : "transparent")
+                        conversation: modelData
+                        selectedId: selectedConversationId
+                        unreadCounts: dmList.unreadCounts
+                        panelColor: dmList.color
                         
-                        property bool selected: selectedConversationId === (modelData.recipientId || modelData._id || modelData.id)
-                        property int unread: unreadCounts[modelData.recipientId || modelData._id || modelData.id] || 0
-                        
-                        Row {
-                            anchors.fill: parent
-                            anchors.leftMargin: units.gu(1.5)
-                            anchors.rightMargin: units.gu(1.5)
-                            spacing: units.gu(1)
-                            
-                            Components.Avatar {
-                                width: units.gu(4)
-                                height: units.gu(4)
-                                anchors.verticalCenter: parent.verticalCenter
-                                name: modelData.recipientName || modelData.username || ""
-                                source: modelData.recipientAvatar || modelData.profilePicture || ""
-                                showStatus: true
-                                status: modelData.recipientStatus || "offline"
-                            }
-                            
-                            Column {
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: parent.width - units.gu(7) - (unread > 0 ? units.gu(3) : 0)
-                                spacing: units.gu(0.2)
-                                
-                                Label {
-                                    text: modelData.recipientName || modelData.username || ""
-                                    fontSize: "small"
-                                    font.bold: unread > 0
-                                    elide: Text.ElideRight
-                                    width: parent.width
-                                    color: selected || unread > 0 ? 
-                                           Theme.palette.normal.foreground : 
-                                           Theme.palette.normal.backgroundSecondaryText
-                                }
-                                
-                                Label {
-                                    text: modelData.lastMessage || ""
-                                    fontSize: "x-small"
-                                    elide: Text.ElideRight
-                                    width: parent.width
-                                    color: Theme.palette.normal.backgroundSecondaryText
-                                    visible: modelData.lastMessage !== undefined
-                                }
-                            }
-                            
-                            // Unread badge
-                            Rectangle {
-                                width: units.gu(2.5)
-                                height: units.gu(2.5)
-                                radius: width / 2
-                                color: LomiriColors.red
-                                anchors.verticalCenter: parent.verticalCenter
-                                visible: unread > 0
-                                
-                                Label {
-                                    anchors.centerIn: parent
-                                    text: unread > 99 ? "99+" : unread.toString()
-                                    fontSize: "x-small"
-                                    color: "white"
-                                }
-                            }
-                        }
-                        
-                        MouseArea {
-                            id: dmMouseArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                var recipientId = modelData.recipientId || modelData._id || modelData.id
-                                var recipientName = modelData.recipientName || modelData.username || ""
-                                var recipientAvatar = modelData.recipientAvatar || modelData.profilePicture || ""
-                                conversationSelected(recipientId, recipientName, recipientAvatar)
-                            }
-                        }
+                        onClicked: conversationSelected(recipientId, recipientName, recipientAvatar)
                     }
                 }
             }

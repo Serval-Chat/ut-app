@@ -38,5 +38,8 @@
     <file>components/EmptyState.qml</file>
     <file>components/EmojiData.qml</file>
     <file>components/BottomSheet.qml</file>
+    <file>components/MemberListItem.qml</file>
+    <file>components/ListHeader.qml</file>
+    <file>components/ConversationListItem.qml</file>
   </qresource>
 </RCC>

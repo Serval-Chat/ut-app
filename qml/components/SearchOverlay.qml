@@ -190,6 +190,7 @@ Rectangle {
             height: parent.height - units.gu(10)
             clip: true
             visible: searchResults.length > 0 && !loading
+            cacheBuffer: units.gu(30)  // Performance optimization
             
             model: searchResults
             

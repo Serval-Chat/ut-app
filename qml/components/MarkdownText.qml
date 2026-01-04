@@ -17,6 +17,7 @@ import SerchatAPI 1.0
  * - Unicode emoji rendering
  * - Mentions (@username)
  * - Channel references (#channel)
+ * - Emoji-only messages with larger emoji display
  */
 Item {
     id: markdownText
@@ -40,8 +41,16 @@ Item {
     // Force re-render when userProfiles changes
     property int userProfilesVersion: Object.keys(userProfiles).length
     
-    // The rendered HTML content (depends on text, emoji cache, and user profiles)
-    property string renderedHtml: renderMarkdown(text, emojiCacheVersion, userProfilesVersion)
+    // Check if the message is emoji-only (for larger display)
+    readonly property bool isEmojiOnly: checkIsEmojiOnly(text)
+    
+    // Emoji sizes based on context
+    readonly property int normalEmojiSize: 20  // Same as text
+    readonly property int largeEmojiSize: 32   // Larger for emoji-only messages
+    readonly property int currentEmojiSize: isEmojiOnly ? largeEmojiSize : normalEmojiSize
+    
+    // The rendered HTML content (depends on text, emoji cache, user profiles, and emoji size)
+    property string renderedHtml: renderMarkdown(text, emojiCacheVersion, userProfilesVersion, currentEmojiSize)
     
     implicitWidth: textLabel.implicitWidth
     implicitHeight: textLabel.implicitHeight
@@ -53,7 +62,7 @@ Item {
         width: parent.width
         text: renderedHtml
         textFormat: Text.RichText  // Use RichText for full HTML support including images
-        fontSize: markdownText.fontSize
+        fontSize: markdownText.isEmojiOnly ? "large" : markdownText.fontSize
         color: markdownText.textColor
         linkColor: markdownText.linkColor
         wrapMode: markdownText.wrapMode
@@ -83,12 +92,91 @@ Item {
     // Track pending emoji requests to avoid duplicates
     property var pendingEmojiRequests: ({})
     
+    // Check if the message contains only emojis (Unicode or custom)
+    // Returns true if the message is emoji-only, false otherwise
+    function checkIsEmojiOnly(input) {
+        if (!input || input.length === 0) return false
+        
+        // Remove whitespace
+        var trimmed = input.trim()
+        if (trimmed.length === 0) return false
+        
+        // Pattern to match custom emojis: <emoji:xxx> or :shortcode:
+        var customEmojiPattern = /<emoji:[a-zA-Z0-9]+>|:[a-zA-Z0-9_]+:/g
+        
+        // Remove custom emojis first
+        var withoutCustom = trimmed.replace(customEmojiPattern, '')
+        
+        // Remove whitespace after removing custom emojis
+        withoutCustom = withoutCustom.replace(/\s+/g, '')
+        
+        // If only custom emojis remain, it's emoji-only
+        if (withoutCustom.length === 0) return true
+        
+        // Check remaining content for Unicode emojis only
+        // This regex matches most common emoji ranges
+        // Unicode emoji ranges: emoticons, dingbats, symbols, flags, etc.
+        var remaining = withoutCustom
+        
+        // Process string character by character (handling surrogate pairs)
+        var i = 0
+        while (i < remaining.length) {
+            var code = remaining.charCodeAt(i)
+            
+            // Check for surrogate pair (emoji often use these)
+            if (code >= 0xD800 && code <= 0xDBFF && i + 1 < remaining.length) {
+                var nextCode = remaining.charCodeAt(i + 1)
+                if (nextCode >= 0xDC00 && nextCode <= 0xDFFF) {
+                    // Valid surrogate pair - skip both chars
+                    i += 2
+                    continue
+                }
+            }
+            
+            // Check for common emoji Unicode ranges (BMP)
+            if (
+                // Emoticons and symbols
+                (code >= 0x2600 && code <= 0x27BF) ||
+                // Dingbats
+                (code >= 0x2700 && code <= 0x27BF) ||
+                // Miscellaneous Symbols
+                (code >= 0x2300 && code <= 0x23FF) ||
+                // Enclosed alphanumerics
+                (code >= 0x2460 && code <= 0x24FF) ||
+                // Box drawing (for certain symbols)
+                (code >= 0x2500 && code <= 0x257F) ||
+                // Geometric shapes
+                (code >= 0x25A0 && code <= 0x25FF) ||
+                // Misc symbols and arrows
+                (code >= 0x2B00 && code <= 0x2BFF) ||
+                // Regional indicators (flags)
+                (code >= 0x1F1E0 && code <= 0x1F1FF) ||
+                // Variation selectors (VS15, VS16)
+                (code === 0xFE0E || code === 0xFE0F) ||
+                // Zero-width joiner
+                (code === 0x200D) ||
+                // Skin tone modifiers
+                (code >= 0x1F3FB && code <= 0x1F3FF)
+            ) {
+                i++
+                continue
+            }
+            
+            // Any other character means it's not emoji-only
+            return false
+        }
+        
+        return true
+    }
+    
     // Parse and render markdown to HTML
     // cacheVersion and userVersion are used to force re-render when data changes
-    function renderMarkdown(input, cacheVersion, userVersion) {
+    // emojiSize determines the size of emoji images
+    function renderMarkdown(input, cacheVersion, userVersion, emojiSize) {
         if (!input) return ""
         
         var html = input
+        var size = emojiSize || normalEmojiSize
         
         // First, extract and preserve custom emoji tags before HTML escaping
         // Store them with placeholders
@@ -112,11 +200,11 @@ Item {
                     unknownEmojis.push(emojiId)
                 }
                 // Show a loading/unknown placeholder
-                emojiPlaceholders.push('<img src="" width="20" height="20" style="vertical-align: middle; background-color: #e0e0e0; border-radius: 3px;" alt=":' + emojiId + ':" />')
+                emojiPlaceholders.push('<img src="" width="' + size + '" height="' + size + '" style="vertical-align: middle; background-color: #e0e0e0; border-radius: 3px;" alt=":' + emojiId + ':" />')
                 return placeholder
             }
             
-            emojiPlaceholders.push('<img src="' + emojiUrl + '" width="20" height="20" style="vertical-align: middle;" />')
+            emojiPlaceholders.push('<img src="' + emojiUrl + '" width="' + size + '" height="' + size + '" style="vertical-align: middle;" />')
             return placeholder
         })
         
@@ -199,7 +287,7 @@ Item {
         html = html.replace(/:([a-zA-Z0-9_]+):/g, function(match, emojiName) {
             if (customEmojis[emojiName]) {
                 // Return an image tag for custom emoji
-                return '<img src="' + customEmojis[emojiName] + '" width="20" height="20" />'
+                return '<img src="' + customEmojis[emojiName] + '" width="' + size + '" height="' + size + '" style="vertical-align: middle;" />'
             }
             // Check if it's a standard emoji shortcode
             var unicodeEmoji = getEmojiFromShortcode(emojiName)

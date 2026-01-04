@@ -3,6 +3,9 @@
 #include <QUrl>
 #include <QString>
 #include <QQuickView>
+#include <QQmlEngine>
+
+#include "imagecache.h"
 
 int main(int argc, char *argv[])
 {
@@ -13,6 +16,10 @@ int main(int argc, char *argv[])
     qDebug() << "Starting app from main.cpp";
 
     QQuickView *view = new QQuickView();
+
+    // Enable disk caching for network images (avatars, emojis, etc.)
+    view->engine()->setNetworkAccessManagerFactory(new CachedNetworkAccessManagerFactory());
+
     view->setSource(QUrl("qrc:/Main.qml"));
     view->setResizeMode(QQuickView::SizeRootObjectToView);
     view->show();

@@ -29,9 +29,11 @@ Rectangle {
     // Display title - shows DM recipient name or channel name
     readonly property string displayTitle: isDMMode ? dmRecipientName : channelName
     
-    property var messages: []
+    // Messages now come from C++ MessageModel (SerchatAPI.messageModel)
+    // These properties are for backwards compatibility during transition
+    property alias messages: messageList.model
     property bool loading: false
-    property bool hasMoreMessages: true
+    property bool hasMoreMessages: SerchatAPI.messageModel.hasMoreMessages
     property string currentUserId: ""
     property bool showBackButton: false  // Whether to show back button for navigation
     
@@ -44,12 +46,14 @@ Rectangle {
     // Track pending profile requests to avoid duplicates
     property var pendingProfileRequests: ({})
     
-    // Members data
-    property var serverMembers: []
+    // Members panel visibility
     property bool showMembersPanel: false
     
     // Custom emojis for markdown rendering
     property var customEmojis: ({})
+    
+    // Expose the message list for external scroll control
+    property alias messageList: messageList
     
     signal sendMessage(string text, string replyToId)
     signal loadMoreMessages()
@@ -212,29 +216,102 @@ Rectangle {
                 clip: true
                 verticalLayoutDirection: ListView.BottomToTop
                 spacing: units.gu(0.3)
+                
+                // Performance optimizations for slower devices
+                cacheBuffer: units.gu(100)  // Cache items beyond viewport
+                maximumFlickVelocity: 4000
+                flickDeceleration: 1500
             
-            model: messages
+            model: SerchatAPI.messageModel
             
             // Lock scrolling when message bubble is swiping
             property bool swipeLockActive: false
             interactive: !swipeLockActive
             
+            // Scroll position management for model updates (edits, deletes, reactions)
+            property bool preserveScrollPosition: false
+            property real savedContentY: 0
+            property real savedContentHeight: 0
+            property int savedMessageCount: 0
+            
+            // Timer to restore scroll position after model change completes
+            // Using multiple stages to handle different QML update timing
+            Timer {
+                id: scrollRestoreTimer
+                interval: 16  // ~1 frame at 60fps
+                repeat: false
+                onTriggered: {
+                    if (messageList.preserveScrollPosition && messageList.savedContentHeight > 0) {
+                        // Calculate delta and adjust position
+                        var heightDelta = messageList.contentHeight - messageList.savedContentHeight
+                        messageList.contentY = messageList.savedContentY + heightDelta
+                        console.log("[MessageView] Scroll restore attempt 1: delta=" + heightDelta + " newY=" + messageList.contentY)
+                        // Schedule second attempt for layout stabilization
+                        scrollRestoreTimer2.restart()
+                    }
+                }
+            }
+            
+            Timer {
+                id: scrollRestoreTimer2
+                interval: 16
+                repeat: false
+                onTriggered: {
+                    if (messageList.preserveScrollPosition && messageList.savedContentHeight > 0) {
+                        var heightDelta = messageList.contentHeight - messageList.savedContentHeight
+                        messageList.contentY = messageList.savedContentY + heightDelta
+                        messageList.preserveScrollPosition = false
+                        console.log("[MessageView] Scroll restore final: delta=" + heightDelta + " newY=" + messageList.contentY)
+                    }
+                }
+            }
+            
+            // Save scroll position before model update
+            function saveScrollPosition() {
+                savedContentY = contentY
+                savedContentHeight = contentHeight
+                savedMessageCount = SerchatAPI.messageModel.count
+                preserveScrollPosition = true
+                console.log("[MessageView] Saved scroll: contentY=" + savedContentY + " contentHeight=" + savedContentHeight + " count=" + savedMessageCount)
+            }
+            
+            // Called when we want to scroll to bottom for new messages
+            function scrollToBottomOnNewMessage() {
+                preserveScrollPosition = false
+            }
+            
+            // Watch for model changes and trigger scroll restore
+            onCountChanged: {
+                console.log("[MessageView] Count changed to " + count + ", preserveScroll=" + preserveScrollPosition)
+                if (preserveScrollPosition) {
+                    scrollRestoreTimer.restart()
+                }
+            }
+            
+            // Also watch contentHeight as backup
+            onContentHeightChanged: {
+                if (preserveScrollPosition && savedContentHeight > 0 && !scrollRestoreTimer.running) {
+                    scrollRestoreTimer.restart()
+                }
+            }
+            
             delegate: Components.MessageBubble {
                 id: messageDelegate
                 width: messageList.width
-                messageId: modelData._id || modelData.id || ""
-                senderId: modelData.senderId || ""
-                senderName: getSenderName(modelData.senderId)
-                senderAvatar: getSenderAvatar(modelData.senderId)
-                text: modelData.text || ""  // Raw text - MarkdownText handles all formatting
-                timestamp: modelData.createdAt || ""
-                isOwn: modelData.senderId === currentUserId
-                isEdited: modelData.isEdited || false
+                // Use C++ model role names directly (no modelData needed)
+                messageId: model.id || ""
+                senderId: model.senderId || ""
+                senderName: model.senderName || getSenderName(model.senderId)
+                senderAvatar: model.senderAvatar || getSenderAvatar(model.senderId)
+                text: model.text || ""  // Raw text - MarkdownText handles all formatting
+                timestamp: model.timestamp || ""
+                isOwn: model.senderId === currentUserId
+                isEdited: model.isEdited || false
                 showAvatar: shouldShowAvatar(index)
-                isReply: modelData.replyToId ? true : false
-                replyToText: modelData.repliedMessage ? modelData.repliedMessage.text : ""
-                replyToSender: modelData.repliedMessage ? getSenderName(modelData.repliedMessage.senderId) : ""
-                reactions: modelData.reactions || []
+                isReply: model.replyToId ? true : false
+                replyToText: model.repliedMessage ? model.repliedMessage.text : ""
+                replyToSender: model.repliedMessage ? getSenderName(model.repliedMessage.senderId) : ""
+                reactions: model.reactions || []
                 customEmojis: messageView.customEmojis
                 userProfiles: messageView.userProfiles
                 
@@ -249,8 +326,8 @@ Rectangle {
                     composer.setReplyTo(messageId, senderName, messageText)
                 }
                 onReplyClicked: {
-                    if (modelData.repliedMessage) {
-                        scrollToMessage(modelData.repliedMessage._id)
+                    if (model.repliedMessage) {
+                        scrollToMessage(model.repliedMessage._id)
                     }
                 }
                 onReactRequested: {
@@ -279,7 +356,7 @@ Rectangle {
             // Loading indicator / load more at visual top (footer in BottomToTop ListView)
             footer: Item {
                 width: messageList.width
-                height: loading ? units.gu(6) : (hasMoreMessages ? units.gu(4) : 0)
+                height: loading ? units.gu(6) : (hasMoreMessages ? units.gu(4) : units.gu(12))
                 
                 ActivityIndicator {
                     anchors.centerIn: parent
@@ -287,6 +364,7 @@ Rectangle {
                     visible: loading
                 }
                 
+                // "Load more" button when there are more messages
                 Label {
                     anchors.centerIn: parent
                     text: i18n.tr("Load more messages")
@@ -299,18 +377,33 @@ Rectangle {
                         onClicked: loadMoreMessages()
                     }
                 }
-            }
-            
-            // Auto-scroll behavior - only scroll when new messages are added at bottom
-            property int previousCount: 0
-            
-            onCountChanged: {
-                // Only auto-scroll if we added new messages (not just updating existing ones)
-                // and we were already at the bottom
-                if (count > previousCount && atYEnd) {
-                    positionViewAtBeginning()
+                
+                // "Beginning of channel" message when all messages loaded
+                Column {
+                    anchors.centerIn: parent
+                    spacing: units.gu(1)
+                    visible: !loading && !hasMoreMessages && SerchatAPI.messageModel.count > 0
+                    
+                    Icon {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: units.gu(5)
+                        height: units.gu(5)
+                        name: isDMMode ? "contact" : "edit"
+                        color: Theme.palette.normal.backgroundSecondaryText
+                    }
+                    
+                    Label {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: isDMMode ? 
+                              i18n.tr("This is the beginning of your conversation with %1").arg(dmRecipientName) :
+                              i18n.tr("This is the beginning of #%1").arg(channelName)
+                        fontSize: "small"
+                        color: Theme.palette.normal.backgroundSecondaryText
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.Wrap
+                        width: messageList.width - units.gu(4)
+                    }
                 }
-                previousCount = count
             }
             
             // Pull to load more (debounced)
@@ -330,7 +423,7 @@ Rectangle {
         // Welcome message when channel is empty
         Item {
             anchors.fill: parent
-            visible: messages.length === 0 && !loading
+            visible: SerchatAPI.messageModel.count === 0 && !loading
             
             Column {
                 anchors.centerIn: parent
@@ -409,10 +502,14 @@ Rectangle {
     
     // Check if we should show avatar for message grouping
     function shouldShowAvatar(index) {
-        if (index >= messages.length - 1) return true  // First message (reversed list)
+        var messageModel = SerchatAPI.messageModel
+        if (index >= messageModel.count - 1) return true  // First message (reversed list)
         
-        var currentMsg = messages[index]
-        var prevMsg = messages[index + 1]  // Previous in time (above in view)
+        // Get messages from model using getMessageAt
+        var currentMsg = messageModel.getMessageAt(index)
+        var prevMsg = messageModel.getMessageAt(index + 1)  // Previous in time (above in view)
+        
+        if (!currentMsg || !prevMsg) return true
         
         // Show avatar if different sender
         if (currentMsg.senderId !== prevMsg.senderId) return true
@@ -460,14 +557,8 @@ Rectangle {
     // Toggle reaction on a message (uses existing API methods)
     function toggleReaction(messageId, emoji, emojiType, emojiId) {
         console.log("[MessageView] Toggle reaction:", messageId, emoji, emojiType, emojiId)
-        // Find the message to check if we already reacted
-        var message = null
-        for (var i = 0; i < messages.length; i++) {
-            if (messages[i]._id === messageId || messages[i].id === messageId) {
-                message = messages[i]
-                break
-            }
-        }
+        // Find the message using C++ model's O(1) lookup
+        var message = SerchatAPI.messageModel.getMessage(messageId)
         
         // Check if we already reacted with this emoji
         var hasReacted = false
@@ -526,12 +617,10 @@ Rectangle {
     
     // Scroll to a specific message
     function scrollToMessage(messageId) {
-        for (var i = 0; i < messages.length; i++) {
-            if (messages[i]._id === messageId || messages[i].id === messageId) {
-                messageList.positionViewAtIndex(i, ListView.Center)
-                // TODO: Highlight the message briefly
-                break
-            }
+        var index = SerchatAPI.messageModel.indexOfMessage(messageId)
+        if (index >= 0) {
+            messageList.positionViewAtIndex(index, ListView.Center)
+            // TODO: Highlight the message briefly
         }
     }
     
@@ -607,18 +696,19 @@ Rectangle {
             // Find which sender this profile belongs to
             for (var senderId in pendingProfileRequests) {
                 if (pendingProfileRequests[senderId] === requestId) {
-                    // Update cache
+                    // Update QML cache
                     var newProfiles = userProfiles
                     newProfiles[senderId] = profile
                     userProfiles = newProfiles
-                    
+
+                    // Sync profile to C++ MessageModel for proper sender name resolution
+                    SerchatAPI.messageModel.updateUserProfile(senderId, profile)
+
                     // Remove from pending
                     var newPending = pendingProfileRequests
                     delete newPending[senderId]
                     pendingProfileRequests = newPending
-                    
-                    // Note: The ListView will update automatically when userProfiles changes
-                    // No need to force refresh messages array
+
                     break
                 }
             }
@@ -637,21 +727,21 @@ Rectangle {
         }
     }
     
-    // Fetch profiles when messages change
-    onMessagesChanged: {
-        console.log("[MessageView] Messages changed, count:", messages.length)
-        // Collect unique sender IDs
-        var senderIds = {}
-        for (var i = 0; i < messages.length; i++) {
-            var senderId = messages[i].senderId
-            if (senderId && !userProfiles[senderId] && !senderIds[senderId]) {
-                senderIds[senderId] = true
+    // Connect to C++ model signals for profile fetching
+    Connections {
+        target: SerchatAPI.messageModel
+        
+        // When a message is added, check if we need to fetch the sender's profile
+        onMessageAdded: {
+            console.log("[MessageView] Message added:", messageId, "isNew:", isNewMessage)
+            var message = SerchatAPI.messageModel.getMessage(messageId)
+            if (message && message.senderId) {
+                fetchProfileIfNeeded(message.senderId)
             }
         }
         
-        // Fetch profiles for unknown senders
-        for (var id in senderIds) {
-            fetchProfileIfNeeded(id)
+        onCountChanged: {
+            console.log("[MessageView] Model count changed to:", SerchatAPI.messageModel.count)
         }
     }
     
@@ -695,10 +785,11 @@ Rectangle {
         Components.MembersListView {
             anchors.fill: parent
             anchors.leftMargin: units.dp(1)
-            members: serverMembers
+            serverId: messageView.serverId
+            currentUserId: messageView.currentUserId
             
             onMemberClicked: {
-                openProfileSheet(memberId)
+                openProfileSheet(userId)
             }
         }
     }

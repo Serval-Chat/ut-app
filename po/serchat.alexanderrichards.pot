@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-04 16:33+0000\n"
+"POT-Creation-Date: 2026-01-04 18:52+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -273,23 +273,23 @@ msgstr ""
 msgid "Profile update not yet implemented"
 msgstr ""
 
-#: ../qml/HomePage.qml:273 ../qml/components/DMListView.qml:44
+#: ../qml/HomePage.qml:272 ../qml/components/DMListView.qml:44
 msgid "Direct Messages"
 msgstr ""
 
-#: ../qml/HomePage.qml:296
+#: ../qml/HomePage.qml:295
 msgid "Select a conversation"
 msgstr ""
 
-#: ../qml/HomePage.qml:297
+#: ../qml/HomePage.qml:296
 msgid "Select a channel"
 msgstr ""
 
-#: ../qml/HomePage.qml:305
+#: ../qml/HomePage.qml:304
 msgid "Choose a conversation from the list or start a new one"
 msgstr ""
 
-#: ../qml/HomePage.qml:306
+#: ../qml/HomePage.qml:305
 msgid "Pick a channel from the list to start chatting"
 msgstr ""
 
@@ -413,11 +413,10 @@ msgstr ""
 msgid "Member Since"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:265 ../qml/components/CreateDMDialog.qml:215
-#: ../qml/components/MembersListView.qml:175
-#: ../qml/components/MembersListView.qml:262
-#: ../qml/components/MessageView.qml:386 ../qml/components/MessageView.qml:391
-#: ../qml/components/SearchOverlay.qml:223
+#: ../qml/ProfilePage.qml:265 ../qml/components/CreateDMDialog.qml:216
+#: ../qml/components/MemberListItem.qml:32
+#: ../qml/components/MessageView.qml:479 ../qml/components/MessageView.qml:484
+#: ../qml/components/SearchOverlay.qml:224
 msgid "Unknown"
 msgstr ""
 
@@ -469,7 +468,7 @@ msgstr ""
 msgid "Create and configure roles"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:159 ../qml/components/MembersListView.qml:65
+#: ../qml/ServerSettingsPage.qml:159 ../qml/components/MembersListView.qml:72
 msgid "Members"
 msgstr ""
 
@@ -597,19 +596,19 @@ msgstr ""
 msgid "Select a friend to start a conversation"
 msgstr ""
 
-#: ../qml/components/CreateDMDialog.qml:265
+#: ../qml/components/CreateDMDialog.qml:266
 msgid "No friends found"
 msgstr ""
 
-#: ../qml/components/CreateDMDialog.qml:266
+#: ../qml/components/CreateDMDialog.qml:267
 msgid "No friends yet"
 msgstr ""
 
-#: ../qml/components/CreateDMDialog.qml:274
+#: ../qml/components/CreateDMDialog.qml:275
 msgid "Try a different search term"
 msgstr ""
 
-#: ../qml/components/CreateDMDialog.qml:275
+#: ../qml/components/CreateDMDialog.qml:276
 msgid "Add friends to start messaging!"
 msgstr ""
 
@@ -641,28 +640,27 @@ msgstr ""
 msgid "Custom Emojis"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:91
-msgid "Search members"
-msgstr ""
-
-#: ../qml/components/MembersListView.qml:132
-msgid "ONLINE — %1"
-msgstr ""
-
-#: ../qml/components/MembersListView.qml:182
-#: ../qml/components/MembersListView.qml:270
+#: ../qml/components/MemberListItem.qml:70
 msgid "(you)"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:219
+#: ../qml/components/MembersListView.qml:98
+msgid "Search members"
+msgstr ""
+
+#: ../qml/components/MembersListView.qml:139
+msgid "ONLINE — %1"
+msgstr ""
+
+#: ../qml/components/MembersListView.qml:170
 msgid "OFFLINE — %1"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:295
+#: ../qml/components/MembersListView.qml:199
 msgid "No members"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:295
+#: ../qml/components/MembersListView.qml:199
 msgid "No members found"
 msgstr ""
 
@@ -707,27 +705,35 @@ msgstr ""
 msgid "Replying to %1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:292
+#: ../qml/components/MessageView.qml:370
 msgid "Load more messages"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:350
+#: ../qml/components/MessageView.qml:398
+msgid "This is the beginning of your conversation with %1"
+msgstr ""
+
+#: ../qml/components/MessageView.qml:399
+msgid "This is the beginning of #%1"
+msgstr ""
+
+#: ../qml/components/MessageView.qml:443
 msgid "Welcome to #%1!"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:357
+#: ../qml/components/MessageView.qml:450
 msgid "This is the start of the #%1 channel."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:375
+#: ../qml/components/MessageView.qml:468
 msgid "Message #%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:375
+#: ../qml/components/MessageView.qml:468
 msgid "Message @%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:376
+#: ../qml/components/MessageView.qml:469
 msgid "You don't have permission to send messages"
 msgstr ""
 

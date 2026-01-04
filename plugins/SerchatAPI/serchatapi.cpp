@@ -7,6 +7,8 @@
 #include "network/socketclient.h"
 #include "auth/authclient.h"
 #include "api/apiclient.h"
+#include "models/messagemodel.h"
+#include "models/genericlistmodel.h"
 
 SerchatAPI::SerchatAPI() {
     // Initialize persistent storage
@@ -19,6 +21,14 @@ SerchatAPI::SerchatAPI() {
     m_authClient = new AuthClient(m_networkClient, this);
     m_apiClient = new ApiClient(m_networkClient, this);
     m_socketClient = new SocketClient(this);
+    
+    // Initialize C++ models for QML
+    // These provide better performance than JavaScript arrays and proper scroll behavior
+    m_messageModel = new MessageModel(this);
+    m_serversModel = new GenericListModel("_id", this);
+    m_channelsModel = new GenericListModel("_id", this);
+    m_membersModel = new GenericListModel("_id", this);
+    m_friendsModel = new GenericListModel("_id", this);
 
     // Configure base URLs
     QString baseUrl = apiBaseUrl();

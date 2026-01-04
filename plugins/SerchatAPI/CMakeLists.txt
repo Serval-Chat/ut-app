@@ -14,6 +14,8 @@ set(
     api/profile.cpp
     api/servers.cpp
     api/messages.cpp
+    models/messagemodel.cpp
+    models/genericlistmodel.cpp
 )
 
 set(CMAKE_AUTOMOC ON)

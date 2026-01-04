@@ -351,10 +351,12 @@ void SocketClient::onTextMessageReceived(const QString& message)
 
 void SocketClient::onPingTimeout()
 {
+    // In Engine.IO v4, the SERVER sends pings, not the client.
+    // This timer is used to detect if the server has gone silent.
+    // If we reach here, it means we haven't received any data from the server
+    // within the pingInterval. Start the pong timeout to wait a bit more.
     if (m_connected) {
-        qDebug() << "[SocketClient] Sending ping to server";
-        sendEnginePacket(ENGINE_PING);
-        // Start pong timeout - if we don't get a response, connection is dead
+        qDebug() << "[SocketClient] No data received from server, starting timeout";
         m_pongTimeoutTimer->start(m_pingTimeout);
     }
 }
@@ -384,11 +386,12 @@ void SocketClient::sendEnginePacket(int type, const QString& data)
 
 void SocketClient::handleEnginePacket(int type, const QString& data)
 {
-    // Reset ping timer on any packet received (server is alive)
+    // Reset inactivity timer on any packet received (server is alive)
+    // This replaces the ping-based heartbeat - we rely on server's pings
     if (m_pingTimer->isActive()) {
         m_pingTimer->start(m_pingInterval);  // Reset the interval
     }
-    // Cancel pong timeout if we got any response
+    // Cancel timeout if we got any response
     m_pongTimeoutTimer->stop();
     
     switch (type) {
@@ -413,8 +416,9 @@ void SocketClient::handleEnginePacket(int type, const QString& data)
         break;
         
     case ENGINE_PONG:
-        // Heartbeat response received from our ping
-        qDebug() << "[SocketClient] Received pong from server";
+        // This shouldn't happen in Engine.IO v4 (client doesn't send ping)
+        // but handle it gracefully in case of protocol variations
+        qDebug() << "[SocketClient] Received unexpected pong from server";
         break;
         
     case ENGINE_MESSAGE:
@@ -467,10 +471,13 @@ void SocketClient::handleOpen(const QJsonObject& config)
     m_pingTimeout = config["pingTimeout"].toInt(20000);
     
     qDebug() << "[SocketClient] Engine.IO open, sid:" << m_sessionId 
-             << "pingInterval:" << m_pingInterval;
+             << "pingInterval:" << m_pingInterval
+             << "pingTimeout:" << m_pingTimeout;
     
-    // Start heartbeat timer
-    m_pingTimer->setInterval(m_pingInterval);
+    // Start inactivity timer - in Engine.IO v4, the server sends pings.
+    // We use this timer to detect if we haven't received anything from the server.
+    // Set to pingInterval + pingTimeout to give server time to ping us.
+    m_pingTimer->setInterval(m_pingInterval + m_pingTimeout);
     m_pingTimer->start();
     
     // Send Socket.IO connect packet

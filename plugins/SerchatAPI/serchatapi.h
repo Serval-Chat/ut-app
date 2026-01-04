@@ -12,6 +12,8 @@ class NetworkClient;
 class AuthClient;
 class ApiClient;
 class SocketClient;
+class MessageModel;
+class GenericListModel;
 
 /**
  * @brief Main API facade exposed to QML.
@@ -35,6 +37,13 @@ class SerchatAPI : public QObject {
     Q_PROPERTY(bool loggedIn READ isLoggedIn NOTIFY loggedInChanged)
     Q_PROPERTY(bool socketConnected READ isSocketConnected NOTIFY socketConnectedChanged)
     Q_PROPERTY(QString socketId READ socketId NOTIFY socketIdChanged)
+    
+    // C++ models for better performance and proper scroll behavior
+    Q_PROPERTY(MessageModel* messageModel READ messageModel CONSTANT)
+    Q_PROPERTY(GenericListModel* serversModel READ serversModel CONSTANT)
+    Q_PROPERTY(GenericListModel* channelsModel READ channelsModel CONSTANT)
+    Q_PROPERTY(GenericListModel* membersModel READ membersModel CONSTANT)
+    Q_PROPERTY(GenericListModel* friendsModel READ friendsModel CONSTANT)
 
 public:
     SerchatAPI();
@@ -477,6 +486,37 @@ signals:
     void pingReceived(const QVariantMap& ping);
     void presenceState(const QVariantMap& presence);
 
+public:
+    // ========================================================================
+    // C++ Models - These provide better performance than QML JavaScript arrays
+    // ========================================================================
+    
+    /**
+     * @brief Get the message model.
+     * This model provides proper scroll preservation during updates.
+     */
+    MessageModel* messageModel() const { return m_messageModel; }
+    
+    /**
+     * @brief Get the servers model.
+     */
+    GenericListModel* serversModel() const { return m_serversModel; }
+    
+    /**
+     * @brief Get the channels model for the current server.
+     */
+    GenericListModel* channelsModel() const { return m_channelsModel; }
+    
+    /**
+     * @brief Get the members model for the current server.
+     */
+    GenericListModel* membersModel() const { return m_membersModel; }
+    
+    /**
+     * @brief Get the friends model for DM conversations.
+     */
+    GenericListModel* friendsModel() const { return m_friendsModel; }
+
 private slots:
     // Auth client handlers
     void onAuthLoginSuccessful(const QVariantMap& userData);
@@ -497,6 +537,13 @@ private:
     AuthClient* m_authClient;
     ApiClient* m_apiClient;
     SocketClient* m_socketClient;
+    
+    // C++ models (owned by this class, exposed to QML)
+    MessageModel* m_messageModel;
+    GenericListModel* m_serversModel;
+    GenericListModel* m_channelsModel;
+    GenericListModel* m_membersModel;
+    GenericListModel* m_friendsModel;
 
     // State tracking for network error handling
     bool m_loginInProgress = false;

@@ -49,7 +49,7 @@ Page {
     property var servers: []
     property var channels: []
     property var categories: []
-    property var messages: []
+    // Messages are now managed by SerchatAPI.messageModel (C++ QAbstractListModel)
     property var userProfiles: ({})
     property var unreadCounts: ({})
     property var serverEmojis: ({})  // Map of emojiId -> emoji data for custom emoji rendering
@@ -63,7 +63,7 @@ Page {
     property bool loadingServers: false
     property bool loadingChannels: false
     property bool loadingMessages: false
-    property bool hasMoreMessages: true
+    // hasMoreMessages is now managed by SerchatAPI.messageModel.hasMoreMessages
     
     // Responsive layout threshold
     readonly property bool isWideScreen: width >= units.gu(200)
@@ -159,9 +159,8 @@ Page {
             dmRecipientName: currentDMRecipientName
             dmRecipientAvatar: currentDMRecipientAvatar
             
-            messages: homePage.messages
+            // Messages are now handled by C++ model (SerchatAPI.messageModel)
             loading: loadingMessages
-            hasMoreMessages: homePage.hasMoreMessages
             currentUserId: homePage.currentUserId
             userProfiles: homePage.userProfiles
             showBackButton: isSmallScreen && mobileViewMode === "messages"
@@ -421,7 +420,7 @@ Page {
                 currentDMRecipientAvatar = ""
                 channels = []
                 categories = []
-                homePage.messages = []
+                SerchatAPI.messageModel.clear()
                 
                 // On small screens, go to channels view to show DM list
                 if (isSmallScreen) {
@@ -520,8 +519,8 @@ Page {
                 currentDMRecipientName = ""
                 currentDMRecipientAvatar = ""
                 
-                // Clear messages immediately when switching channels
-                homePage.messages = []
+                // Clear messages immediately when switching channels (uses proper model signals)
+                SerchatAPI.messageModel.setChannel(currentServerId, channelId)
                 
                 currentChannelId = channelId
                 currentChannelName = channelName
@@ -593,16 +592,19 @@ Page {
         onMyProfileFetched: {
             currentUserId = profile.id || ""
             currentUserName = profile.displayName || profile.username || ""
-            
+
             // Set avatar URL - profilePicture contains the full path
             if (profile.profilePicture) {
                 currentUserAvatar = SerchatAPI.apiBaseUrl + profile.profilePicture
             }
-            
-            // Cache own profile
+
+            // Cache own profile in QML
             var profiles = Object.assign({}, userProfiles)
             profiles[profile.id] = profile
             userProfiles = profiles
+
+            // Sync to C++ MessageModel for proper sender name resolution
+            SerchatAPI.messageModel.updateUserProfile(profile.id, profile)
         }
         
         onMyProfileFetchFailed: {
@@ -724,18 +726,19 @@ Page {
                 var reversedMessages = fetchedMessages.slice().reverse()
                 
                 // Check if this is a pagination request (loading older messages)
-                // by seeing if we already have messages and this is from "before" query
-                if (homePage.messages.length > 0 && reversedMessages.length > 0) {
-                    // This is pagination - append older messages at the end
-                    homePage.messages = homePage.messages.concat(reversedMessages)
+                if (SerchatAPI.messageModel.count > 0 && reversedMessages.length > 0) {
+                    // This is pagination - append older messages at the end using proper model signals
+                    SerchatAPI.messageModel.appendMessages(reversedMessages)
                 } else {
-                    // Initial load - replace all messages
-                    homePage.messages = reversedMessages
+                    // Initial load - use appendMessages for correct ordering
+                    // With BottomToTop ListView: index 0 = bottom, so we need newest at index 0
+                    // reversedMessages is [newest, ..., oldest], appendMessages preserves this order
+                    SerchatAPI.messageModel.appendMessages(reversedMessages)
                 }
-                console.log("[HomePage] Messages updated, total:", homePage.messages.length)
+                console.log("[HomePage] Messages updated, total:", SerchatAPI.messageModel.count)
                 
                 // Check if there are more messages
-                hasMoreMessages = fetchedMessages.length >= 50
+                SerchatAPI.messageModel.hasMoreMessages = (fetchedMessages.length >= 50)
             } else {
                 console.log("[HomePage] Ignoring messages for old channel:", channelId)
             }
@@ -755,55 +758,51 @@ Page {
             // 1. Remove any temp message with matching text
             // 2. Check if Socket.IO already delivered this message
             var msgId = String(message._id || message.id || "")
-            var newMessages = []
-            var foundTempMessage = false
-            var alreadyHasRealMessage = false
             
-            // First pass: check if we already have the real message from Socket.IO
-            for (var i = 0; i < homePage.messages.length; i++) {
-                var existingId = String(homePage.messages[i]._id || homePage.messages[i].id || "")
-                if (existingId === msgId) {
-                    alreadyHasRealMessage = true
-                    break
-                }
-            }
+            // Use C++ model's O(1) lookup to check for duplicates
+            var alreadyHasRealMessage = SerchatAPI.messageModel.hasMessage(msgId)
             
-            // Second pass: build new array, replacing temp message if needed
-            for (var j = 0; j < homePage.messages.length; j++) {
-                var msg = homePage.messages[j]
-                var id = String(msg._id || msg.id || "")
-                
-                // Skip the temp message
-                if (id.indexOf("temp_") === 0 && msg.text === message.text && !foundTempMessage) {
-                    foundTempMessage = true
-                    // Only add real message if Socket.IO hasn't delivered it yet
-                    if (!alreadyHasRealMessage) {
-                        newMessages.push(message)
+            if (alreadyHasRealMessage) {
+                console.log("[HomePage] Real message already exists from Socket.IO:", msgId)
+                // Just need to remove the temp message if any
+            } else {
+                // Try to replace a temp message first
+                // Find temp message with matching text using getMessageAt
+                var tempFound = false
+                var count = SerchatAPI.messageModel.count
+                for (var i = 0; i < count; i++) {
+                    var existingMsg = SerchatAPI.messageModel.getMessageAt(i)
+                    var existingId = String(existingMsg._id || existingMsg.id || "")
+                    if (existingId.indexOf("temp_") === 0) {
+                        if (existingMsg.text === message.text) {
+                            SerchatAPI.messageModel.replaceTempMessage(existingId, message)
+                            tempFound = true
+                            console.log("[HomePage] Replaced temp message with real message")
+                            break
+                        }
                     }
-                } else {
-                    newMessages.push(msg)
+                }
+                
+                if (!tempFound) {
+                    // No temp message found, prepend the real message
+                    SerchatAPI.messageModel.prependMessage(message)
+                    console.log("[HomePage] Added real message (no temp found)")
                 }
             }
-            
-            // If no temp message was found and we don't have it from Socket.IO, prepend
-            if (!foundTempMessage && !alreadyHasRealMessage) {
-                newMessages = [message].concat(newMessages)
-            }
-            
-            homePage.messages = newMessages
         }
         
         onMessageSendFailed: {
             console.log("Failed to send message:", error)
-            // Remove temp message
-            var newMessages = []
-            for (var i = 0; i < homePage.messages.length; i++) {
-                var msg = homePage.messages[i]
-                if (!(msg._id && msg._id.toString().indexOf("temp_") === 0)) {
-                    newMessages.push(msg)
+            // Remove temp messages using model method
+            // Find and remove any temp messages (iterate backwards for safe removal)
+            var count = SerchatAPI.messageModel.count
+            for (var i = count - 1; i >= 0; i--) {
+                var msg = SerchatAPI.messageModel.getMessageAt(i)
+                var id = String(msg._id || msg.id || "")
+                if (id.indexOf("temp_") === 0) {
+                    SerchatAPI.messageModel.deleteMessage(id)
                 }
             }
-            homePage.messages = newMessages
         }
         
         // Friends (for DM list)
@@ -844,17 +843,19 @@ Page {
                 var reversedMessages = fetchedMessages.slice().reverse()
                 
                 // Check if this is a pagination request
-                if (homePage.messages.length > 0 && reversedMessages.length > 0) {
-                    // This is pagination - append older messages at the end
-                    homePage.messages = homePage.messages.concat(reversedMessages)
+                if (SerchatAPI.messageModel.count > 0 && reversedMessages.length > 0) {
+                    // This is pagination - append older messages at the end using proper model signals
+                    SerchatAPI.messageModel.appendMessages(reversedMessages)
                 } else {
-                    // Initial load - replace all messages
-                    homePage.messages = reversedMessages
+                    // Initial load - use appendMessages for correct ordering
+                    // With BottomToTop ListView: index 0 = bottom, so we need newest at index 0
+                    // reversedMessages is [newest, ..., oldest], appendMessages preserves this order
+                    SerchatAPI.messageModel.appendMessages(reversedMessages)
                 }
-                console.log("[HomePage] DM Messages updated, total:", homePage.messages.length)
+                console.log("[HomePage] DM Messages updated, total:", SerchatAPI.messageModel.count)
                 
                 // Check if there are more messages
-                hasMoreMessages = fetchedMessages.length >= 50
+                SerchatAPI.messageModel.hasMoreMessages = (fetchedMessages.length >= 50)
             } else {
                 console.log("[HomePage] Ignoring DM messages for old recipient:", recipientId)
             }
@@ -871,52 +872,43 @@ Page {
             console.log("[HomePage] DM Message sent via HTTP:", message._id)
             
             var msgId = String(message._id || message.id || "")
-            var newMessages = []
-            var foundTempMessage = false
-            var alreadyHasRealMessage = false
             
-            // Check if we already have the real message from Socket.IO
-            for (var i = 0; i < homePage.messages.length; i++) {
-                var existingId = String(homePage.messages[i]._id || homePage.messages[i].id || "")
-                if (existingId === msgId) {
-                    alreadyHasRealMessage = true
-                    break
-                }
-            }
+            // Use C++ model's O(1) lookup to check for duplicates
+            var alreadyHasRealMessage = SerchatAPI.messageModel.hasMessage(msgId)
             
-            // Build new array, replacing temp message if needed
-            for (var j = 0; j < homePage.messages.length; j++) {
-                var msg = homePage.messages[j]
-                var id = String(msg._id || msg.id || "")
-                
-                if (id.indexOf("temp_") === 0 && msg.text === message.text && !foundTempMessage) {
-                    foundTempMessage = true
-                    if (!alreadyHasRealMessage) {
-                        newMessages.push(message)
+            if (!alreadyHasRealMessage) {
+                // Try to find and replace temp message using getMessageAt
+                var tempFound = false
+                var count = SerchatAPI.messageModel.count
+                for (var i = 0; i < count; i++) {
+                    var existingMsg = SerchatAPI.messageModel.getMessageAt(i)
+                    var existingId = String(existingMsg._id || existingMsg.id || "")
+                    if (existingId.indexOf("temp_") === 0) {
+                        if (existingMsg.text === message.text) {
+                            SerchatAPI.messageModel.replaceTempMessage(existingId, message)
+                            tempFound = true
+                            break
+                        }
                     }
-                } else {
-                    newMessages.push(msg)
+                }
+                
+                if (!tempFound) {
+                    SerchatAPI.messageModel.prependMessage(message)
                 }
             }
-            
-            if (!foundTempMessage && !alreadyHasRealMessage) {
-                newMessages = [message].concat(newMessages)
-            }
-            
-            homePage.messages = newMessages
         }
         
         onDmMessageSendFailed: {
             console.log("[HomePage] Failed to send DM message:", error)
-            // Remove temp message
-            var newMessages = []
-            for (var i = 0; i < homePage.messages.length; i++) {
-                var msg = homePage.messages[i]
-                if (!(msg._id && msg._id.toString().indexOf("temp_") === 0)) {
-                    newMessages.push(msg)
+            // Remove temp messages (iterate backwards for safe removal)
+            var count = SerchatAPI.messageModel.count
+            for (var i = count - 1; i >= 0; i--) {
+                var msg = SerchatAPI.messageModel.getMessageAt(i)
+                var id = String(msg._id || msg.id || "")
+                if (id.indexOf("temp_") === 0) {
+                    SerchatAPI.messageModel.deleteMessage(id)
                 }
             }
-            homePage.messages = newMessages
         }
         
         // Server management
@@ -981,36 +973,33 @@ Page {
             console.log("[HomePage] Comparing channels - message:", msgChannelId, "current:", currChannelId)
             
             if (msgChannelId === currChannelId && msgChannelId !== "") {
-                // Check if we already have this message (from HTTP response or duplicate Socket.IO)
-                var isDuplicate = false
+                // Check if we already have this message using C++ model's O(1) lookup
                 var newId = String(message._id || message.id || "")
-                var tempMessageIndex = -1
-                
-                for (var i = 0; i < homePage.messages.length; i++) {
-                    var existingId = String(homePage.messages[i]._id || homePage.messages[i].id || "")
-                    if (existingId === newId) {
-                        isDuplicate = true
-                        break
-                    }
-                    // Also track if there's a temp message with same text (our own message)
-                    if (existingId.indexOf("temp_") === 0 && 
-                        homePage.messages[i].text === message.text &&
-                        tempMessageIndex === -1) {
-                        tempMessageIndex = i
-                    }
-                }
+                var isDuplicate = SerchatAPI.messageModel.hasMessage(newId)
                 
                 if (!isDuplicate) {
-                    // If we found a matching temp message, replace it
-                    if (tempMessageIndex !== -1) {
-                        var newMessages = homePage.messages.slice()
-                        newMessages[tempMessageIndex] = message
-                        homePage.messages = newMessages
-                        console.log("[HomePage] Replaced temp message with real message")
-                    } else {
+                    // Try to find and replace a matching temp message using getMessageAt
+                    var tempFound = false
+                    var count = SerchatAPI.messageModel.count
+                    for (var i = 0; i < count; i++) {
+                        var existingMsg = SerchatAPI.messageModel.getMessageAt(i)
+                        var existingId = String(existingMsg._id || existingMsg.id || "")
+                        if (existingId.indexOf("temp_") === 0) {
+                            if (existingMsg.text === message.text) {
+                                // Replace temp message - this uses dataChanged, preserving scroll
+                                SerchatAPI.messageModel.replaceTempMessage(existingId, message)
+                                tempFound = true
+                                console.log("[HomePage] Replaced temp message with real message via Socket.IO")
+                                break
+                            }
+                        }
+                    }
+                    
+                    if (!tempFound) {
                         // Add new message at index 0 (displayed at bottom with BottomToTop)
-                        homePage.messages = [message].concat(homePage.messages)
-                        console.log("[HomePage] Added message to list, new count:", homePage.messages.length)
+                        // Uses beginInsertRows/endInsertRows for proper scroll handling
+                        SerchatAPI.messageModel.prependMessage(message)
+                        console.log("[HomePage] Added message to list, new count:", SerchatAPI.messageModel.count)
                     }
                 } else {
                     console.log("[HomePage] Skipping duplicate message:", newId)
@@ -1021,32 +1010,16 @@ Page {
         onServerMessageEdited: {
             console.log("[HomePage] Server message edited:", message._id)
             
-            // Update message in the list
-            var msgId = message._id || message.id
-            var newMessages = []
-            for (var i = 0; i < messages.length; i++) {
-                var existingId = messages[i]._id || messages[i].id
-                if (existingId === msgId) {
-                    newMessages.push(message)
-                } else {
-                    newMessages.push(messages[i])
-                }
-            }
-            homePage.messages = newMessages
+            // Update message using C++ model - uses dataChanged signal to preserve scroll
+            var msgId = String(message._id || message.id || "")
+            SerchatAPI.messageModel.updateMessage(msgId, message)
         }
         
         onServerMessageDeleted: {
             console.log("[HomePage] Server message deleted:", messageId)
             
-            // Remove message from the list
-            var newMessages = []
-            for (var i = 0; i < messages.length; i++) {
-                var existingId = messages[i]._id || messages[i].id
-                if (existingId !== messageId) {
-                    newMessages.push(messages[i])
-                }
-            }
-            homePage.messages = newMessages
+            // Delete message using C++ model - uses proper remove signals to preserve scroll
+            SerchatAPI.messageModel.deleteMessage(String(messageId))
         }
         
         // Channel unread notifications
@@ -1079,20 +1052,13 @@ Page {
             var currRecipient = String(currentDMRecipientId || "")
             
             if (currRecipient !== "" && (currRecipient === senderId || currRecipient === receiverId)) {
-                var isDuplicate = false
                 var newId = String(message._id || message.id || "")
-                for (var i = 0; i < messages.length; i++) {
-                    var existingId = String(messages[i]._id || messages[i].id || "")
-                    if (existingId === newId) {
-                        isDuplicate = true
-                        break
-                    }
-                }
+                var isDuplicate = SerchatAPI.messageModel.hasMessage(newId)
                 
                 if (!isDuplicate) {
-                    // Add new message at index 0 (displayed at bottom with BottomToTop)
-                    homePage.messages = [message].concat(homePage.messages)
-                    console.log("[HomePage] Added DM to list, new count:", homePage.messages.length)
+                    // Add new message using C++ model - uses proper insert signals
+                    SerchatAPI.messageModel.prependMessage(message)
+                    console.log("[HomePage] Added DM to list, new count:", SerchatAPI.messageModel.count)
                 }
             }
         }
@@ -1137,7 +1103,7 @@ Page {
                 if (channelId === currentChannelId) {
                     currentChannelId = ""
                     currentChannelName = ""
-                    homePage.messages = []
+                    SerchatAPI.messageModel.clear()
                 }
                 // Refresh channels list
                 loadChannels(serverId)
@@ -1208,7 +1174,7 @@ Page {
         }
         
         loadingChannels = true
-        homePage.messages = []  // Clear messages when loading new server
+        SerchatAPI.messageModel.clear()  // Clear messages when loading new server
         currentChannelId = ""
         currentChannelName = ""
         SerchatAPI.getChannels(serverId)
@@ -1221,8 +1187,8 @@ Page {
         if (!serverId || !channelId) return
         
         loadingMessages = true
-        homePage.messages = []  // Clear messages when loading new channel
-        hasMoreMessages = true
+        // Set channel context and clear messages using proper model signals
+        SerchatAPI.messageModel.setChannel(serverId, channelId)
         
         // Join the channel room for real-time updates
         SerchatAPI.joinChannel(serverId, channelId)
@@ -1231,19 +1197,20 @@ Page {
     }
     
     function loadOlderMessages() {
-        if (loadingMessages || !hasMoreMessages || homePage.messages.length === 0) return
+        var model = SerchatAPI.messageModel
+        if (loadingMessages || !model.hasMoreMessages || model.count === 0) return
         
         loadingMessages = true
         
-        // Get the oldest message ID
-        var oldestId = homePage.messages[homePage.messages.length - 1]._id || homePage.messages[homePage.messages.length - 1].id
+        // Get the oldest message ID using C++ model method
+        var oldestId = model.oldestMessageId()
         SerchatAPI.getMessages(currentServerId, currentChannelId, 50, oldestId)
     }
     
     function sendMessageToChannel(text, replyToId) {
         if (!currentServerId || !currentChannelId || !text) return
         
-        // Optimistically add message to view
+        // Optimistically add message to view using C++ model
         var newMessage = {
             _id: "temp_" + Date.now(),
             serverId: currentServerId,
@@ -1254,7 +1221,8 @@ Page {
             replyToId: replyToId || null
         }
         
-        homePage.messages = [newMessage].concat(homePage.messages)
+        // Use model method - will use proper insert signals
+        SerchatAPI.messageModel.prependMessage(newMessage)
         
         // Send via API
         SerchatAPI.sendMessage(currentServerId, currentChannelId, text, replyToId || "")
@@ -1264,27 +1232,28 @@ Page {
         if (!recipientId) return
         
         loadingMessages = true
-        homePage.messages = []
-        hasMoreMessages = true
+        // Set DM mode and clear messages using proper model signals
+        SerchatAPI.messageModel.setDMRecipient(recipientId)
         
         // Fetch DM messages from API
         SerchatAPI.getDMMessages(recipientId, 50, "")
     }
     
     function loadOlderDMMessages() {
-        if (loadingMessages || !hasMoreMessages || homePage.messages.length === 0 || !currentDMRecipientId) return
+        var model = SerchatAPI.messageModel
+        if (loadingMessages || !model.hasMoreMessages || model.count === 0 || !currentDMRecipientId) return
         
         loadingMessages = true
         
-        // Get the oldest message ID
-        var oldestId = homePage.messages[homePage.messages.length - 1]._id || homePage.messages[homePage.messages.length - 1].id
+        // Get the oldest message ID using C++ model method
+        var oldestId = model.oldestMessageId()
         SerchatAPI.getDMMessages(currentDMRecipientId, 50, oldestId)
     }
     
     function sendDMMessageToUser(text, replyToId) {
         if (!currentDMRecipientId || !text) return
         
-        // Optimistically add message to view
+        // Optimistically add message to view using C++ model
         var newMessage = {
             _id: "temp_" + Date.now(),
             senderId: currentUserId,
@@ -1295,7 +1264,8 @@ Page {
             replyToId: replyToId || null
         }
         
-        homePage.messages = [newMessage].concat(homePage.messages)
+        // Use model method - will use proper insert signals
+        SerchatAPI.messageModel.prependMessage(newMessage)
         
         // Send via API
         SerchatAPI.sendDMMessage(currentDMRecipientId, text, replyToId || "")
@@ -1321,22 +1291,17 @@ Page {
         }
     }
     
-    // Update reactions for a message (preserves scroll position)
+    // Update reactions for a message (preserves scroll position via C++ model)
     function updateMessageReactions(messageId, newReactions) {
-        // Find and update the message
-        for (var i = 0; i < homePage.messages.length; i++) {
-            var msg = homePage.messages[i]
-            var existingId = msg._id || msg.id
-            if (existingId === messageId) {
-                // Create a shallow copy of the messages array
-                var updatedMessages = homePage.messages.slice()
-                // Create a copy of the message with updated reactions
-                updatedMessages[i] = Object.assign({}, msg, { reactions: newReactions })
-                // Signal that only this message changed (not the whole list)
-                homePage.messagesChanged()
-                homePage.messages = updatedMessages
-                return
-            }
+        var targetId = String(messageId)
+        console.log("[HomePage] updateMessageReactions - Updating message:", targetId)
+        
+        // Use C++ model's updateReactions method - uses dataChanged signal to preserve scroll
+        var success = SerchatAPI.messageModel.updateReactions(targetId, newReactions)
+        if (success) {
+            console.log("[HomePage] Updated reactions for message:", targetId, "new reactions count:", newReactions.length)
+        } else {
+            console.log("[HomePage] Message not found for reaction update:", targetId)
         }
     }
     
