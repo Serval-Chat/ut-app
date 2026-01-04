@@ -606,6 +606,18 @@ void SocketClient::handleEvent(const QString& nsp, const QJsonArray& args)
         emit channelDeleted(data["serverId"].toString(),
                            data["channelId"].toString());
     }
+    else if (event == "category_created") {
+        emit categoryCreated(data["serverId"].toString(),
+                            data["category"].toMap());
+    }
+    else if (event == "category_updated") {
+        emit categoryUpdated(data["serverId"].toString(),
+                            data["category"].toMap());
+    }
+    else if (event == "category_deleted") {
+        emit categoryDeleted(data["serverId"].toString(),
+                            data["categoryId"].toString());
+    }
     else if (event == "channel_unread") {
         emit channelUnread(data["serverId"].toString(),
                           data["channelId"].toString(),

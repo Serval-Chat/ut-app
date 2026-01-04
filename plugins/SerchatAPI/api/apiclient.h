@@ -38,6 +38,7 @@ enum class RequestType {
     SingleEmoji,
     Channels,
     ChannelDetails,
+    Categories,
     Messages,
     DMMessages,
     SendMessage,
@@ -128,6 +129,14 @@ public:
      * @return Request ID for matching with channelDetailsFetched signal
      */
     int getChannelDetails(const QString& serverId, const QString& channelId, bool useCache = true);
+    
+    /**
+     * @brief Fetch all categories for a specific server.
+     * @param serverId The server ID to fetch categories for
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with categoriesFetched signal
+     */
+    int getCategories(const QString& serverId, bool useCache = true);
 
     // ========================================================================
     // Server Members API (implemented in servers.cpp)
@@ -292,6 +301,12 @@ signals:
     void channelsFetchFailed(int requestId, const QString& serverId, const QString& error);
     void channelDetailsFetched(int requestId, const QVariantMap& channel);
     void channelDetailsFetchFailed(int requestId, const QString& error);
+    
+    // ========================================================================
+    // Category Signals
+    // ========================================================================
+    void categoriesFetched(int requestId, const QString& serverId, const QVariantList& categories);
+    void categoriesFetchFailed(int requestId, const QString& serverId, const QString& error);
     
     // ========================================================================
     // Server Members Signals

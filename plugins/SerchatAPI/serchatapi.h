@@ -14,6 +14,7 @@ class ApiClient;
 class SocketClient;
 class MessageModel;
 class GenericListModel;
+class ChannelListModel;
 
 /**
  * @brief Main API facade exposed to QML.
@@ -47,6 +48,7 @@ class SerchatAPI : public QObject {
     Q_PROPERTY(GenericListModel* channelsModel READ channelsModel CONSTANT)
     Q_PROPERTY(GenericListModel* membersModel READ membersModel CONSTANT)
     Q_PROPERTY(GenericListModel* friendsModel READ friendsModel CONSTANT)
+    Q_PROPERTY(ChannelListModel* channelListModel READ channelListModel CONSTANT)
 
 public:
     SerchatAPI();
@@ -154,6 +156,14 @@ public:
      */
     Q_INVOKABLE int getChannelDetails(const QString& serverId, const QString& channelId, 
                                        bool useCache = true);
+    
+    /**
+     * @brief Fetch all categories for a specific server.
+     * @param serverId The server ID to fetch categories for
+     * @param useCache If true, return cached data if valid
+     * @return Request ID for matching with categoriesFetched signal
+     */
+    Q_INVOKABLE int getCategories(const QString& serverId, bool useCache = true);
     
     // ========================================================================
     // Server Members API
@@ -402,6 +412,10 @@ signals:
     void channelDetailsFetched(int requestId, const QVariantMap& channel);
     void channelDetailsFetchFailed(int requestId, const QString& error);
     
+    // Category signals
+    void categoriesFetched(int requestId, const QString& serverId, const QVariantList& categories);
+    void categoriesFetchFailed(int requestId, const QString& serverId, const QString& error);
+    
     // Server members signals
     void serverMembersFetched(int requestId, const QString& serverId, const QVariantList& members);
     void serverMembersFetchFailed(int requestId, const QString& serverId, const QString& error);
@@ -467,6 +481,11 @@ signals:
     void channelUnread(const QString& serverId, const QString& channelId,
                        const QString& lastMessageAt, const QString& senderId);
     
+    // Real-time category signals
+    void categoryCreated(const QString& serverId, const QVariantMap& category);
+    void categoryUpdated(const QString& serverId, const QVariantMap& category);
+    void categoryDeleted(const QString& serverId, const QString& categoryId);
+    
     // Real-time DM signals
     void dmUnread(const QString& peer, int count);
     
@@ -530,6 +549,12 @@ public:
      * @brief Get the friends model for DM conversations.
      */
     GenericListModel* friendsModel() const { return m_friendsModel; }
+    
+    /**
+     * @brief Get the channel list model with category grouping.
+     * This model provides a hierarchical view of channels organized by category.
+     */
+    ChannelListModel* channelListModel() const { return m_channelListModel; }
 
 private slots:
     // Auth client handlers
@@ -558,6 +583,7 @@ private:
     GenericListModel* m_channelsModel;
     GenericListModel* m_membersModel;
     GenericListModel* m_friendsModel;
+    ChannelListModel* m_channelListModel;
 
     // State tracking for network error handling
     bool m_loginInProgress = false;

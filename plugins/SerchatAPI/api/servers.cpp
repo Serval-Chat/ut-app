@@ -76,6 +76,26 @@ int ApiClient::getChannelDetails(const QString& serverId, const QString& channel
     return startGetRequest(RequestType::ChannelDetails, endpoint, cacheKey, useCache, context);
 }
 
+int ApiClient::getCategories(const QString& serverId, bool useCache) {
+    if (serverId.isEmpty()) {
+        int requestId = generateRequestId();
+        QMetaObject::invokeMethod(this, [this, requestId]() {
+            PendingRequest req;
+            req.type = RequestType::Categories;
+            emitFailure(requestId, req, "Server ID is required");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    QString cacheKey = QStringLiteral("categories:%1").arg(serverId);
+    QString endpoint = QStringLiteral("/api/v1/servers/%1/categories").arg(serverId);
+    
+    QVariantMap context;
+    context["serverId"] = serverId;
+    
+    return startGetRequest(RequestType::Categories, endpoint, cacheKey, useCache, context);
+}
+
 // ============================================================================
 // Server Members API
 // ============================================================================

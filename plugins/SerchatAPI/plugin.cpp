@@ -5,6 +5,7 @@
 #include "serchatapi.h"
 #include "models/messagemodel.h"
 #include "models/genericlistmodel.h"
+#include "models/channellistmodel.h"
 
 void SerchatAPIPlugin::registerTypes(const char *uri) {
     //@uri SerchatAPI
@@ -18,4 +19,6 @@ void SerchatAPIPlugin::registerTypes(const char *uri) {
         "MessageModel is accessed via SerchatAPI.messageModel");
     qmlRegisterUncreatableType<GenericListModel>(uri, 1, 0, "GenericListModel",
         "GenericListModel is accessed via SerchatAPI model properties");
+    qmlRegisterUncreatableType<ChannelListModel>(uri, 1, 0, "ChannelListModel",
+        "ChannelListModel is accessed via SerchatAPI.channelListModel");
 }

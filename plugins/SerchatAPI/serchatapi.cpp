@@ -9,6 +9,7 @@
 #include "api/apiclient.h"
 #include "models/messagemodel.h"
 #include "models/genericlistmodel.h"
+#include "models/channellistmodel.h"
 
 SerchatAPI::SerchatAPI() {
     // Initialize persistent storage
@@ -29,6 +30,7 @@ SerchatAPI::SerchatAPI() {
     m_channelsModel = new GenericListModel("_id", this);
     m_membersModel = new GenericListModel("_id", this);
     m_friendsModel = new GenericListModel("_id", this);
+    m_channelListModel = new ChannelListModel(this);
 
     // Configure base URLs
     QString baseUrl = apiBaseUrl();
@@ -78,6 +80,12 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::channelDetailsFetched);
     connect(m_apiClient, &ApiClient::channelDetailsFetchFailed,
             this, &SerchatAPI::channelDetailsFetchFailed);
+    
+    // Connect category signals
+    connect(m_apiClient, &ApiClient::categoriesFetched,
+            this, &SerchatAPI::categoriesFetched);
+    connect(m_apiClient, &ApiClient::categoriesFetchFailed,
+            this, &SerchatAPI::categoriesFetchFailed);
     
     // Connect server members signals
     connect(m_apiClient, &ApiClient::serverMembersFetched,
@@ -182,6 +190,14 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::channelDeleted);
     connect(m_socketClient, &SocketClient::channelUnread,
             this, &SerchatAPI::channelUnread);
+    
+    // Real-time category events
+    connect(m_socketClient, &SocketClient::categoryCreated,
+            this, &SerchatAPI::categoryCreated);
+    connect(m_socketClient, &SocketClient::categoryUpdated,
+            this, &SerchatAPI::categoryUpdated);
+    connect(m_socketClient, &SocketClient::categoryDeleted,
+            this, &SerchatAPI::categoryDeleted);
     
     // Real-time DM unread
     connect(m_socketClient, &SocketClient::dmUnread,
@@ -399,6 +415,10 @@ int SerchatAPI::getChannels(const QString& serverId, bool useCache) {
 
 int SerchatAPI::getChannelDetails(const QString& serverId, const QString& channelId, bool useCache) {
     return m_apiClient->getChannelDetails(serverId, channelId, useCache);
+}
+
+int SerchatAPI::getCategories(const QString& serverId, bool useCache) {
+    return m_apiClient->getCategories(serverId, useCache);
 }
 
 // ============================================================================

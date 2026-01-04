@@ -124,6 +124,11 @@ signals:
     void channelUnread(const QString& serverId, const QString& channelId, 
                        const QString& lastMessageAt, const QString& senderId);
     
+    // Category events
+    void categoryCreated(const QString& serverId, const QVariantMap& category);
+    void categoryUpdated(const QString& serverId, const QVariantMap& category);
+    void categoryDeleted(const QString& serverId, const QString& categoryId);
+    
     // DM events
     void dmUnread(const QString& peer, int count);
     

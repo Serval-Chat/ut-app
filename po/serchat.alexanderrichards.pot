@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-04 21:56+0000\n"
+"POT-Creation-Date: 2026-01-04 22:48+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -273,23 +273,23 @@ msgstr ""
 msgid "Profile update not yet implemented"
 msgstr ""
 
-#: ../qml/HomePage.qml:268 ../qml/components/DMListView.qml:44
+#: ../qml/HomePage.qml:267 ../qml/components/DMListView.qml:44
 msgid "Direct Messages"
 msgstr ""
 
-#: ../qml/HomePage.qml:291
+#: ../qml/HomePage.qml:290
 msgid "Select a conversation"
 msgstr ""
 
-#: ../qml/HomePage.qml:292
+#: ../qml/HomePage.qml:291
 msgid "Select a channel"
 msgstr ""
 
-#: ../qml/HomePage.qml:300
+#: ../qml/HomePage.qml:299
 msgid "Choose a conversation from the list or start a new one"
 msgstr ""
 
-#: ../qml/HomePage.qml:301
+#: ../qml/HomePage.qml:300
 msgid "Pick a channel from the list to start chatting"
 msgstr ""
 

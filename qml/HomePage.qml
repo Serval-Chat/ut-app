@@ -47,8 +47,7 @@ Page {
     
     // Data stores
     property var servers: []
-    property var channels: []
-    property var categories: []
+    // Channels and categories are now managed by SerchatAPI.channelListModel
     // Messages are now managed by SerchatAPI.messageModel (C++ QAbstractListModel)
     property var userProfiles: ({})
     property var unreadCounts: ({})
@@ -417,8 +416,7 @@ Page {
                 currentDMRecipientId = ""
                 currentDMRecipientName = ""
                 currentDMRecipientAvatar = ""
-                channels = []
-                categories = []
+                SerchatAPI.channelListModel.clear()
                 SerchatAPI.messageModel.clear()
                 
                 // Save state - clear all last IDs when going home
@@ -506,8 +504,7 @@ Page {
             serverId: currentServerId
             serverName: currentServerName
             selectedChannelId: currentChannelId
-            channels: homePage.channels
-            categories: homePage.categories
+            // Channels and categories now come from SerchatAPI.channelListModel
             currentUserName: homePage.currentUserName
             currentUserAvatar: homePage.currentUserAvatar
             
@@ -656,28 +653,25 @@ Page {
             if (serverId === currentServerId) {
                 loadingChannels = false
                 
-                // Separate channels and categories
+                // Filter out categories (type === "category") from channels list
+                // Categories are fetched separately via getCategories
                 var chans = []
-                var cats = []
-                
                 for (var i = 0; i < channels.length; i++) {
                     var item = channels[i]
-                    if (item.type === "category") {
-                        cats.push(item)
-                    } else {
+                    if (item.type !== "category") {
                         chans.push(item)
                     }
                 }
                 
-                homePage.channels = chans
-                homePage.categories = cats
+                // Update the C++ model with channels
+                SerchatAPI.channelListModel.setChannels(chans)
                 
                 // Check for saved channel state and restore if valid
                 var savedChannelId = SerchatAPI.lastChannelId
                 if (savedChannelId && savedChannelId !== "") {
                     // Find the saved channel in the list
-                    for (var j = 0; j < channels.length; j++) {
-                        var ch = channels[j]
+                    for (var j = 0; j < chans.length; j++) {
+                        var ch = chans[j]
                         var chId = ch._id || ch.id
                         if (chId === savedChannelId && ch.type === "text") {
                             // Restore channel selection
@@ -695,10 +689,10 @@ Page {
                 }
                 
                 // Fallback: Auto-select first text channel
-                if (channels.length > 0 && currentChannelId === "") {
-                    for (var k = 0; k < channels.length; k++) {
-                        if (channels[k].type === "text") {
-                            var channel = channels[k]
+                if (chans.length > 0 && currentChannelId === "") {
+                    for (var k = 0; k < chans.length; k++) {
+                        if (chans[k].type === "text") {
+                            var channel = chans[k]
                             currentChannelId = channel._id || channel.id
                             currentChannelName = channel.name
                             currentChannelType = channel.type
@@ -714,6 +708,20 @@ Page {
             if (serverId === currentServerId) {
                 loadingChannels = false
                 console.log("Failed to fetch channels:", error)
+            }
+        }
+        
+        // Categories
+        onCategoriesFetched: {
+            if (serverId === currentServerId) {
+                // Update the C++ model with categories
+                SerchatAPI.channelListModel.setCategories(categories)
+            }
+        }
+        
+        onCategoriesFetchFailed: {
+            if (serverId === currentServerId) {
+                console.log("Failed to fetch categories:", error)
             }
         }
         
@@ -1156,8 +1164,8 @@ Page {
         onChannelCreated: {
             console.log("[HomePage] Channel created in server:", serverId)
             if (serverId === currentServerId) {
-                // Refresh channels list
-                loadChannels(serverId)
+                // Add the new channel to the C++ model
+                SerchatAPI.channelListModel.addChannel(channel)
             }
         }
         
@@ -1170,16 +1178,40 @@ Page {
                     currentChannelName = ""
                     SerchatAPI.messageModel.clear()
                 }
-                // Refresh channels list
-                loadChannels(serverId)
+                // Remove from the C++ model
+                SerchatAPI.channelListModel.removeChannel(channelId)
             }
         }
         
         onChannelUpdated: {
             console.log("[HomePage] Channel updated in server:", serverId)
             if (serverId === currentServerId) {
-                // Refresh channels list
-                loadChannels(serverId)
+                // Update in the C++ model
+                var chId = channel._id || channel.id
+                SerchatAPI.channelListModel.updateChannel(chId, channel)
+            }
+        }
+        
+        // Category updates
+        onCategoryCreated: {
+            console.log("[HomePage] Category created in server:", serverId)
+            if (serverId === currentServerId) {
+                SerchatAPI.channelListModel.addCategory(category)
+            }
+        }
+        
+        onCategoryUpdated: {
+            console.log("[HomePage] Category updated in server:", serverId)
+            if (serverId === currentServerId) {
+                var catId = category._id || category.id
+                SerchatAPI.channelListModel.updateCategory(catId, category)
+            }
+        }
+        
+        onCategoryDeleted: {
+            console.log("[HomePage] Category deleted:", categoryId)
+            if (serverId === currentServerId) {
+                SerchatAPI.channelListModel.removeCategory(categoryId)
             }
         }
         
@@ -1240,9 +1272,13 @@ Page {
         
         loadingChannels = true
         SerchatAPI.messageModel.clear()  // Clear messages when loading new server
+        SerchatAPI.channelListModel.clear()  // Clear channel list model
         currentChannelId = ""
         currentChannelName = ""
+        
+        // Fetch both channels and categories for the server
         SerchatAPI.getChannels(serverId)
+        SerchatAPI.getCategories(serverId)
         
         // Also fetch server emojis for custom emoji rendering
         SerchatAPI.getServerEmojis(serverId)

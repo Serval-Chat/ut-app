@@ -16,6 +16,7 @@ set(
     api/messages.cpp
     models/messagemodel.cpp
     models/genericlistmodel.cpp
+    models/channellistmodel.cpp
 )
 
 set(CMAKE_AUTOMOC ON)

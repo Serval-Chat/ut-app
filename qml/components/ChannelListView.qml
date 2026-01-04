@@ -6,6 +6,12 @@ import "." as Components
 
 /*
  * ChannelListView - Channel list with categories for a server
+ * 
+ * Uses SerchatAPI.channelListModel which provides:
+ * - Sorted categories by position
+ * - Uncategorized channels at the top
+ * - Expandable category headers
+ * - Real-time updates when channels/categories change
  */
 Rectangle {
     id: channelList
@@ -14,15 +20,10 @@ Rectangle {
     property string serverName: ""
     property string serverIcon: ""
     property string selectedChannelId: ""
-    property var channels: []
-    property var categories: []
     property var unreadCounts: ({})  // channelId -> count
     property var mentionChannels: ({})  // channelId -> hasMention
     property var mutedChannels: ({})  // channelId -> muted
     property bool canManageChannels: false
-    
-    // Track expanded state per category
-    property var expandedCategories: ({})
     
     signal channelSelected(string channelId, string channelName, string channelType)
     signal serverSettingsClicked()
@@ -31,8 +32,13 @@ Rectangle {
     signal channelSettingsClicked(string channelId)
     signal backClicked()
     
-    color: Qt.darker(Theme.palette.normal.background, 1.08)
+    color: Qt.darker(theme.palette.normal.background, 1.08)
     width: units.gu(26)
+    
+    // Current user info (to be set from parent)
+    property string currentUserName: ""
+    property string currentUserAvatar: ""
+    property string currentUserStatus: ""
     
     Column {
         anchors.fill: parent
@@ -66,7 +72,7 @@ Rectangle {
                     height: units.gu(2)
                     name: "go-down"
                     anchors.verticalCenter: parent.verticalCenter
-                    color: Theme.palette.normal.backgroundSecondaryText
+                    color: theme.palette.normal.backgroundSecondaryText
                 }
             }
             
@@ -87,31 +93,39 @@ Rectangle {
             }
         }
         
-        // Channels list
-        Flickable {
-            id: channelFlickable
+        // Channels list using the C++ model
+        ListView {
+            id: channelListView
             width: parent.width
             height: parent.height - serverHeader.height - userPanel.height
-            contentHeight: channelColumn.height + units.gu(2)
             clip: true
+            topMargin: units.gu(1)
+            spacing: units.gu(0.2)
             
-            Column {
-                id: channelColumn
-                width: parent.width
-                topPadding: units.gu(1)
-                spacing: units.gu(0.2)
+            model: SerchatAPI.channelListModel
+            
+            delegate: Loader {
+                id: delegateLoader
+                width: channelListView.width
                 
-                Repeater {
-                    id: channelRepeater
-                    model: buildChannelModel()
-                    
-                    Loader {
-                        width: parent.width
-                        sourceComponent: modelData.isCategory ? categoryComponent : channelComponent
-                        
-                        property var itemData: modelData
-                    }
+                // Respect visibility from the model (handles category expansion)
+                visible: model.visible
+                height: visible ? (model.itemType === "category" ? units.gu(3.5) : units.gu(4)) : 0
+                
+                Behavior on height {
+                    NumberAnimation { duration: 150; easing.type: Easing.OutQuad }
                 }
+                
+                sourceComponent: model.itemType === "category" ? categoryDelegate : channelDelegate
+                
+                // Pass model data to components via properties
+                property string itemId: model.itemId
+                property string itemName: model.name
+                property string itemCategoryId: model.categoryId || ""
+                property string itemChannelType: model.channelType || "text"
+                property string itemIcon: model.icon || ""
+                property string itemDescription: model.description || ""
+                property bool itemExpanded: model.expanded
             }
         }
         
@@ -129,26 +143,18 @@ Rectangle {
         }
     }
     
-    // Current user info (to be set from parent)
-    property string currentUserName: ""
-    property string currentUserAvatar: ""
-    property string currentUserStatus: ""
-    
-    // Component for category headers
+    // Category delegate component
     Component {
-        id: categoryComponent
+        id: categoryDelegate
         
         Components.CategoryHeader {
-            categoryId: itemData.id || ""
-            categoryName: itemData.name || ""
-            expanded: expandedCategories[itemData.id] !== false  // Default to expanded
+            categoryId: itemId
+            categoryName: itemName
+            expanded: itemExpanded
             canManage: canManageChannels
             
             onToggleExpanded: {
-                var newState = !expanded
-                var newExpanded = Object.assign({}, expandedCategories)
-                newExpanded[categoryId] = newState
-                expandedCategories = newExpanded
+                SerchatAPI.channelListModel.toggleCategoryExpanded(categoryId)
             }
             
             onAddChannelClicked: createChannelClicked(categoryId)
@@ -156,26 +162,20 @@ Rectangle {
         }
     }
     
-    // Component for channel items
+    // Channel delegate component
     Component {
-        id: channelComponent
+        id: channelDelegate
         
         Components.ChannelItem {
-            visible: !itemData.categoryId || expandedCategories[itemData.categoryId] !== false
-            height: visible ? units.gu(4) : 0
-            channelId: itemData.id || itemData._id || ""
-            channelName: itemData.name || ""
-            channelType: itemData.type || "text"
-            channelIcon: itemData.icon || ""
-            description: itemData.description || ""
+            channelId: itemId
+            channelName: itemName
+            channelType: itemChannelType
+            channelIcon: itemIcon
+            description: itemDescription
             selected: selectedChannelId === channelId
             unreadCount: unreadCounts[channelId] || 0
             hasMention: mentionChannels[channelId] || false
             muted: mutedChannels[channelId] || false
-            
-            Behavior on height {
-                NumberAnimation { duration: 150; easing.type: Easing.OutQuad }
-            }
             
             onClicked: {
                 selectedChannelId = channelId
@@ -186,92 +186,18 @@ Rectangle {
         }
     }
     
-    // Build a flat model with categories and their channels
-    function buildChannelModel() {
-        var model = []
-        
-        // Group channels by category
-        var categoryMap = {}
-        var uncategorized = []
-        
-        // Initialize category map
-        for (var i = 0; i < categories.length; i++) {
-            var cat = categories[i]
-            var catId = cat._id || cat.id
-            categoryMap[catId] = {
-                category: cat,
-                channels: []
-            }
+    // Update the model when serverId changes
+    onServerIdChanged: {
+        if (serverId) {
+            SerchatAPI.channelListModel.serverId = serverId
         }
-        
-        // Assign channels to categories
-        for (var j = 0; j < channels.length; j++) {
-            var ch = channels[j]
-            if (ch.categoryId && categoryMap[ch.categoryId]) {
-                categoryMap[ch.categoryId].channels.push(ch)
-            } else {
-                uncategorized.push(ch)
-            }
-        }
-        
-        // Add uncategorized channels first
-        for (var k = 0; k < uncategorized.length; k++) {
-            model.push({
-                isCategory: false,
-                id: uncategorized[k]._id || uncategorized[k].id,
-                name: uncategorized[k].name,
-                type: uncategorized[k].type,
-                icon: uncategorized[k].icon,
-                description: uncategorized[k].description,
-                categoryId: null,
-                position: uncategorized[k].position || 0
-            })
-        }
-        
-        // Sort categories by position
-        var sortedCategories = categories.slice().sort(function(a, b) {
-            return (a.position || 0) - (b.position || 0)
-        })
-        
-        // Add categories and their channels
-        for (var m = 0; m < sortedCategories.length; m++) {
-            var category = sortedCategories[m]
-            var catId2 = category._id || category.id
-            
-            // Add category header
-            model.push({
-                isCategory: true,
-                id: catId2,
-                name: category.name,
-                position: category.position || 0
-            })
-            
-            // Sort and add channels in this category
-            var catChannels = categoryMap[catId2].channels.sort(function(a, b) {
-                return (a.position || 0) - (b.position || 0)
-            })
-            
-            for (var n = 0; n < catChannels.length; n++) {
-                model.push({
-                    isCategory: false,
-                    id: catChannels[n]._id || catChannels[n].id,
-                    name: catChannels[n].name,
-                    type: catChannels[n].type,
-                    icon: catChannels[n].icon,
-                    description: catChannels[n].description,
-                    categoryId: catId2,
-                    position: catChannels[n].position || 0
-                })
-            }
-        }
-        
-        return model
     }
     
     // Public function to refresh channels
     function refresh() {
         if (serverId) {
             SerchatAPI.getChannels(serverId, false)
+            SerchatAPI.getCategories(serverId, false)
         }
     }
 }
