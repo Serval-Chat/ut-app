@@ -1,4 +1,4 @@
-This is a client/frontend for the Serchat chatting application. It is in many respects similar to Discord, but open-source.
+This is a client/frontend for the Serchat chatting application. It is in many respects similar to Discord, but open-source. The app is designed to be convergent between phone-sized screens and desktop-sized screens.
 
 The API is not stable; you can assume you do not need to support older versions of the backend when you make changes to API code. You can find a OpenAPI description of most of the HTTP-based API in `openapi.yaml`.
 
