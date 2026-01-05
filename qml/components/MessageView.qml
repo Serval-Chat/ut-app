@@ -222,200 +222,200 @@ Rectangle {
                 cacheBuffer: units.gu(100)  // Cache items beyond viewport
                 maximumFlickVelocity: 4000
                 flickDeceleration: 1500
-            
-            model: SerchatAPI.messageModel
-            
-            // Lock scrolling when message bubble is swiping
-            property bool swipeLockActive: false
-            interactive: !swipeLockActive
-            
-            // Scroll position management for model updates (edits, deletes, reactions)
-            property bool preserveScrollPosition: false
-            property real savedContentY: 0
-            property real savedContentHeight: 0
-            property int savedMessageCount: 0
-            
-            // Track the first unread message ID for "NEW MESSAGES" divider
-            // This is set by C++ after calculating based on timestamps
-            property string firstUnreadMessageId: ""
+                
+                model: SerchatAPI.messageModel
+                
+                // Lock scrolling when message bubble is swiping
+                property bool swipeLockActive: false
+                interactive: !swipeLockActive
+                
+                // Scroll position management for model updates (edits, deletes, reactions)
+                property bool preserveScrollPosition: false
+                property real savedContentY: 0
+                property real savedContentHeight: 0
+                property int savedMessageCount: 0
+                
+                // Track the first unread message ID for "NEW MESSAGES" divider
+                // This is set by C++ after calculating based on timestamps
+                property string firstUnreadMessageId: ""
 
-            delegate: Item {
-                id: messageDelegateContainer
-                width: messageList.width
-                height: messageBubble.height + (newMessagesDivider.visible ? newMessagesDivider.height : 0)
+                delegate: Item {
+                    id: messageDelegateContainer
+                    width: messageList.width
+                    height: messageBubble.height + (newMessagesDivider.visible ? newMessagesDivider.height : 0)
 
-                // Show "NEW MESSAGES" divider above this message if it's the first unread
-                // The firstUnreadMessageId is calculated by C++ based on lastReadAt timestamps
-                property bool isFirstUnread: {
-                    if (messageList.firstUnreadMessageId === "") return false
-                    // Check if this message is the first unread message
-                    var msgId = model.id || ""
-                    return msgId === messageList.firstUnreadMessageId
+                    // Show "NEW MESSAGES" divider above this message if it's the first unread
+                    // The firstUnreadMessageId is calculated by C++ based on lastReadAt timestamps
+                    property bool isFirstUnread: {
+                        if (messageList.firstUnreadMessageId === "") return false
+                        // Check if this message is the first unread message
+                        var msgId = model.id || ""
+                        return msgId === messageList.firstUnreadMessageId
+                    }
+                    
+                    // "NEW MESSAGES" divider
+                    Rectangle {
+                        id: newMessagesDivider
+                        width: parent.width
+                        height: visible ? units.gu(3) : 0
+                        visible: messageDelegateContainer.isFirstUnread
+                        color: "transparent"
+                        
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: units.gu(1)
+                            
+                            Rectangle {
+                                width: (messageDelegateContainer.width - newMessagesLabel.width - units.gu(4)) / 2
+                                height: units.dp(1)
+                                color: "#f04747"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            
+                            Label {
+                                id: newMessagesLabel
+                                text: i18n.tr("NEW MESSAGES")
+                                fontSize: "x-small"
+                                font.bold: true
+                                color: "#f04747"
+                            }
+                            
+                            Rectangle {
+                                width: (messageDelegateContainer.width - newMessagesLabel.width - units.gu(4)) / 2
+                                height: units.dp(1)
+                                color: "#f04747"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                    }
+                    
+                    Components.MessageBubble {
+                        id: messageBubble
+                        width: parent.width
+                        anchors.top: newMessagesDivider.visible ? newMessagesDivider.bottom : parent.top
+                        // Use C++ model role names directly - senderName/Avatar come from UserProfileCache via MessageModel
+                        messageId: model.id || ""
+                        senderId: model.senderId || ""
+                        senderName: model.senderName || i18n.tr("Unknown")
+                        senderAvatar: model.senderAvatar || ""
+                        text: model.text || ""  // Raw text - MarkdownText handles all formatting
+                        timestamp: model.timestamp || ""
+                        isOwn: model.senderId === currentUserId
+                        isEdited: model.isEdited || false
+                        showAvatar: SerchatAPI.messageModel.shouldShowAvatar(index)
+                        isReply: model.replyToId ? true : false
+                        replyToText: model.repliedMessage ? model.repliedMessage.text : ""
+                        replyToSender: model.repliedMessage ? getSenderName(model.repliedMessage.senderId) : ""
+                        reactions: model.reactions || []
+                        
+                        // Bind swipe state to list scroll lock
+                        onIsSwipeActiveChanged: {
+                            messageList.swipeLockActive = isSwipeActive
+                        }
+                        
+                        onAvatarClicked: openProfileSheet(senderId)
+                        onReplyRequested: {
+                            // Set up reply in composer (messageId, senderName, messageText)
+                            composer.setReplyTo(messageId, senderName, messageText)
+                        }
+                        onReplyClicked: {
+                            if (model.repliedMessage) {
+                                scrollToMessage(model.repliedMessage._id)
+                            }
+                        }
+                        onReactRequested: {
+                            showReactionPicker(messageId)
+                        }
+                        onReactionTapped: {
+                            // Toggle reaction - add if not reacted, remove if already reacted
+                            toggleReaction(messageId, emoji, emojiType, emojiId)
+                        }
+                        onMenuRequested: {
+                            // Open bottom sheet action menu
+                            messageActionSheet.open(messageId, messageText, senderName, senderId, isOwn)
+                        }
+                        onCopyRequested: {
+                            console.log("[MessageView] Text copied to clipboard")
+                        }
+                        onDeleteRequested: {
+                            deleteMessage(messageId)
+                        }
+                        onEditRequested: {
+                            // TODO: Implement edit message
+                            console.log("[MessageView] Edit message:", messageId)
+                        }
+                        onMediaViewRequested: {
+                            openMediaViewer(url, name, mime)
+                        }
+                    }
                 }
                 
-                // "NEW MESSAGES" divider
-                Rectangle {
-                    id: newMessagesDivider
-                    width: parent.width
-                    height: visible ? units.gu(3) : 0
-                    visible: messageDelegateContainer.isFirstUnread
-                    color: "transparent"
+                // Loading indicator / load more at visual top (footer in BottomToTop ListView)
+                footer: Item {
+                    width: messageList.width
+                    height: loading ? units.gu(6) : (hasMoreMessages ? units.gu(4) : units.gu(12))
                     
-                    Row {
+                    ActivityIndicator {
+                        anchors.centerIn: parent
+                        running: loading
+                        visible: loading
+                    }
+                    
+                    // "Load more" button when there are more messages
+                    Label {
+                        anchors.centerIn: parent
+                        text: i18n.tr("Load more messages")
+                        fontSize: "small"
+                        color: LomiriColors.blue
+                        visible: !loading && hasMoreMessages
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: loadMoreMessages()
+                        }
+                    }
+                    
+                    // "Beginning of channel" message when all messages loaded
+                    Column {
                         anchors.centerIn: parent
                         spacing: units.gu(1)
+                        visible: !loading && !hasMoreMessages && SerchatAPI.messageModel.count > 0
                         
-                        Rectangle {
-                            width: (messageDelegateContainer.width - newMessagesLabel.width - units.gu(4)) / 2
-                            height: units.dp(1)
-                            color: "#f04747"
-                            anchors.verticalCenter: parent.verticalCenter
+                        Icon {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: units.gu(5)
+                            height: units.gu(5)
+                            name: isDMMode ? "contact" : "edit"
+                            color: Theme.palette.normal.backgroundSecondaryText
                         }
                         
                         Label {
-                            id: newMessagesLabel
-                            text: i18n.tr("NEW MESSAGES")
-                            fontSize: "x-small"
-                            font.bold: true
-                            color: "#f04747"
-                        }
-                        
-                        Rectangle {
-                            width: (messageDelegateContainer.width - newMessagesLabel.width - units.gu(4)) / 2
-                            height: units.dp(1)
-                            color: "#f04747"
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: isDMMode ? 
+                                i18n.tr("This is the beginning of your conversation with %1").arg(dmRecipientName) :
+                                i18n.tr("This is the beginning of #%1").arg(channelName)
+                            fontSize: "small"
+                            color: Theme.palette.normal.backgroundSecondaryText
+                            horizontalAlignment: Text.AlignHCenter
+                            wrapMode: Text.Wrap
+                            width: messageList.width - units.gu(4)
                         }
                     }
                 }
                 
-                Components.MessageBubble {
-                    id: messageBubble
-                    width: parent.width
-                    anchors.top: newMessagesDivider.visible ? newMessagesDivider.bottom : parent.top
-                    // Use C++ model role names directly - senderName/Avatar come from UserProfileCache via MessageModel
-                    messageId: model.id || ""
-                    senderId: model.senderId || ""
-                    senderName: model.senderName || i18n.tr("Unknown")
-                    senderAvatar: model.senderAvatar || ""
-                    text: model.text || ""  // Raw text - MarkdownText handles all formatting
-                    timestamp: model.timestamp || ""
-                    isOwn: model.senderId === currentUserId
-                    isEdited: model.isEdited || false
-                    showAvatar: SerchatAPI.messageModel.shouldShowAvatar(index)
-                    isReply: model.replyToId ? true : false
-                    replyToText: model.repliedMessage ? model.repliedMessage.text : ""
-                    replyToSender: model.repliedMessage ? getSenderName(model.repliedMessage.senderId) : ""
-                    reactions: model.reactions || []
-                    
-                    // Bind swipe state to list scroll lock
-                    onIsSwipeActiveChanged: {
-                        messageList.swipeLockActive = isSwipeActive
+                // Pull to load more (debounced)
+                property bool loadingTriggered: false
+                
+                onContentYChanged: {
+                    if (contentY < -units.gu(8) && !loading && hasMoreMessages && !loadingTriggered) {
+                        loadingTriggered = true
+                        loadMoreMessages()
                     }
-                    
-                    onAvatarClicked: openProfileSheet(senderId)
-                    onReplyRequested: {
-                        // Set up reply in composer (messageId, senderName, messageText)
-                        composer.setReplyTo(messageId, senderName, messageText)
-                    }
-                    onReplyClicked: {
-                        if (model.repliedMessage) {
-                            scrollToMessage(model.repliedMessage._id)
-                        }
-                    }
-                    onReactRequested: {
-                        showReactionPicker(messageId)
-                    }
-                    onReactionTapped: {
-                        // Toggle reaction - add if not reacted, remove if already reacted
-                        toggleReaction(messageId, emoji, emojiType, emojiId)
-                    }
-                    onMenuRequested: {
-                        // Open bottom sheet action menu
-                        messageActionSheet.open(messageId, messageText, senderName, senderId, isOwn)
-                    }
-                    onCopyRequested: {
-                        console.log("[MessageView] Text copied to clipboard")
-                    }
-                    onDeleteRequested: {
-                        deleteMessage(messageId)
-                    }
-                    onEditRequested: {
-                        // TODO: Implement edit message
-                        console.log("[MessageView] Edit message:", messageId)
-                    }
-                    onMediaViewRequested: {
-                        openMediaViewer(url, name, mime)
+                    if (contentY >= 0) {
+                        loadingTriggered = false
                     }
                 }
             }
-            
-            // Loading indicator / load more at visual top (footer in BottomToTop ListView)
-            footer: Item {
-                width: messageList.width
-                height: loading ? units.gu(6) : (hasMoreMessages ? units.gu(4) : units.gu(12))
-                
-                ActivityIndicator {
-                    anchors.centerIn: parent
-                    running: loading
-                    visible: loading
-                }
-                
-                // "Load more" button when there are more messages
-                Label {
-                    anchors.centerIn: parent
-                    text: i18n.tr("Load more messages")
-                    fontSize: "small"
-                    color: LomiriColors.blue
-                    visible: !loading && hasMoreMessages
-                    
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: loadMoreMessages()
-                    }
-                }
-                
-                // "Beginning of channel" message when all messages loaded
-                Column {
-                    anchors.centerIn: parent
-                    spacing: units.gu(1)
-                    visible: !loading && !hasMoreMessages && SerchatAPI.messageModel.count > 0
-                    
-                    Icon {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        width: units.gu(5)
-                        height: units.gu(5)
-                        name: isDMMode ? "contact" : "edit"
-                        color: Theme.palette.normal.backgroundSecondaryText
-                    }
-                    
-                    Label {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: isDMMode ? 
-                              i18n.tr("This is the beginning of your conversation with %1").arg(dmRecipientName) :
-                              i18n.tr("This is the beginning of #%1").arg(channelName)
-                        fontSize: "small"
-                        color: Theme.palette.normal.backgroundSecondaryText
-                        horizontalAlignment: Text.AlignHCenter
-                        wrapMode: Text.Wrap
-                        width: messageList.width - units.gu(4)
-                    }
-                }
-            }
-            
-            // Pull to load more (debounced)
-            property bool loadingTriggered: false
-            
-            onContentYChanged: {
-                if (contentY < -units.gu(8) && !loading && hasMoreMessages && !loadingTriggered) {
-                    loadingTriggered = true
-                    loadMoreMessages()
-                }
-                if (contentY >= 0) {
-                    loadingTriggered = false
-                }
-            }
-        }
         
         // Welcome message when channel is empty
         Item {
