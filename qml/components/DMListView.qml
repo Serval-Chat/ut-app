@@ -45,7 +45,7 @@ Rectangle {
                     font.bold: true
                     fontSize: "medium"
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - addButton.width - units.gu(2)
+                    width: parent.width - units.gu(2)
                 }
             }
             
