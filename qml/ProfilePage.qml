@@ -27,6 +27,16 @@ Page {
         
         trailingActionBar.actions: [
             Action {
+                iconName: "edit"
+                text: i18n.tr("Edit Profile")
+                visible: isOwnProfile
+                onTriggered: {
+                    pageStack.push(Qt.resolvedUrl("EditProfilePage.qml"), {
+                        userProfile: userProfile
+                    })
+                }
+            },
+            Action {
                 iconName: "compose"
                 text: i18n.tr("Message")
                 visible: !isOwnProfile

@@ -19,7 +19,9 @@ Item {
     property string userId: ""
     property var userProfile: ({})
     property bool loading: false
-    property bool isOwnProfile: false
+    
+    // Whether this is the current user's own profile
+    readonly property bool isOwnProfile: userId === SerchatAPI.currentUserId
     
     // Whether the sheet is currently visible
     property bool opened: false
@@ -30,6 +32,7 @@ Item {
     signal viewFullProfileClicked(string userId)
     signal sendMessageClicked(string userId)
     signal addFriendClicked(string userId)
+    signal editProfileClicked()
     signal closed()
     
     // Cover the full parent area
@@ -286,14 +289,27 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: units.gu(1)
                     
-                    // View Full Profile button
+                    // View Full Profile button (not for own profile)
                     Button {
                         width: parent.width
                         text: i18n.tr("View Full Profile")
                         color: LomiriColors.blue
+                        visible: !isOwnProfile
                         onClicked: {
                             close()
                             viewFullProfileClicked(userId)
+                        }
+                    }
+                    
+                    // Edit Profile button (only for own profile)
+                    Button {
+                        width: parent.width
+                        text: i18n.tr("Edit Profile")
+                        color: LomiriColors.blue
+                        visible: isOwnProfile
+                        onClicked: {
+                            close()
+                            editProfileClicked()
                         }
                     }
                     
@@ -363,9 +379,8 @@ Item {
     }
     
     // Open the sheet for a user
-    function open(targetUserId, isOwn) {
+    function open(targetUserId) {
         userId = targetUserId
-        isOwnProfile = isOwn || false
         userProfile = {}
         loading = true
         opened = true

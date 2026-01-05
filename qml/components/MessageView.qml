@@ -691,7 +691,7 @@ Rectangle {
     
     // Open profile sheet for a user
     function openProfileSheet(userId) {
-        userProfileSheet.open(userId, userId === currentUserId)
+        userProfileSheet.open(userId)
     }
     
     // User profile sheet (bottom sheet popup)
@@ -717,6 +717,13 @@ Rectangle {
             var profile = userProfileSheet.userProfile
             var username = profile.username || ""
             sendFriendRequest(userId, username)
+        }
+        
+        onEditProfileClicked: {
+            // Open profile edit page
+            pageStack.push(Qt.resolvedUrl("../EditProfilePage.qml"), {
+                userProfile: userProfileSheet.userProfile
+            })
         }
     }
     

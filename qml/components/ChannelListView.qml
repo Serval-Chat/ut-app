@@ -140,6 +140,12 @@ Rectangle {
             onSettingsClicked: {
                 pageStack.push(Qt.resolvedUrl("../SettingsPage.qml"))
             }
+            
+            onProfileClicked: {
+                pageStack.push(Qt.resolvedUrl("../ProfilePage.qml"), {
+                    userId: "me"
+                })
+            }
         }
     }
     

@@ -14,9 +14,15 @@ Rectangle {
     property string userStatus: "online"
     
     signal settingsClicked()
+    signal profileClicked()
     
     height: units.gu(6.5)
     color: Qt.darker(Theme.palette.normal.background, 1.18)
+    
+    MouseArea {
+        anchors.fill: parent
+        onClicked: profileClicked()
+    }
     
     Row {
         anchors.fill: parent

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-05 20:08+0000\n"
+"POT-Creation-Date: 2026-01-05 21:04+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -203,7 +203,8 @@ msgstr ""
 msgid "API responses will appear here..."
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:16
+#: ../qml/EditProfilePage.qml:16 ../qml/ProfilePage.qml:31
+#: ../qml/components/UserProfileSheet.qml:307
 msgid "Edit Profile"
 msgstr ""
 
@@ -244,8 +245,8 @@ msgstr ""
 msgid "e.g., they/them, she/her, he/him"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:171 ../qml/ProfilePage.qml:233
-#: ../qml/components/UserProfileSheet.qml:258
+#: ../qml/EditProfilePage.qml:171 ../qml/ProfilePage.qml:243
+#: ../qml/components/UserProfileSheet.qml:261
 msgid "About Me"
 msgstr ""
 
@@ -401,19 +402,19 @@ msgstr ""
 msgid "Password must be at least 6 characters"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:31
+#: ../qml/ProfilePage.qml:41
 msgid "Message"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:132 ../qml/components/UserProfileSheet.qml:148
+#: ../qml/ProfilePage.qml:142 ../qml/components/UserProfileSheet.qml:151
 msgid "Unknown User"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:264
+#: ../qml/ProfilePage.qml:274
 msgid "Member Since"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:272 ../qml/components/CreateDMDialog.qml:222
+#: ../qml/ProfilePage.qml:282 ../qml/components/CreateDMDialog.qml:222
 #: ../qml/components/MemberListItem.qml:32
 #: ../qml/components/MessageView.qml:299 ../qml/components/MessageView.qml:592
 #: ../qml/components/MessageView.qml:596
@@ -421,11 +422,11 @@ msgstr ""
 msgid "Unknown"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:298
+#: ../qml/ProfilePage.qml:308
 msgid "Send Friend Request"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:305
+#: ../qml/ProfilePage.qml:315
 msgid "Block User"
 msgstr ""
 
@@ -803,39 +804,39 @@ msgstr ""
 msgid "Enter a search term to find messages in this channel"
 msgstr ""
 
-#: ../qml/components/UserPanel.qml:53
+#: ../qml/components/UserPanel.qml:59
 msgid "Online"
 msgstr ""
 
-#: ../qml/components/UserPanel.qml:54
+#: ../qml/components/UserPanel.qml:60
 msgid "Idle"
 msgstr ""
 
-#: ../qml/components/UserPanel.qml:55
+#: ../qml/components/UserPanel.qml:61
 msgid "Do Not Disturb"
 msgstr ""
 
-#: ../qml/components/UserPanel.qml:56
+#: ../qml/components/UserPanel.qml:62
 msgid "Offline"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:292
+#: ../qml/components/UserProfileSheet.qml:295
 msgid "View Full Profile"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:303
+#: ../qml/components/UserProfileSheet.qml:319
 msgid "Send Message"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:314
+#: ../qml/components/UserProfileSheet.qml:330
 msgid "Add Friend"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:405
+#: ../qml/components/UserProfileSheet.qml:420
 msgid "Error"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:406
+#: ../qml/components/UserProfileSheet.qml:421
 msgid "Could not load profile"
 msgstr ""
 
