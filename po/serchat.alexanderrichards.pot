@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-05 03:01+0000\n"
+"POT-Creation-Date: 2026-01-05 03:11+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: ../qml/ApiSettingsPage.qml:12 ../qml/SettingsPage.qml:273
+#: ../qml/ApiSettingsPage.qml:12 ../qml/SettingsPage.qml:246
 msgid "API Settings"
 msgstr ""
 
@@ -115,7 +115,7 @@ msgstr ""
 msgid "Creating..."
 msgstr ""
 
-#: ../qml/DebugPage.qml:9 ../qml/SettingsPage.qml:292
+#: ../qml/DebugPage.qml:9 ../qml/SettingsPage.qml:265
 msgid "Debug"
 msgstr ""
 
@@ -179,7 +179,7 @@ msgstr ""
 msgid "Cache"
 msgstr ""
 
-#: ../qml/DebugPage.qml:161 ../qml/SettingsPage.qml:311
+#: ../qml/DebugPage.qml:161 ../qml/SettingsPage.qml:284
 msgid "Clear Cache"
 msgstr ""
 
@@ -337,7 +337,7 @@ msgstr ""
 msgid "Create an account to get started."
 msgstr ""
 
-#: ../qml/LoginPage.qml:88 ../qml/SettingsPage.qml:156
+#: ../qml/LoginPage.qml:88
 msgid "Email"
 msgstr ""
 
@@ -415,7 +415,7 @@ msgstr ""
 
 #: ../qml/ProfilePage.qml:265 ../qml/components/CreateDMDialog.qml:216
 #: ../qml/components/MemberListItem.qml:32
-#: ../qml/components/MessageView.qml:598 ../qml/components/MessageView.qml:603
+#: ../qml/components/MessageView.qml:600 ../qml/components/MessageView.qml:605
 #: ../qml/components/SearchOverlay.qml:224
 msgid "Unknown"
 msgstr ""
@@ -524,6 +524,10 @@ msgstr ""
 msgid "Account"
 msgstr ""
 
+#: ../qml/SettingsPage.qml:156
+msgid "Login / Email"
+msgstr ""
+
 #: ../qml/SettingsPage.qml:157
 msgid "Not set"
 msgstr ""
@@ -533,54 +537,42 @@ msgid "Change Password"
 msgstr ""
 
 #: ../qml/SettingsPage.qml:191
-msgid "Appearance"
-msgstr ""
-
-#: ../qml/SettingsPage.qml:201
-msgid "Theme"
-msgstr ""
-
-#: ../qml/SettingsPage.qml:202
-msgid "System default"
-msgstr ""
-
-#: ../qml/SettingsPage.qml:218
 msgid "Notifications"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:228
+#: ../qml/SettingsPage.qml:201
 msgid "Enable Notifications"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:243
+#: ../qml/SettingsPage.qml:216
 msgid "Mention Notifications Only"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:244
+#: ../qml/SettingsPage.qml:217
 msgid "Only notify for @mentions"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:260
+#: ../qml/SettingsPage.qml:233
 msgid "Advanced"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:293
+#: ../qml/SettingsPage.qml:266
 msgid "Developer tools"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:312
+#: ../qml/SettingsPage.qml:285
 msgid "Clear locally stored data"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:328
+#: ../qml/SettingsPage.qml:301
 msgid "About"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:338
+#: ../qml/SettingsPage.qml:311
 msgid "Version"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:351
+#: ../qml/SettingsPage.qml:324
 msgid "Log Out"
 msgstr ""
 
@@ -729,27 +721,27 @@ msgstr ""
 msgid "This is the start of the #%1 channel. There are no messages yet."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:534
+#: ../qml/components/MessageView.qml:536
 msgid "%1 is typing..."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:535
+#: ../qml/components/MessageView.qml:537
 msgid "%1 and %2 are typing..."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:536
+#: ../qml/components/MessageView.qml:538
 msgid "%1 and %2 others are typing..."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:576
+#: ../qml/components/MessageView.qml:578
 msgid "Message #%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:576
+#: ../qml/components/MessageView.qml:578
 msgid "Message @%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:577
+#: ../qml/components/MessageView.qml:579
 msgid "You don't have permission to send messages"
 msgstr ""
 

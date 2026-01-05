@@ -502,7 +502,8 @@ Rectangle {
             Row {
                 spacing: units.gu(0.3)
                 visible: typingLabel.visible
-                
+                anchors.verticalCenter: parent.verticalCenter
+
                 Repeater {
                     model: 3
                     Rectangle {
@@ -510,7 +511,7 @@ Rectangle {
                         height: units.gu(0.8)
                         radius: width / 2
                         color: Theme.palette.normal.backgroundSecondaryText
-                        
+
                         SequentialAnimation on opacity {
                             loops: Animation.Infinite
                             running: typingLabel.visible
@@ -521,10 +522,11 @@ Rectangle {
                     }
                 }
             }
-            
+
             Label {
                 id: typingLabel
                 visible: typingIndicator.typingUsers.length > 0
+                anchors.verticalCenter: parent.verticalCenter
                 fontSize: "x-small"
                 color: Theme.palette.normal.backgroundSecondaryText
                 text: {
