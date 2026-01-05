@@ -72,9 +72,9 @@ SerchatAPI::SerchatAPI() {
     connect(m_apiClient, &ApiClient::serverDetailsFetchFailed,
             this, &SerchatAPI::serverDetailsFetchFailed);
     
-    // Connect channel signals
+    // Connect channel signals - intercept to extract lastReadAt
     connect(m_apiClient, &ApiClient::channelsFetched,
-            this, &SerchatAPI::channelsFetched);
+            this, &SerchatAPI::handleChannelsFetched);
     connect(m_apiClient, &ApiClient::channelsFetchFailed,
             this, &SerchatAPI::channelsFetchFailed);
     connect(m_apiClient, &ApiClient::channelDetailsFetched,
@@ -118,9 +118,9 @@ SerchatAPI::SerchatAPI() {
     connect(m_apiClient, &ApiClient::emojiFetchFailed,
             this, &SerchatAPI::emojiFetchFailed);
     
-    // Connect message signals
+    // Connect message signals - intercept to calculate first unread
     connect(m_apiClient, &ApiClient::messagesFetched,
-            this, &SerchatAPI::messagesFetched);
+            this, &SerchatAPI::handleMessagesFetched);
     connect(m_apiClient, &ApiClient::messagesFetchFailed,
             this, &SerchatAPI::messagesFetchFailed);
     connect(m_apiClient, &ApiClient::messageSent,
@@ -375,6 +375,52 @@ void SerchatAPI::setLastDMRecipientId(const QString& id) {
     if (lastDMRecipientId() != id) {
         m_settings->setValue("lastDMRecipientId", id);
         emit lastDMRecipientIdChanged();
+    }
+}
+
+// Current user ID (for filtering own messages from unread counts)
+QString SerchatAPI::currentUserId() const {
+    return m_currentUserId;
+}
+
+void SerchatAPI::setCurrentUserId(const QString& id) {
+    if (m_currentUserId != id) {
+        m_currentUserId = id;
+        emit currentUserIdChanged();
+    }
+}
+
+// Currently viewing channel/DM (for auto-marking messages as read)
+QString SerchatAPI::viewingServerId() const {
+    return m_viewingServerId;
+}
+
+void SerchatAPI::setViewingServerId(const QString& id) {
+    if (m_viewingServerId != id) {
+        m_viewingServerId = id;
+        emit viewingServerIdChanged();
+    }
+}
+
+QString SerchatAPI::viewingChannelId() const {
+    return m_viewingChannelId;
+}
+
+void SerchatAPI::setViewingChannelId(const QString& id) {
+    if (m_viewingChannelId != id) {
+        m_viewingChannelId = id;
+        emit viewingChannelIdChanged();
+    }
+}
+
+QString SerchatAPI::viewingDMRecipientId() const {
+    return m_viewingDMRecipientId;
+}
+
+void SerchatAPI::setViewingDMRecipientId(const QString& id) {
+    if (m_viewingDMRecipientId != id) {
+        m_viewingDMRecipientId = id;
+        emit viewingDMRecipientIdChanged();
     }
 }
 
@@ -887,9 +933,61 @@ void SerchatAPI::handleServerRolesFetched(int requestId, const QString& serverId
     // Populate the roles model with the fetched data
     m_rolesModel->setItems(roles);
     qDebug() << "[SerchatAPI] Roles model populated with" << roles.size() << "roles for server:" << serverId;
-    
+
     // Forward the signal to QML for any additional handling
     emit serverRolesFetched(requestId, serverId, roles);
+}
+
+void SerchatAPI::handleChannelsFetched(int requestId, const QString& serverId, const QVariantList& channels) {
+    // Extract lastReadAt from each channel and store it
+    for (const QVariant& chanVar : channels) {
+        QVariantMap channel = chanVar.toMap();
+        QString channelId = channel.value("_id").toString();
+        if (channelId.isEmpty()) {
+            channelId = channel.value("id").toString();
+        }
+        QString lastReadAt = channel.value("lastReadAt").toString();
+        QString lastMessageAt = channel.value("lastMessageAt").toString();
+
+        if (!channelId.isEmpty()) {
+            // Store the lastReadAt timestamp for this channel
+            setChannelLastReadAt(serverId, channelId, lastReadAt);
+
+            // Determine if channel has unread messages
+            QString key = serverId + ":" + channelId;
+            bool hasUnread = false;
+            if (!lastMessageAt.isEmpty()) {
+                if (lastReadAt.isEmpty()) {
+                    // Never read - has unread if there are any messages
+                    hasUnread = true;
+                } else {
+                    QDateTime lastRead = QDateTime::fromString(lastReadAt, Qt::ISODate);
+                    QDateTime lastMsg = QDateTime::fromString(lastMessageAt, Qt::ISODate);
+                    hasUnread = lastMsg.isValid() && lastRead.isValid() && lastMsg > lastRead;
+                }
+            }
+
+            bool previousState = m_unreadState.value(key, false);
+            if (previousState != hasUnread) {
+                m_unreadState[key] = hasUnread;
+                m_unreadStateVersion++;
+            }
+        }
+    }
+
+    emit unreadStateVersionChanged();
+    qDebug() << "[SerchatAPI] Extracted lastReadAt for" << channels.size() << "channels in server:" << serverId;
+
+    // Forward the signal to QML
+    emit channelsFetched(requestId, serverId, channels);
+}
+
+void SerchatAPI::handleMessagesFetched(int requestId, const QString& serverId, const QString& channelId, const QVariantList& messages) {
+    // Calculate the first unread message based on timestamps
+    calculateFirstUnreadMessage(serverId, channelId, messages);
+
+    // Forward the signal to QML
+    emit messagesFetched(requestId, serverId, channelId, messages);
 }
 
 // ============================================================================
@@ -1007,6 +1105,18 @@ void SerchatAPI::removeTypingUser(const QString& key, const QString& username) {
 // ============================================================================
 // Unread State Tracking
 // ============================================================================
+//
+// This section handles tracking which channels/DMs have unread messages.
+// The system uses server-provided timestamps to determine unread status.
+//
+// Key functions:
+// - markChannelAsRead(): Called when entering a channel, updates lastReadAt
+// - handleChannelsFetched(): Extracts lastReadAt from API response
+// - calculateFirstUnreadMessage(): Finds first message after lastReadAt
+// - handleChannelUnread(): Handles real-time unread notifications from server
+//
+// See serchatapi.h for the full architecture documentation.
+// ============================================================================
 
 bool SerchatAPI::hasUnreadMessages(const QString& serverId, const QString& channelId) const {
     QString key = serverId + ":" + channelId;
@@ -1029,69 +1139,157 @@ bool SerchatAPI::hasServerUnread(const QString& serverId) const {
     return false;
 }
 
-QString SerchatAPI::getLastReadMessageId(const QString& serverId, const QString& channelId) const {
+QString SerchatAPI::getFirstUnreadMessageId(const QString& serverId, const QString& channelId) const {
     QString key = serverId + ":" + channelId;
-    return m_lastReadMessageId.value(key, QString());
+    return m_firstUnreadMessageId.value(key, QString());
 }
 
-QString SerchatAPI::getDMLastReadMessageId(const QString& recipientId) const {
-    QString key = "dm:" + recipientId;
-    return m_lastReadMessageId.value(key, QString());
-}
-
-void SerchatAPI::setLastReadMessageId(const QString& serverId, const QString& channelId, const QString& messageId) {
+void SerchatAPI::clearFirstUnreadMessageId(const QString& serverId, const QString& channelId) {
     QString key = serverId + ":" + channelId;
-    if (m_lastReadMessageId.value(key) != messageId) {
-        m_lastReadMessageId[key] = messageId;
-        emit lastReadMessageChanged(serverId, channelId, messageId);
+    if (m_firstUnreadMessageId.contains(key)) {
+        m_firstUnreadMessageId.remove(key);
+        emit firstUnreadMessageIdChanged(serverId, channelId, QString());
+        qDebug() << "[SerchatAPI] Cleared first unread message ID for channel" << channelId;
     }
 }
 
-void SerchatAPI::setDMLastReadMessageId(const QString& recipientId, const QString& messageId) {
-    QString key = "dm:" + recipientId;
-    if (m_lastReadMessageId.value(key) != messageId) {
-        m_lastReadMessageId[key] = messageId;
-        emit dmLastReadMessageChanged(recipientId, messageId);
-    }
-}
-
-void SerchatAPI::clearChannelUnread(const QString& serverId, const QString& channelId) {
+void SerchatAPI::markChannelAsRead(const QString& serverId, const QString& channelId) {
     QString key = serverId + ":" + channelId;
     bool hadUnread = m_unreadState.value(key, false);
-    
+
+    // Update local lastReadAt to current time - this is the key fix!
+    // When we mark as read, we're saying "I've read everything up to now"
+    QString currentTime = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+    m_channelLastReadAt[key] = currentTime;
+    qDebug() << "[SerchatAPI] Updated lastReadAt for channel" << channelId << "to" << currentTime;
+
+    // Clear the first unread message ID since we've now read everything
+    if (m_firstUnreadMessageId.contains(key)) {
+        m_firstUnreadMessageId.remove(key);
+        emit firstUnreadMessageIdChanged(serverId, channelId, QString());
+    }
+
     if (hadUnread) {
         m_unreadState[key] = false;
         m_unreadStateVersion++;
         emit unreadStateVersionChanged();
         emit channelUnreadStateChanged(serverId, channelId, false);
-        
+
         // Check if server still has any unread channels
         if (!hasServerUnread(serverId)) {
             emit serverUnreadStateChanged(serverId, false);
         }
     }
-    
-    // Also notify the server via socket
+
+    // Notify the server via socket that we've read the channel
     m_socketClient->markChannelRead(serverId, channelId);
+    qDebug() << "[SerchatAPI] Marked channel as read:" << channelId;
 }
 
 void SerchatAPI::clearDMUnread(const QString& recipientId) {
     QString key = "dm:" + recipientId;
     bool hadUnread = m_unreadState.value(key, false);
-    
+
     if (hadUnread) {
         m_unreadState[key] = false;
         m_unreadStateVersion++;
         emit unreadStateVersionChanged();
         emit dmUnreadStateChanged(recipientId, false);
     }
-    
-    // Also notify the server via socket
+
+    // Notify the server via socket
     m_socketClient->markDMRead(recipientId);
+}
+
+void SerchatAPI::setChannelLastReadAt(const QString& serverId, const QString& channelId, const QString& lastReadAt) {
+    QString key = serverId + ":" + channelId;
+    m_channelLastReadAt[key] = lastReadAt;
+    qDebug() << "[SerchatAPI] Set lastReadAt for channel" << channelId << ":" << lastReadAt;
+}
+
+QString SerchatAPI::getChannelLastReadAt(const QString& serverId, const QString& channelId) const {
+    QString key = serverId + ":" + channelId;
+    return m_channelLastReadAt.value(key, QString());
+}
+
+void SerchatAPI::calculateFirstUnreadMessage(const QString& serverId, const QString& channelId, const QVariantList& messages) {
+    QString key = serverId + ":" + channelId;
+    QString lastReadAt = m_channelLastReadAt.value(key);
+
+    qDebug() << "[SerchatAPI] Calculating first unread for channel" << channelId
+             << "lastReadAt:" << lastReadAt << "messages count:" << messages.size();
+
+    // If no lastReadAt, all messages are considered read (new user or first visit)
+    if (lastReadAt.isEmpty()) {
+        if (m_firstUnreadMessageId.contains(key)) {
+            m_firstUnreadMessageId.remove(key);
+            emit firstUnreadMessageIdChanged(serverId, channelId, QString());
+        }
+        return;
+    }
+
+    QDateTime lastReadTime = QDateTime::fromString(lastReadAt, Qt::ISODate);
+    if (!lastReadTime.isValid()) {
+        qDebug() << "[SerchatAPI] Invalid lastReadAt timestamp:" << lastReadAt;
+        return;
+    }
+
+    // Messages come in newest-first order (from the API response reversed)
+    // We need to find the OLDEST message that is newer than lastReadAt
+    // That's the first unread message
+    QString firstUnreadId;
+    QDateTime firstUnreadTime;
+
+    for (const QVariant& msgVar : messages) {
+        QVariantMap msg = msgVar.toMap();
+        QString msgId = msg.value("_id").toString();
+        if (msgId.isEmpty()) {
+            msgId = msg.value("id").toString();
+        }
+        QString createdAtStr = msg.value("createdAt").toString();
+        QDateTime createdAt = QDateTime::fromString(createdAtStr, Qt::ISODate);
+
+        if (!createdAt.isValid()) continue;
+
+        // Skip messages that were sent before or at lastReadAt
+        if (createdAt <= lastReadTime) continue;
+
+        // This message is unread - check if it's older than our current first unread
+        if (firstUnreadId.isEmpty() || createdAt < firstUnreadTime) {
+            firstUnreadId = msgId;
+            firstUnreadTime = createdAt;
+        }
+    }
+
+    // Update the first unread message ID
+    QString previousId = m_firstUnreadMessageId.value(key);
+    if (previousId != firstUnreadId) {
+        if (firstUnreadId.isEmpty()) {
+            m_firstUnreadMessageId.remove(key);
+        } else {
+            m_firstUnreadMessageId[key] = firstUnreadId;
+        }
+        emit firstUnreadMessageIdChanged(serverId, channelId, firstUnreadId);
+        qDebug() << "[SerchatAPI] First unread message ID for channel" << channelId << ":" << firstUnreadId;
+    }
 }
 
 void SerchatAPI::handleChannelUnread(const QString& serverId, const QString& channelId,
                                       const QString& lastMessageAt, const QString& senderId) {
+    // Ignore messages sent by the current user
+    if (!m_currentUserId.isEmpty() && senderId == m_currentUserId) {
+        qDebug() << "[SerchatAPI] Ignoring unread notification for own message in channel" << channelId;
+        return;
+    }
+    
+    // Ignore messages in the currently viewed channel (user is already reading them)
+    if (!m_viewingChannelId.isEmpty() && channelId == m_viewingChannelId) {
+        qDebug() << "[SerchatAPI] Ignoring unread notification for currently viewed channel" << channelId;
+        // Still mark as read on server to keep sync
+        m_socketClient->markChannelRead(serverId, channelId);
+        return;
+    }
+    
     QString key = serverId + ":" + channelId;
     bool wasUnread = m_unreadState.value(key, false);
     
@@ -1106,11 +1304,19 @@ void SerchatAPI::handleChannelUnread(const QString& serverId, const QString& cha
         emit serverUnreadStateChanged(serverId, true);
     }
     
-    // Forward the raw signal for any other handlers
+    // Forward the raw signal for any other handlers (for count tracking in QML)
     emit channelUnread(serverId, channelId, lastMessageAt, senderId);
 }
 
 void SerchatAPI::handleDMUnread(const QString& peer, int count) {
+    // Ignore unread notifications for the currently viewed DM conversation
+    if (!m_viewingDMRecipientId.isEmpty() && peer == m_viewingDMRecipientId) {
+        qDebug() << "[SerchatAPI] Ignoring unread notification for currently viewed DM with" << peer;
+        // Still mark as read on server to keep sync
+        m_socketClient->markDMRead(peer);
+        return;
+    }
+    
     QString key = "dm:" + peer;
     bool wasUnread = m_unreadState.value(key, false);
     bool isNowUnread = count > 0;

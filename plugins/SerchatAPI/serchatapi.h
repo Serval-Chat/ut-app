@@ -44,6 +44,14 @@ class SerchatAPI : public QObject {
     Q_PROPERTY(bool socketConnected READ isSocketConnected NOTIFY socketConnectedChanged)
     Q_PROPERTY(QString socketId READ socketId NOTIFY socketIdChanged)
     
+    // Current user ID (for filtering own messages from unread)
+    Q_PROPERTY(QString currentUserId READ currentUserId WRITE setCurrentUserId NOTIFY currentUserIdChanged)
+    
+    // Currently viewing channel/DM (for auto-marking as read)
+    Q_PROPERTY(QString viewingServerId READ viewingServerId WRITE setViewingServerId NOTIFY viewingServerIdChanged)
+    Q_PROPERTY(QString viewingChannelId READ viewingChannelId WRITE setViewingChannelId NOTIFY viewingChannelIdChanged)
+    Q_PROPERTY(QString viewingDMRecipientId READ viewingDMRecipientId WRITE setViewingDMRecipientId NOTIFY viewingDMRecipientIdChanged)
+    
     // Unread state version counter - triggers QML re-binding when unread state changes
     Q_PROPERTY(int unreadStateVersion READ unreadStateVersion NOTIFY unreadStateVersionChanged)
     
@@ -249,73 +257,83 @@ public:
     // ========================================================================
     // Unread State Tracking
     // ========================================================================
-    
+    //
+    // ARCHITECTURE OVERVIEW:
+    // ----------------------
+    // The unread tracking system uses server-provided timestamps to determine
+    // which messages are unread. Here's the flow:
+    //
+    // 1. When channels are fetched via API, each channel includes:
+    //    - lastReadAt: timestamp when user last read the channel
+    //    - lastMessageAt: timestamp of most recent message
+    //
+    // 2. When messages are loaded, we calculate the first unread message by
+    //    comparing each message's createdAt to the channel's lastReadAt.
+    //
+    // 3. When user enters a channel:
+    //    - markChannelAsRead() is called
+    //    - Updates local lastReadAt to current time (no more unread messages)
+    //    - Clears the firstUnreadMessageId
+    //    - Sends mark_channel_read event to server
+    //
+    // 4. The "NEW MESSAGES" divider appears above the first unread message
+    //    and disappears when user sends a message or navigates away.
+    //
+    // DATA STRUCTURES:
+    // - m_unreadState: tracks whether channel has unread (for badges)
+    // - m_channelLastReadAt: stores lastReadAt timestamp per channel
+    // - m_firstUnreadMessageId: calculated divider position per channel
+    // ========================================================================
+
     /**
-     * @brief Check if a channel has unread messages.
-     * @param serverId The server ID
-     * @param channelId The channel ID
-     * @return true if channel has unread messages
+     * @brief Check if a channel has unread messages (for badge display).
      */
     Q_INVOKABLE bool hasUnreadMessages(const QString& serverId, const QString& channelId) const;
-    
+
     /**
-     * @brief Check if a DM has unread messages.
-     * @param recipientId The DM recipient ID
-     * @return true if DM has unread messages
+     * @brief Check if a DM has unread messages (for badge display).
      */
     Q_INVOKABLE bool hasDMUnreadMessages(const QString& recipientId) const;
-    
+
     /**
-     * @brief Check if a server has any unread channels.
-     * @param serverId The server ID
-     * @return true if any channel in the server has unread messages
+     * @brief Check if any channel in a server has unread messages (for server badge).
      */
     Q_INVOKABLE bool hasServerUnread(const QString& serverId) const;
-    
+
     /**
-     * @brief Get the last read message ID for a channel.
-     * Used to display the "NEW" divider in message view.
-     * @param serverId The server ID
-     * @param channelId The channel ID
-     * @return The last read message ID, or empty string if none
+     * @brief Get the first unread message ID for displaying the "NEW MESSAGES" divider.
+     * This is calculated by comparing message timestamps to lastReadAt.
      */
-    Q_INVOKABLE QString getLastReadMessageId(const QString& serverId, const QString& channelId) const;
-    
+    Q_INVOKABLE QString getFirstUnreadMessageId(const QString& serverId, const QString& channelId) const;
+
     /**
-     * @brief Get the last read message ID for a DM.
-     * @param recipientId The DM recipient ID
-     * @return The last read message ID, or empty string if none
+     * @brief Clear the divider when user sends a message or navigates away.
      */
-    Q_INVOKABLE QString getDMLastReadMessageId(const QString& recipientId) const;
-    
+    Q_INVOKABLE void clearFirstUnreadMessageId(const QString& serverId, const QString& channelId);
+
     /**
-     * @brief Set the last read message ID for a channel.
-     * Called when user views messages to update the "NEW" divider position.
-     * @param serverId The server ID
-     * @param channelId The channel ID
-     * @param messageId The ID of the last read message
+     * @brief Mark a channel as read. Call when entering a channel.
+     * - Updates local lastReadAt to current time
+     * - Clears the unread divider
+     * - Sends mark_channel_read event to server
      */
-    Q_INVOKABLE void setLastReadMessageId(const QString& serverId, const QString& channelId, const QString& messageId);
-    
+    Q_INVOKABLE void markChannelAsRead(const QString& serverId, const QString& channelId);
+
     /**
-     * @brief Set the last read message ID for a DM.
-     * @param recipientId The DM recipient ID
-     * @param messageId The ID of the last read message
-     */
-    Q_INVOKABLE void setDMLastReadMessageId(const QString& recipientId, const QString& messageId);
-    
-    /**
-     * @brief Clear unread state for a channel and notify server.
-     * @param serverId The server ID
-     * @param channelId The channel ID
-     */
-    Q_INVOKABLE void clearChannelUnread(const QString& serverId, const QString& channelId);
-    
-    /**
-     * @brief Clear unread state for a DM and notify server.
-     * @param recipientId The DM recipient ID
+     * @brief Clear DM unread state and notify server.
      */
     Q_INVOKABLE void clearDMUnread(const QString& recipientId);
+
+    // --- Internal methods (not exposed to QML) ---
+
+    /** Store lastReadAt from API response. */
+    void setChannelLastReadAt(const QString& serverId, const QString& channelId, const QString& lastReadAt);
+
+    /** Get stored lastReadAt for a channel. */
+    QString getChannelLastReadAt(const QString& serverId, const QString& channelId) const;
+
+    /** Calculate first unread message by comparing timestamps to lastReadAt. */
+    void calculateFirstUnreadMessage(const QString& serverId, const QString& channelId, const QVariantList& messages);
     
     // ========================================================================
     // Server Emojis API
@@ -515,6 +533,18 @@ public:
     void setLastChannelId(const QString& id);
     QString lastDMRecipientId() const;
     void setLastDMRecipientId(const QString& id);
+    
+    // Current user ID (for filtering own messages from unread counts)
+    QString currentUserId() const;
+    void setCurrentUserId(const QString& id);
+    
+    // Currently viewing channel/DM (for auto-marking messages as read)
+    QString viewingServerId() const;
+    void setViewingServerId(const QString& id);
+    QString viewingChannelId() const;
+    void setViewingChannelId(const QString& id);
+    QString viewingDMRecipientId() const;
+    void setViewingDMRecipientId(const QString& id);
 
     // Token accessors (mainly for debugging)
     QString authToken() const;
@@ -534,6 +564,12 @@ signals:
     void lastServerIdChanged();
     void lastChannelIdChanged();
     void lastDMRecipientIdChanged();
+    
+    // Current user and viewing state signals
+    void currentUserIdChanged();
+    void viewingServerIdChanged();
+    void viewingChannelIdChanged();
+    void viewingDMRecipientIdChanged();
 
     // Profile signals (with request ID for parallel request tracking)
     void profileFetched(int requestId, const QVariantMap& profile);
@@ -672,8 +708,8 @@ signals:
     void channelUnreadStateChanged(const QString& serverId, const QString& channelId, bool hasUnread);
     void dmUnreadStateChanged(const QString& recipientId, bool hasUnread);
     void serverUnreadStateChanged(const QString& serverId, bool hasUnread);
-    void lastReadMessageChanged(const QString& serverId, const QString& channelId, const QString& messageId);
-    void dmLastReadMessageChanged(const QString& recipientId, const QString& messageId);
+    // Signal when first unread message ID is calculated (for displaying divider)
+    void firstUnreadMessageIdChanged(const QString& serverId, const QString& channelId, const QString& messageId);
     
     // Real-time server membership signals
     void serverMemberJoined(const QString& serverId, const QString& userId);
@@ -800,14 +836,32 @@ private:
     QMap<QString, QMap<QString, QTimer*>> m_typingUsers;
     static const int TYPING_TIMEOUT_MS = 5000;  // 5 seconds
     
-    // Unread state tracking
-    // Key: "serverId:channelId" for channels, "dm:recipientId" for DMs
-    // Value: true if has unread messages
+    // ========================================================================
+    // Unread State Tracking Data
+    // See "Unread State Tracking" section in public API for architecture docs
+    // ========================================================================
+
+    // Unread status for badge display. Key: "serverId:channelId" or "dm:recipientId"
     QMap<QString, bool> m_unreadState;
-    // Track last read message ID per channel/DM for "NEW" divider
-    QMap<QString, QString> m_lastReadMessageId;
-    // Version counter to trigger QML binding updates
+
+    // Last read timestamp per channel (from API or updated when marking as read)
+    // Key: "serverId:channelId", Value: ISO timestamp string
+    QMap<QString, QString> m_channelLastReadAt;
+
+    // First unread message ID per channel (for "NEW MESSAGES" divider)
+    // Key: "serverId:channelId", Value: message ID
+    QMap<QString, QString> m_firstUnreadMessageId;
+
+    // Version counter to trigger QML binding updates for unread badges
     int m_unreadStateVersion = 0;
+    
+    // Current user ID (for filtering own messages from unread)
+    QString m_currentUserId;
+    
+    // Currently viewing channel/DM (for auto-marking as read)
+    QString m_viewingServerId;
+    QString m_viewingChannelId;
+    QString m_viewingDMRecipientId;
 
     // State tracking for network error handling
     bool m_loginInProgress = false;
@@ -838,6 +892,12 @@ private:
     // Model population handlers
     void handleServerMembersFetched(int requestId, const QString& serverId, const QVariantList& members);
     void handleServerRolesFetched(int requestId, const QString& serverId, const QVariantList& roles);
+
+    // Channel data handler - extracts lastReadAt before forwarding
+    void handleChannelsFetched(int requestId, const QString& serverId, const QVariantList& channels);
+
+    // Messages data handler - calculates first unread message
+    void handleMessagesFetched(int requestId, const QString& serverId, const QString& channelId, const QVariantList& messages);
 };
 
 #endif

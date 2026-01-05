@@ -167,7 +167,13 @@ public:
      * @brief Get oldest message ID (for pagination).
      */
     Q_INVOKABLE QString oldestMessageId() const;
-    
+
+    /**
+     * @brief Get newest message ID (for tracking last read position).
+     * In a BottomToTop ListView, newest message is at index 0.
+     */
+    Q_INVOKABLE QString newestMessageId() const;
+
     /**
      * @brief Get message data by index.
      * For use in QML when you need to access adjacent messages.

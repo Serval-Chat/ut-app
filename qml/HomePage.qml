@@ -197,19 +197,30 @@ Page {
             }
             
             onOpenDMWithUser: {
+                // Clear unread divider for channel when leaving
+                if (currentServerId && currentChannelId) {
+                    SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
+                    SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+                }
+
+                // Set viewing state BEFORE setting currentDMRecipientId
+                SerchatAPI.viewingServerId = ""
+                SerchatAPI.viewingChannelId = ""
+                SerchatAPI.viewingDMRecipientId = recipientId
+
                 // Switch to DM mode with the selected user
                 currentDMRecipientId = recipientId
                 currentDMRecipientName = recipientName
                 currentDMRecipientAvatar = recipientAvatar
-                
+
                 // Clear server/channel state
                 currentChannelId = ""
                 currentChannelName = ""
                 currentServerId = ""
                 currentServerName = ""
-                
+
                 loadDMMessages(recipientId)
-                
+
                 if (isSmallScreen) {
                     mobileViewMode = "messages"
                 }
@@ -409,6 +420,12 @@ Page {
             }
             
             onHomeClicked: {
+                // Clear unread divider for channel when leaving
+                if (currentServerId && currentChannelId) {
+                    SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
+                    SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+                }
+
                 currentServerId = ""
                 currentServerName = ""
                 currentServerOwnerId = ""
@@ -418,13 +435,18 @@ Page {
                 currentDMRecipientAvatar = ""
                 SerchatAPI.channelListModel.clear()
                 SerchatAPI.messageModel.clear()
-                
+
+                // Clear viewing state when navigating away
+                SerchatAPI.viewingServerId = ""
+                SerchatAPI.viewingChannelId = ""
+                SerchatAPI.viewingDMRecipientId = ""
+
                 // Save state - clear all last IDs when going home
                 SerchatAPI.lastServerId = ""
                 SerchatAPI.lastChannelId = ""
                 SerchatAPI.lastDMRecipientId = ""
                 mobileViewMode = "channels"
-                
+
                 // Load DM conversations (friends list)
                 loadDMConversations()
             }
@@ -459,22 +481,33 @@ Page {
             currentUserAvatar: homePage.currentUserAvatar
             
             onConversationSelected: {
+                // Clear unread divider for old channel when leaving
+                if (currentServerId && currentChannelId) {
+                    SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
+                    SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+                }
+
+                // Set viewing state BEFORE setting currentDMRecipientId
+                SerchatAPI.viewingServerId = ""
+                SerchatAPI.viewingChannelId = ""
+                SerchatAPI.viewingDMRecipientId = recipientId
+
                 // Clear channel state when switching to DM
                 currentChannelId = ""
                 currentChannelName = ""
                 currentChannelType = "text"
-                
+
                 // Set DM state
                 currentDMRecipientId = recipientId
                 currentDMRecipientName = recipientName
                 currentDMRecipientAvatar = recipientAvatar
                 loadDMMessages(recipientId)
-                
+
                 // Save state
                 SerchatAPI.lastDMRecipientId = recipientId
                 SerchatAPI.lastServerId = ""
                 SerchatAPI.lastChannelId = ""
-                
+
                 mobileViewMode = "messages"
             }
             
@@ -509,24 +542,27 @@ Page {
             currentUserAvatar: homePage.currentUserAvatar
             
             onChannelSelected: {
-                // Leave old channel if we were in one
+                // Clear unread divider for old channel when leaving
                 if (currentServerId && currentChannelId) {
+                    SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
                     SerchatAPI.leaveChannel(currentServerId, currentChannelId)
                 }
-                
+
                 // Clear DM state when switching to channel
                 currentDMRecipientId = ""
                 currentDMRecipientName = ""
                 currentDMRecipientAvatar = ""
-                
-                // Clear messages immediately when switching channels (uses proper model signals)
-                SerchatAPI.messageModel.setChannel(currentServerId, channelId)
-                
+
+                // Set viewing state BEFORE updating channel
+                SerchatAPI.viewingDMRecipientId = ""
+                SerchatAPI.viewingServerId = currentServerId
+                SerchatAPI.viewingChannelId = channelId
+
                 currentChannelId = channelId
                 currentChannelName = channelName
                 currentChannelType = channelType
                 loadMessages(currentServerId, channelId)
-                
+
                 // Save state
                 SerchatAPI.lastChannelId = channelId
                 mobileViewMode = "messages"
@@ -592,6 +628,9 @@ Page {
         onMyProfileFetched: {
             currentUserId = profile.id || ""
             currentUserName = profile.displayName || profile.username || ""
+            
+            // Also set in C++ API for filtering own messages from unread counts
+            SerchatAPI.currentUserId = profile.id || ""
 
             // Set avatar URL - profilePicture contains the full path
             if (profile.profilePicture) {
@@ -674,6 +713,11 @@ Page {
                         var ch = chans[j]
                         var chId = ch._id || ch.id
                         if (chId === savedChannelId && ch.type === "text") {
+                            // Set viewing state BEFORE setting currentChannelId
+                            SerchatAPI.viewingDMRecipientId = ""
+                            SerchatAPI.viewingServerId = currentServerId
+                            SerchatAPI.viewingChannelId = chId
+                            
                             // Restore channel selection
                             currentChannelId = chId
                             currentChannelName = ch.name
@@ -693,7 +737,14 @@ Page {
                     for (var k = 0; k < chans.length; k++) {
                         if (chans[k].type === "text") {
                             var channel = chans[k]
-                            currentChannelId = channel._id || channel.id
+                            var autoChId = channel._id || channel.id
+                            
+                            // Set viewing state BEFORE setting currentChannelId
+                            SerchatAPI.viewingDMRecipientId = ""
+                            SerchatAPI.viewingServerId = currentServerId
+                            SerchatAPI.viewingChannelId = autoChId
+                            
+                            currentChannelId = autoChId
                             currentChannelName = channel.name
                             currentChannelType = channel.type
                             loadMessages(currentServerId, currentChannelId)
@@ -786,12 +837,8 @@ Page {
                     // reversedMessages is [newest, ..., oldest], appendMessages preserves this order
                     SerchatAPI.messageModel.appendMessages(reversedMessages)
                     
-                    // Update last read message ID to the newest message for "NEW" divider
-                    if (reversedMessages.length > 0) {
-                        var newestMsg = reversedMessages[0]
-                        var newestId = newestMsg._id || newestMsg.id
-                        SerchatAPI.setLastReadMessageId(serverId, channelId, newestId)
-                    }
+                    // Note: We don't set lastReadMessageId here because when viewing a channel,
+                    // all messages are considered read. The C++ clearChannelUnread() handles this.
                 }
                 console.log("[HomePage] Messages updated, total:", SerchatAPI.messageModel.count)
                 
@@ -894,6 +941,11 @@ Page {
                     var friend = friends[j]
                     var friendId = friend._id || friend.id
                     if (friendId === savedDMRecipientId) {
+                        // Set viewing state BEFORE setting currentDMRecipientId
+                        SerchatAPI.viewingServerId = ""
+                        SerchatAPI.viewingChannelId = ""
+                        SerchatAPI.viewingDMRecipientId = friendId
+                        
                         // Restore DM selection
                         currentDMRecipientId = friendId
                         currentDMRecipientName = friend.displayName || friend.username
@@ -932,12 +984,8 @@ Page {
                     // reversedMessages is [newest, ..., oldest], appendMessages preserves this order
                     SerchatAPI.messageModel.appendMessages(reversedMessages)
                     
-                    // Update last read message ID to the newest message for "NEW" divider
-                    if (reversedMessages.length > 0) {
-                        var newestMsg = reversedMessages[0]
-                        var newestId = newestMsg._id || newestMsg.id
-                        SerchatAPI.setDMLastReadMessageId(recipientId, newestId)
-                    }
+                    // Note: We don't set lastReadMessageId here because when viewing a DM,
+                    // all messages are considered read. The C++ clearDMUnread() handles this.
                 }
                 console.log("[HomePage] DM Messages updated, total:", SerchatAPI.messageModel.count)
                 
@@ -1121,20 +1169,18 @@ Page {
         }
         
         // Channel unread state changes (from C++ tracking)
+        // This is primarily used for clearing unread state when channel is marked as read
         onChannelUnreadStateChanged: {
             console.log("[HomePage] Channel unread state changed:", serverId, channelId, hasUnread)
-            var key = serverId + ":" + channelId
-            var newCounts = Object.assign({}, unreadCounts)
-            if (hasUnread) {
-                // If we don't have a count yet, set to 1
-                if (!newCounts[key]) {
-                    newCounts[key] = 1
-                }
-            } else {
-                // Clear the unread count
+            if (!hasUnread) {
+                // Clear the unread count when C++ tells us channel is read
+                var key = serverId + ":" + channelId
+                var newCounts = Object.assign({}, unreadCounts)
                 newCounts[key] = 0
+                unreadCounts = newCounts
             }
-            unreadCounts = newCounts
+            // Note: We don't set counts here for hasUnread=true because
+            // onChannelUnread handles incrementing the count properly
         }
         
         // Server unread state changes (any channel in server has unread)
@@ -1442,21 +1488,27 @@ Page {
     }
     
     function loadChannels(serverId) {
-        // Leave current channel if any
+        // Clear unread divider for current channel when leaving
         if (currentServerId && currentChannelId) {
+            SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
             SerchatAPI.leaveChannel(currentServerId, currentChannelId)
         }
-        
+
+        // Clear viewing state when navigating away from a channel view
+        SerchatAPI.viewingServerId = ""
+        SerchatAPI.viewingChannelId = ""
+        SerchatAPI.viewingDMRecipientId = ""
+
         loadingChannels = true
         SerchatAPI.messageModel.clear()  // Clear messages when loading new server
         SerchatAPI.channelListModel.clear()  // Clear channel list model
         currentChannelId = ""
         currentChannelName = ""
-        
+
         // Fetch both channels and categories for the server
         SerchatAPI.getChannels(serverId)
         SerchatAPI.getCategories(serverId)
-        
+
         // Also fetch server emojis for custom emoji rendering
         SerchatAPI.getServerEmojis(serverId)
     }
@@ -1465,15 +1517,22 @@ Page {
         if (!serverId || !channelId) return
         
         loadingMessages = true
+        
+        // Clear any DM viewing state and set channel viewing state
+        // This tells C++ to auto-mark incoming messages as read
+        SerchatAPI.viewingDMRecipientId = ""
+        SerchatAPI.viewingServerId = serverId
+        SerchatAPI.viewingChannelId = channelId
+        
         // Set channel context and clear messages using proper model signals
         SerchatAPI.messageModel.setChannel(serverId, channelId)
         
         // Join the channel room for real-time updates
         SerchatAPI.joinChannel(serverId, channelId)
         
-        // Mark channel as read when viewing
-        SerchatAPI.clearChannelUnread(serverId, channelId)
-        
+        // Mark channel as read on the server (sends mark_channel_read event)
+        SerchatAPI.markChannelAsRead(serverId, channelId)
+
         SerchatAPI.getMessages(serverId, channelId, 50, "")
     }
     
@@ -1513,6 +1572,13 @@ Page {
         if (!recipientId) return
         
         loadingMessages = true
+        
+        // Clear any channel viewing state and set DM viewing state
+        // This tells C++ to auto-mark incoming messages as read
+        SerchatAPI.viewingServerId = ""
+        SerchatAPI.viewingChannelId = ""
+        SerchatAPI.viewingDMRecipientId = recipientId
+        
         // Set DM mode and clear messages using proper model signals
         SerchatAPI.messageModel.setDMRecipient(recipientId)
         
@@ -1557,19 +1623,30 @@ Page {
     
     // Open DM with a specific user (can be called from ProfilePage)
     function openDMWithUser(recipientId, recipientName, recipientAvatar) {
+        // Clear unread divider for channel when leaving
+        if (currentServerId && currentChannelId) {
+            SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
+            SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+        }
+
+        // Set viewing state BEFORE setting currentDMRecipientId
+        SerchatAPI.viewingServerId = ""
+        SerchatAPI.viewingChannelId = ""
+        SerchatAPI.viewingDMRecipientId = recipientId
+
         // Set DM state
         currentDMRecipientId = recipientId
         currentDMRecipientName = recipientName
         currentDMRecipientAvatar = recipientAvatar
-        
+
         // Clear server/channel state
         currentChannelId = ""
         currentChannelName = ""
         currentServerId = ""
         currentServerName = ""
-        
+
         loadDMMessages(recipientId)
-        
+
         if (isSmallScreen) {
             mobileViewMode = "messages"
         }
@@ -1602,20 +1679,31 @@ Page {
         
         onConversationStarted: {
             createDMDialog.opened = false
-            
+
+            // Clear unread divider for channel when leaving
+            if (currentServerId && currentChannelId) {
+                SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
+                SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+            }
+
+            // Set viewing state BEFORE setting currentDMRecipientId
+            SerchatAPI.viewingServerId = ""
+            SerchatAPI.viewingChannelId = ""
+            SerchatAPI.viewingDMRecipientId = recipientId
+
             // Set DM state
             currentDMRecipientId = recipientId
             currentDMRecipientName = recipientName
             currentDMRecipientAvatar = recipientAvatar
-            
+
             // Clear channel state
             currentChannelId = ""
             currentChannelName = ""
             currentServerId = ""
             currentServerName = ""
-            
+
             loadDMMessages(recipientId)
-            
+
             if (isSmallScreen) {
                 mobileViewMode = "messages"
             }

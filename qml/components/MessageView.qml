@@ -61,21 +61,18 @@ Rectangle {
     signal sendFriendRequest(string userId, string username)
     
     color: Theme.palette.normal.background
-    
-    // Update last read message ID when channel changes
-    onChannelIdChanged: {
-        if (channelId !== "" && serverId !== "") {
-            messageList.lastReadMessageId = SerchatAPI.getLastReadMessageId(serverId, channelId)
-        } else {
-            messageList.lastReadMessageId = ""
-        }
-    }
-    
-    onDmRecipientIdChanged: {
-        if (dmRecipientId !== "") {
-            messageList.lastReadMessageId = SerchatAPI.getDMLastReadMessageId(dmRecipientId)
-        } else {
-            messageList.lastReadMessageId = ""
+
+    // Listen for first unread message ID changes from C++
+    // The C++ side calculates this based on timestamps when messages are loaded
+    Connections {
+        target: SerchatAPI
+
+        onFirstUnreadMessageIdChanged: function(sId, chId, msgId) {
+            // Update the divider position when C++ calculates the first unread message
+            if (sId === serverId && chId === channelId) {
+                messageList.firstUnreadMessageId = msgId
+                console.log("[MessageView] First unread message ID set to:", msgId)
+            }
         }
     }
     
@@ -247,26 +244,22 @@ Rectangle {
             property real savedContentHeight: 0
             property int savedMessageCount: 0
             
-            // Track the last read message ID for "NEW" divider
-            property string lastReadMessageId: ""
-            
+            // Track the first unread message ID for "NEW MESSAGES" divider
+            // This is set by C++ after calculating based on timestamps
+            property string firstUnreadMessageId: ""
+
             delegate: Item {
                 id: messageDelegateContainer
                 width: messageList.width
                 height: messageBubble.height + (newMessagesDivider.visible ? newMessagesDivider.height : 0)
-                
+
                 // Show "NEW MESSAGES" divider above this message if it's the first unread
-                // In a BottomToTop list, messages are reversed, so we show it below the last read message
+                // The firstUnreadMessageId is calculated by C++ based on lastReadAt timestamps
                 property bool isFirstUnread: {
-                    if (messageList.lastReadMessageId === "") return false
-                    // Check if the previous message (index + 1) is the last read message
-                    if (index + 1 < SerchatAPI.messageModel.count) {
-                        var prevMsg = SerchatAPI.messageModel.getMessageAt(index + 1)
-                        if (prevMsg && (prevMsg._id === messageList.lastReadMessageId || prevMsg.id === messageList.lastReadMessageId)) {
-                            return true
-                        }
-                    }
-                    return false
+                    if (messageList.firstUnreadMessageId === "") return false
+                    // Check if this message is the first unread message
+                    var msgId = model.id || ""
+                    return msgId === messageList.firstUnreadMessageId
                 }
                 
                 // "NEW MESSAGES" divider
@@ -590,6 +583,12 @@ Rectangle {
         dmRecipientId: messageView.dmRecipientId
         
         onSendMessage: {
+            // Clear the "NEW MESSAGES" divider when user sends a message
+            messageList.firstUnreadMessageId = ""
+            // Also clear in C++ so it doesn't reappear on next load
+            if (messageView.serverId && messageView.channelId) {
+                SerchatAPI.clearFirstUnreadMessageId(messageView.serverId, messageView.channelId)
+            }
             messageView.sendMessage(message, replyToId)
         }
     }

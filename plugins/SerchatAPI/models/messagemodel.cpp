@@ -330,6 +330,14 @@ QString MessageModel::oldestMessageId() const
     return m_messages.last().id;
 }
 
+QString MessageModel::newestMessageId() const
+{
+    if (m_messages.isEmpty())
+        return QString();
+    // In a BottomToTop ListView, newest message is at index 0
+    return m_messages.first().id;
+}
+
 QVariantMap MessageModel::getMessageAt(int index) const
 {
     if (index < 0 || index >= m_messages.count())
