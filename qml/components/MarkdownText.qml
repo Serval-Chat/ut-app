@@ -10,10 +10,16 @@ import SerchatAPI 1.0
  * - Bold (**text** or __text__)
  * - Italic (*text* or _text_)
  * - Strikethrough (~~text~~)
+ * - Underline (__text__ when not bold)
  * - Code (`code`)
  * - Code blocks (```code```)
- * - Links (automatic URL detection)
- * - Custom emojis (:emoji_name:)
+ * - Headers (# ## ### ####)
+ * - Blockquotes (> text)
+ * - Unordered lists (- item or * item)
+ * - Ordered lists (1. item)
+ * - Links ([text](url) and automatic URL detection)
+ * - Spoilers (||text||)
+ * - Custom emojis (<emoji:id>)
  * - Unicode emoji rendering
  * - Mentions (@username)
  * - Channel references (#channel)
@@ -68,6 +74,7 @@ Item {
         wrapMode: markdownText.wrapMode
         maximumLineCount: markdownText.maximumLineCount
         elide: maximumLineCount > 0 ? Text.ElideRight : Text.ElideNone
+        lineHeight: 1.4  // Increase line height to accommodate emojis
         
         onLinkActivated: {
             if (link.startsWith("user:")) {
@@ -200,11 +207,11 @@ Item {
                     unknownEmojis.push(emojiId)
                 }
                 // Show a loading/unknown placeholder
-                emojiPlaceholders.push('<img src="" width="' + size + '" height="' + size + '" style="vertical-align: middle; background-color: #e0e0e0; border-radius: 3px;" alt=":' + emojiId + ':" />')
+                emojiPlaceholders.push('<img src="" width="' + size + '" height="' + size + '" style="vertical-align: -0.5em; background-color: #e0e0e0; border-radius: 3px;" alt=":' + emojiId + ':" />')
                 return placeholder
             }
             
-            emojiPlaceholders.push('<img src="' + emojiUrl + '" width="' + size + '" height="' + size + '" style="vertical-align: middle;" />')
+            emojiPlaceholders.push('<img src="' + emojiUrl + '" width="' + size + '" height="' + size + '" style="vertical-align: -0.5em;" />')
             return placeholder
         })
         
@@ -236,8 +243,15 @@ Item {
             return placeholder
         })
 
-        // Extract URLs before escaping to preserve them
+        // Extract markdown-style links [text](url) before escaping
         var urlPlaceholders = []
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(match, text, url) {
+            var placeholder = "___URL_" + urlPlaceholders.length + "___"
+            urlPlaceholders.push('<a href="' + url + '">' + text + '</a>')
+            return placeholder
+        })
+        
+        // Extract plain URLs before escaping to preserve them
         html = html.replace(/(https?:\/\/[^\s<>"]+)/g, function(match, url) {
             var placeholder = "___URL_" + urlPlaceholders.length + "___"
             urlPlaceholders.push('<a href="' + url + '">' + url + '</a>')
@@ -279,8 +293,26 @@ Item {
             if (/^#{4,}\s+(.+)$/.test(line)) {
                 return line.replace(/^#{4,}\s+(.+)$/, '<span style="font-weight: bold; display: block; margin: 2px 0;">$1</span>')
             }
+            // Blockquotes: > text
+            if (/^&gt;\s+(.+)$/.test(line)) {
+                return line.replace(/^&gt;\s+(.+)$/, '<span style="border-left: 4px solid ' + linkColor + '; padding-left: 12px; margin-left: 4px; display: block; opacity: 0.8;">$1</span>')
+            }
+            // Unordered lists: - item or * item
+            if (/^[-*]\s+(.+)$/.test(line)) {
+                return line.replace(/^[-*]\s+(.+)$/, '<span style="display: block; margin-left: 16px;">• $1</span>')
+            }
+            // Ordered lists: 1. item
+            if (/^(\d+)\.\s+(.+)$/.test(line)) {
+                return line.replace(/^(\d+)\.\s+(.+)$/, '<span style="display: block; margin-left: 16px;">$1. $2</span>')
+            }
             return line
         }).join('<br>')
+        
+        // Spoilers (||text||)
+        html = html.replace(/\|\|([^|]+)\|\|/g, '<span style="background-color: ' + textColor + '; color: ' + textColor + ';">$1</span>')
+        
+        // Underline (++text++)
+        html = html.replace(/\+\+([^+]+)\+\+/g, '<u>$1</u>')
         
         // Bold (**text** or __text__)
         html = html.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
@@ -292,20 +324,6 @@ Item {
         
         // Strikethrough (~~text~~)
         html = html.replace(/~~([^~]+)~~/g, '<s>$1</s>')
-        
-        // Custom emojis in format :emoji_name: (shortcode style)
-        html = html.replace(/:([a-zA-Z0-9_]+):/g, function(match, emojiName) {
-            if (customEmojis[emojiName]) {
-                // Return an image tag for custom emoji
-                return '<img src="' + customEmojis[emojiName] + '" width="' + size + '" height="' + size + '" style="vertical-align: middle;" />'
-            }
-            // Check if it's a standard emoji shortcode
-            var unicodeEmoji = getEmojiFromShortcode(emojiName)
-            if (unicodeEmoji) {
-                return unicodeEmoji
-            }
-            return match  // Keep original if not found
-        })
         
         // User mentions (@username)
         html = html.replace(/@([a-zA-Z0-9_]+)/g, function(match, username) {
@@ -354,210 +372,5 @@ Item {
                   .replace(/</g, '&lt;')
                   .replace(/>/g, '&gt;')
                   .replace(/"/g, '&quot;')
-    }
-    
-    // Common emoji shortcodes to Unicode mapping
-    function getEmojiFromShortcode(shortcode) {
-        var shortcodes = {
-            // Smileys
-            "smile": "😊",
-            "grin": "😀",
-            "grinning": "😃",
-            "joy": "😂",
-            "rofl": "🤣",
-            "smiley": "😃",
-            "sweat_smile": "😅",
-            "laughing": "😆",
-            "wink": "😉",
-            "blush": "😊",
-            "yum": "😋",
-            "sunglasses": "😎",
-            "heart_eyes": "😍",
-            "kissing_heart": "😘",
-            "thinking": "🤔",
-            "neutral_face": "😐",
-            "expressionless": "😑",
-            "unamused": "😒",
-            "rolling_eyes": "🙄",
-            "flushed": "😳",
-            "disappointed": "😞",
-            "worried": "😟",
-            "angry": "😠",
-            "rage": "😡",
-            "cry": "😢",
-            "sob": "😭",
-            "scream": "😱",
-            "confounded": "😖",
-            "persevere": "😣",
-            "triumph": "😤",
-            "sleepy": "😪",
-            "sleeping": "😴",
-            "mask": "😷",
-            "thermometer_face": "🤒",
-            "nerd": "🤓",
-            "devil": "😈",
-            "skull": "💀",
-            "poop": "💩",
-            "ghost": "👻",
-            "alien": "👽",
-            "robot": "🤖",
-            "cat": "😺",
-            
-            // Gestures
-            "thumbsup": "👍",
-            "thumbs_up": "👍",
-            "+1": "👍",
-            "thumbsdown": "👎",
-            "thumbs_down": "👎",
-            "-1": "👎",
-            "ok_hand": "👌",
-            "punch": "👊",
-            "fist": "✊",
-            "wave": "👋",
-            "clap": "👏",
-            "raised_hands": "🙌",
-            "pray": "🙏",
-            "muscle": "💪",
-            "point_up": "☝️",
-            "point_down": "👇",
-            "point_left": "👈",
-            "point_right": "👉",
-            "middle_finger": "🖕",
-            "v": "✌️",
-            
-            // Hearts
-            "heart": "❤️",
-            "red_heart": "❤️",
-            "orange_heart": "🧡",
-            "yellow_heart": "💛",
-            "green_heart": "💚",
-            "blue_heart": "💙",
-            "purple_heart": "💜",
-            "black_heart": "🖤",
-            "white_heart": "🤍",
-            "brown_heart": "🤎",
-            "broken_heart": "💔",
-            "sparkling_heart": "💖",
-            "heartpulse": "💗",
-            "heartbeat": "💓",
-            "two_hearts": "💕",
-            "revolving_hearts": "💞",
-            
-            // Objects
-            "fire": "🔥",
-            "100": "💯",
-            "star": "⭐",
-            "sparkles": "✨",
-            "zap": "⚡",
-            "boom": "💥",
-            "tada": "🎉",
-            "confetti_ball": "🎊",
-            "trophy": "🏆",
-            "medal": "🏅",
-            "crown": "👑",
-            "gem": "💎",
-            "money": "💰",
-            "dollar": "💵",
-            "gift": "🎁",
-            "balloon": "🎈",
-            "bell": "🔔",
-            "music": "🎵",
-            "notes": "🎶",
-            "microphone": "🎤",
-            "headphones": "🎧",
-            "camera": "📷",
-            "video_camera": "📹",
-            "computer": "💻",
-            "phone": "📱",
-            "email": "📧",
-            "mailbox": "📬",
-            "book": "📖",
-            "bulb": "💡",
-            "wrench": "🔧",
-            "hammer": "🔨",
-            "lock": "🔒",
-            "key": "🔑",
-            "mag": "🔍",
-            
-            // Nature
-            "sun": "☀️",
-            "moon": "🌙",
-            "cloud": "☁️",
-            "rain": "🌧️",
-            "rainbow": "🌈",
-            "snowflake": "❄️",
-            "tree": "🌳",
-            "flower": "🌸",
-            "rose": "🌹",
-            "herb": "🌿",
-            
-            // Animals
-            "dog": "🐶",
-            "cat2": "🐱",
-            "mouse": "🐭",
-            "hamster": "🐹",
-            "rabbit": "🐰",
-            "fox": "🦊",
-            "bear": "🐻",
-            "panda": "🐼",
-            "koala": "🐨",
-            "tiger": "🐯",
-            "lion": "🦁",
-            "cow": "🐮",
-            "pig": "🐷",
-            "frog": "🐸",
-            "monkey": "🐵",
-            "chicken": "🐔",
-            "penguin": "🐧",
-            "bird": "🐦",
-            "fish": "🐟",
-            "whale": "🐳",
-            "dolphin": "🐬",
-            "octopus": "🐙",
-            "butterfly": "🦋",
-            "bee": "🐝",
-            "bug": "🐛",
-            "snake": "🐍",
-            "turtle": "🐢",
-            
-            // Food
-            "apple": "🍎",
-            "pizza": "🍕",
-            "hamburger": "🍔",
-            "fries": "🍟",
-            "hotdog": "🌭",
-            "taco": "🌮",
-            "burrito": "🌯",
-            "sushi": "🍣",
-            "cake": "🎂",
-            "cookie": "🍪",
-            "chocolate": "🍫",
-            "candy": "🍬",
-            "lollipop": "🍭",
-            "coffee": "☕",
-            "tea": "🍵",
-            "beer": "🍺",
-            "wine": "🍷",
-            "cocktail": "🍸",
-            
-            // Symbols
-            "check": "✅",
-            "x": "❌",
-            "warning": "⚠️",
-            "question": "❓",
-            "exclamation": "❗",
-            "plus": "➕",
-            "minus": "➖",
-            "arrow_right": "➡️",
-            "arrow_left": "⬅️",
-            "arrow_up": "⬆️",
-            "arrow_down": "⬇️",
-            "recycle": "♻️",
-            "copyright": "©️",
-            "registered": "®️",
-            "tm": "™️"
-        }
-        
-        return shortcodes[shortcode.toLowerCase()] || null
     }
 }
