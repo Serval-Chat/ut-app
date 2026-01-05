@@ -19,7 +19,6 @@ Item {
     property string senderName: ""
     property string senderId: ""
     property bool isOwnMessage: false
-    property var customEmojis: ({})
     
     // Whether the sheet is currently visible
     property bool opened: false

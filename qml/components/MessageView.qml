@@ -37,17 +37,8 @@ Rectangle {
     // Permission checking
     property bool canSendMessages: true  // Default to true, can be overridden
     
-    // User profile cache for sender names/avatars
-    property var userProfiles: ({})
-    
-    // Track pending profile requests to avoid duplicates
-    property var pendingProfileRequests: ({})
-    
     // Members panel visibility
     property bool showMembersPanel: false
-    
-    // Custom emojis for markdown rendering
-    property var customEmojis: ({})
     
     // Expose the message list for external scroll control
     property alias messageList: messageList
@@ -302,11 +293,11 @@ Rectangle {
                     id: messageBubble
                     width: parent.width
                     anchors.top: newMessagesDivider.visible ? newMessagesDivider.bottom : parent.top
-                    // Use C++ model role names directly (no modelData needed)
+                    // Use C++ model role names directly - senderName/Avatar come from UserProfileCache via MessageModel
                     messageId: model.id || ""
                     senderId: model.senderId || ""
-                    senderName: model.senderName || getSenderName(model.senderId)
-                    senderAvatar: model.senderAvatar || getSenderAvatar(model.senderId)
+                    senderName: model.senderName || i18n.tr("Unknown")
+                    senderAvatar: model.senderAvatar || ""
                     text: model.text || ""  // Raw text - MarkdownText handles all formatting
                     timestamp: model.timestamp || ""
                     isOwn: model.senderId === currentUserId
@@ -316,8 +307,6 @@ Rectangle {
                     replyToText: model.repliedMessage ? model.repliedMessage.text : ""
                     replyToSender: model.repliedMessage ? getSenderName(model.repliedMessage.senderId) : ""
                     reactions: model.reactions || []
-                    customEmojis: messageView.customEmojis
-                    userProfiles: messageView.userProfiles
                     
                     // Bind swipe state to list scroll lock
                     onIsSwipeActiveChanged: {
@@ -595,29 +584,13 @@ Rectangle {
         }
     }
     
-    // Get sender name from cache or fallback
+    // Get sender name from C++ cache for reply previews (not from model roles)
     function getSenderName(senderId) {
         if (!senderId) return i18n.tr("Unknown")
         
-        if (userProfiles[senderId]) {
-            return userProfiles[senderId].displayName || 
-                   userProfiles[senderId].username || 
-                   i18n.tr("Unknown")
-        }
-        
-        // Return truncated ID as fallback (profile will be fetched by fetchProfileIfNeeded)
-        return senderId.substring(0, 8) + "..."
-    }
-    
-    // Get sender avatar from cache
-    function getSenderAvatar(senderId) {
-        if (!senderId || !userProfiles[senderId]) return ""
-        
-        var profile = userProfiles[senderId]
-        if (profile.profilePicture) {
-            return SerchatAPI.apiBaseUrl + profile.profilePicture
-        }
-        return ""
+        // Use C++ cache - it auto-fetches if not present
+        var displayName = SerchatAPI.userProfileCache.getDisplayName(senderId)
+        return displayName || i18n.tr("Unknown")
     }
     
     // Check if we should show avatar for message grouping
@@ -754,18 +727,6 @@ Rectangle {
         messageList.positionViewAtBeginning()
     }
     
-    // Fetch profile for a sender if not cached
-    function fetchProfileIfNeeded(senderId) {
-        if (!senderId) return
-        if (userProfiles[senderId]) return
-        if (pendingProfileRequests[senderId]) return
-        
-        var requestId = SerchatAPI.getProfile(senderId)
-        var newPending = pendingProfileRequests
-        newPending[senderId] = requestId
-        pendingProfileRequests = newPending
-    }
-    
     // Open profile sheet for a user
     function openProfileSheet(userId) {
         userProfileSheet.open(userId, userId === currentUserId)
@@ -808,55 +769,35 @@ Rectangle {
         }
     }
     
-    // Connections for profile loading
+    // Connect to C++ caches for re-rendering when profiles/emojis load
     Connections {
-        target: SerchatAPI
+        target: SerchatAPI.userProfileCache
         
-        onProfileFetched: {
-            // Find which sender this profile belongs to
-            for (var senderId in pendingProfileRequests) {
-                if (pendingProfileRequests[senderId] === requestId) {
-                    // Update QML cache
-                    var newProfiles = userProfiles
-                    newProfiles[senderId] = profile
-                    userProfiles = newProfiles
-
-                    // Sync profile to C++ MessageModel for proper sender name resolution
-                    SerchatAPI.messageModel.updateUserProfile(senderId, profile)
-
-                    // Remove from pending
-                    var newPending = pendingProfileRequests
-                    delete newPending[senderId]
-                    pendingProfileRequests = newPending
-
-                    break
-                }
-            }
-        }
-        
-        onProfileFetchFailed: {
-            // Remove from pending on failure
-            for (var senderId in pendingProfileRequests) {
-                if (pendingProfileRequests[senderId] === requestId) {
-                    var newPending = pendingProfileRequests
-                    delete newPending[senderId]
-                    pendingProfileRequests = newPending
-                    break
-                }
-            }
+        onVersionChanged: {
+            // Force delegate re-binding when profiles are loaded
+            // The ListView will automatically update via role bindings
         }
     }
     
-    // Connect to C++ model signals for profile fetching
+    Connections {
+        target: SerchatAPI.emojiCache
+        
+        onVersionChanged: {
+            // MarkdownText components will re-render via emojiCacheVersion binding
+        }
+    }
+    
+    // Connect to C++ model signals
     Connections {
         target: SerchatAPI.messageModel
         
-        // When a message is added, check if we need to fetch the sender's profile
+        // When a message is added, prefetch the sender's profile if needed
         onMessageAdded: {
             console.log("[MessageView] Message added:", messageId, "isNew:", isNewMessage)
             var message = SerchatAPI.messageModel.getMessage(messageId)
             if (message && message.senderId) {
-                fetchProfileIfNeeded(message.senderId)
+                // Cache will auto-fetch if not present
+                SerchatAPI.userProfileCache.fetchProfile(message.senderId)
             }
         }
         
@@ -949,7 +890,7 @@ Rectangle {
     Components.ReactionPickerSheet {
         id: reactionPickerSheet
         anchors.fill: parent
-        customEmojis: messageView.customEmojis
+        serverId: messageView.serverId
         
         onReactionSelected: {
             addReaction(messageId, emoji, emojiType, emojiId)

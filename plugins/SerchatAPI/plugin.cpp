@@ -6,6 +6,8 @@
 #include "models/messagemodel.h"
 #include "models/genericlistmodel.h"
 #include "models/channellistmodel.h"
+#include "emojicache.h"
+#include "userprofilecache.h"
 
 void SerchatAPIPlugin::registerTypes(const char *uri) {
     //@uri SerchatAPI
@@ -21,4 +23,10 @@ void SerchatAPIPlugin::registerTypes(const char *uri) {
         "GenericListModel is accessed via SerchatAPI model properties");
     qmlRegisterUncreatableType<ChannelListModel>(uri, 1, 0, "ChannelListModel",
         "ChannelListModel is accessed via SerchatAPI.channelListModel");
+    
+    // Register cache types for global emoji and user profile caching
+    qmlRegisterUncreatableType<EmojiCache>(uri, 1, 0, "EmojiCache",
+        "EmojiCache is accessed via SerchatAPI.emojiCache");
+    qmlRegisterUncreatableType<UserProfileCache>(uri, 1, 0, "UserProfileCache",
+        "UserProfileCache is accessed via SerchatAPI.userProfileCache");
 }

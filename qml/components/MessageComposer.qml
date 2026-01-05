@@ -21,9 +21,6 @@ Item {
     property string channelId: ""
     property string dmRecipientId: ""
     
-    // Custom emojis for the server (passed from parent)
-    property var customEmojis: ({})
-    
     // Reply state
     property bool isReplying: false
     property string replyToMessageId: ""
@@ -286,7 +283,7 @@ Item {
         anchors.rightMargin: units.gu(1)
         
         visible: false
-        customEmojis: composer.customEmojis
+        serverId: composer.serverId
         
         onEmojiSelected: {
             // Insert emoji at cursor position

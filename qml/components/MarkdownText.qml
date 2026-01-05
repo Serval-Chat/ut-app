@@ -19,9 +19,9 @@ import SerchatAPI 1.0
  * - Ordered lists (1. item)
  * - Links ([text](url) and automatic URL detection)
  * - Spoilers (||text||)
- * - Custom emojis (<emoji:id>)
+ * - Custom emojis (<emoji:id>) - fetched from SerchatAPI.emojiCache
  * - Unicode emoji rendering
- * - Mentions (@username)
+ * - Mentions (@username) - resolved from SerchatAPI.userProfileCache
  * - Channel references (#channel)
  * - Emoji-only messages with larger emoji display
  */
@@ -35,17 +35,14 @@ Item {
     property color codeBackground: Qt.rgba(Theme.palette.normal.base.r,
                                            Theme.palette.normal.base.g,
                                            Theme.palette.normal.base.b, 0.5)
-    property var customEmojis: ({})  // Map of emojiId -> emoji object
-    property var userProfiles: ({})  // Map of userId -> user profile object for mention rendering
     property bool selectable: false
     property int wrapMode: Text.Wrap
     property int maximumLineCount: -1
     
-    // Force re-render when customEmojis changes by including its keys count
-    property int emojiCacheVersion: Object.keys(customEmojis).length
-    
-    // Force re-render when userProfiles changes
-    property int userProfilesVersion: Object.keys(userProfiles).length
+    // Use C++ cache versions to trigger re-render when data changes
+    // This replaces the old customEmojis and userProfiles props
+    property int emojiCacheVersion: SerchatAPI.emojiCache.version
+    property int profileCacheVersion: SerchatAPI.userProfileCache.version
     
     // Check if the message is emoji-only (for larger display)
     readonly property bool isEmojiOnly: checkIsEmojiOnly(text)
@@ -55,8 +52,8 @@ Item {
     readonly property int largeEmojiSize: 32   // Larger for emoji-only messages
     readonly property int currentEmojiSize: isEmojiOnly ? largeEmojiSize : normalEmojiSize
     
-    // The rendered HTML content (depends on text, emoji cache, user profiles, and emoji size)
-    property string renderedHtml: renderMarkdown(text, emojiCacheVersion, userProfilesVersion, currentEmojiSize)
+    // The rendered HTML content (depends on text, cache versions, and emoji size)
+    property string renderedHtml: renderMarkdown(text, emojiCacheVersion, profileCacheVersion, currentEmojiSize)
     
     implicitWidth: textLabel.implicitWidth
     implicitHeight: textLabel.implicitHeight
@@ -94,10 +91,6 @@ Item {
     
     signal userMentionClicked(string userId)
     signal channelMentionClicked(string channelId)
-    signal unknownEmojiFound(string emojiId)  // Signal to request emoji fetch
-    
-    // Track pending emoji requests to avoid duplicates
-    property var pendingEmojiRequests: ({})
     
     // Check if the message contains only emojis (Unicode or custom)
     // Returns true if the message is emoji-only, false otherwise
@@ -177,9 +170,9 @@ Item {
     }
     
     // Parse and render markdown to HTML
-    // cacheVersion and userVersion are used to force re-render when data changes
+    // cacheVersion and profileVersion are used to force re-render when data changes
     // emojiSize determines the size of emoji images
-    function renderMarkdown(input, cacheVersion, userVersion, emojiSize) {
+    function renderMarkdown(input, cacheVersion, profileVersion, emojiSize) {
         if (!input) return ""
         
         var html = input
@@ -189,29 +182,20 @@ Item {
         // Store them with placeholders
         // Emoji format: <emoji:emojiId> where emojiId is the database ID
         var emojiPlaceholders = []
-        var unknownEmojis = []
         
         html = html.replace(/<emoji:([a-zA-Z0-9]+)>/g, function(match, emojiId) {
             var placeholder = "___EMOJI_" + emojiPlaceholders.length + "___"
-            var emojiUrl = ""
             
-            // Check if we have this emoji in our cache
-            if (customEmojis && customEmojis[emojiId]) {
-                var emoji = customEmojis[emojiId]
-                // emoji.imageUrl is like "/uploads/emojis/xxx.png"
-                emojiUrl = SerchatAPI.apiBaseUrl + emoji.imageUrl
+            // Get emoji URL from C++ cache (auto-fetches if not present)
+            var emojiUrl = SerchatAPI.emojiCache.getEmojiUrl(emojiId)
+            
+            if (emojiUrl && emojiUrl.length > 0) {
+                emojiPlaceholders.push('<img src="' + emojiUrl + '" width="' + size + '" height="' + size + '" style="vertical-align: -0.5em;" />')
             } else {
-                // Emoji not in cache - queue for fetch and show loading placeholder
-                console.log("[MarkdownText] Unknown emoji:", emojiId)
-                if (!pendingEmojiRequests[emojiId]) {
-                    unknownEmojis.push(emojiId)
-                }
-                // Show a loading/unknown placeholder
+                // Emoji not in cache yet - show loading placeholder
+                // The cache will auto-fetch and trigger a re-render via version change
                 emojiPlaceholders.push('<img src="" width="' + size + '" height="' + size + '" style="vertical-align: -0.5em; background-color: #e0e0e0; border-radius: 3px;" alt=":' + emojiId + ':" />')
-                return placeholder
             }
-            
-            emojiPlaceholders.push('<img src="' + emojiUrl + '" width="' + size + '" height="' + size + '" style="vertical-align: -0.5em;" />')
             return placeholder
         })
         
@@ -220,13 +204,9 @@ Item {
         var userMentionPlaceholders = []
         html = html.replace(/<userid:'([a-zA-Z0-9]+)'>/g, function(match, userId) {
             var placeholder = "___USERMENTION_" + userMentionPlaceholders.length + "___"
-            var displayName = "@" + userId.substring(0, 8) + "..."  // Default fallback
             
-            // Try to get username from userProfiles
-            if (userProfiles && userProfiles[userId]) {
-                var profile = userProfiles[userId]
-                displayName = "@" + (profile.displayName || profile.username || userId.substring(0, 8))
-            }
+            // Get display name from C++ cache (auto-fetches if not present)
+            var displayName = "@" + SerchatAPI.userProfileCache.getDisplayName(userId)
             
             // Create clickable mention link
             userMentionPlaceholders.push('<a href="user:' + userId + '" style="color: ' + linkColor + '; font-weight: bold; background-color: rgba(88, 101, 242, 0.2); padding: 0 2px; border-radius: 3px;">' + displayName + '</a>')
@@ -353,15 +333,6 @@ Item {
         // Newlines to <br> (if not already converted during header processing)
         if (html.indexOf('<br>') === -1) {
             html = html.replace(/\n/g, '<br>')
-        }
-        
-        // Request unknown emojis to be fetched
-        for (var k = 0; k < unknownEmojis.length; k++) {
-            var eid = unknownEmojis[k]
-            if (!pendingEmojiRequests[eid]) {
-                pendingEmojiRequests[eid] = true
-                unknownEmojiFound(eid)
-            }
         }
         
         return html

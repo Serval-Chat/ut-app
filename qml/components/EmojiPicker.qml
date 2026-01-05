@@ -7,14 +7,28 @@ import "." as Components
 /*
  * EmojiPicker - Emoji selection popup with categories and custom emojis
  * Uses EmojiData singleton for centralized emoji data
+ * Uses SerchatAPI.emojiCache for custom emojis
  */
 Rectangle {
     id: emojiPicker
     
     property string serverId: ""  // For server-specific custom emojis
-    property var customEmojis: []  // Custom emojis from server
     property bool opened: false
     property string selectedCategory: "smileys"
+    
+    // Bind to cache version to trigger re-renders when cache updates
+    property int emojiCacheVersion: SerchatAPI.emojiCache ? SerchatAPI.emojiCache.version : 0
+    
+    // Get custom emojis from cache based on serverId
+    readonly property var customEmojis: {
+        // Reference emojiCacheVersion to ensure reactivity
+        var v = emojiCacheVersion;
+        if (!SerchatAPI.emojiCache) return [];
+        if (serverId) {
+            return SerchatAPI.emojiCache.getServerEmojis(serverId);
+        }
+        return SerchatAPI.emojiCache.getAllEmojis();
+    }
     
     signal emojiSelected(string emoji, bool isCustom, string emojiId, string emojiUrl)
     signal closed()

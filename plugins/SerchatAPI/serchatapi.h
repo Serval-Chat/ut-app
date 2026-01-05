@@ -17,6 +17,8 @@ class SocketClient;
 class MessageModel;
 class GenericListModel;
 class ChannelListModel;
+class EmojiCache;
+class UserProfileCache;
 
 /**
  * @brief Main API facade exposed to QML.
@@ -63,6 +65,10 @@ class SerchatAPI : public QObject {
     Q_PROPERTY(GenericListModel* friendsModel READ friendsModel CONSTANT)
     Q_PROPERTY(GenericListModel* rolesModel READ rolesModel CONSTANT)
     Q_PROPERTY(ChannelListModel* channelListModel READ channelListModel CONSTANT)
+    
+    // Global caches for emojis and user profiles - eliminates prop drilling in QML
+    Q_PROPERTY(EmojiCache* emojiCache READ emojiCache CONSTANT)
+    Q_PROPERTY(UserProfileCache* userProfileCache READ userProfileCache CONSTANT)
 
 public:
     SerchatAPI();
@@ -796,6 +802,18 @@ public:
      * This model provides a hierarchical view of channels organized by category.
      */
     ChannelListModel* channelListModel() const { return m_channelListModel; }
+    
+    /**
+     * @brief Get the global emoji cache.
+     * Provides centralized emoji storage with automatic fetch for unknown emojis.
+     */
+    EmojiCache* emojiCache() const { return m_emojiCache; }
+    
+    /**
+     * @brief Get the global user profile cache.
+     * Provides centralized profile storage with automatic fetch for unknown users.
+     */
+    UserProfileCache* userProfileCache() const { return m_userProfileCache; }
 
 private slots:
     // Auth client handlers
@@ -826,6 +844,10 @@ private:
     GenericListModel* m_friendsModel;
     GenericListModel* m_rolesModel;
     ChannelListModel* m_channelListModel;
+    
+    // Global caches (owned by this class, exposed to QML)
+    EmojiCache* m_emojiCache;
+    UserProfileCache* m_userProfileCache;
     
     // Presence tracking
     QSet<QString> m_onlineUsers;

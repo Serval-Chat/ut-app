@@ -49,10 +49,7 @@ Page {
     property var servers: []
     // Channels and categories are now managed by SerchatAPI.channelListModel
     // Messages are now managed by SerchatAPI.messageModel (C++ QAbstractListModel)
-    property var userProfiles: ({})
     property var unreadCounts: ({})
-    property var serverEmojis: ({})  // Map of emojiId -> emoji data for custom emoji rendering
-    property var allEmojis: ({})  // Global emoji cache from all servers (emojiId -> emoji data)
     
     // DM data stores
     property var dmConversations: []
@@ -157,10 +154,8 @@ Page {
             // Messages are now handled by C++ model (SerchatAPI.messageModel)
             loading: loadingMessages
             currentUserId: homePage.currentUserId
-            userProfiles: homePage.userProfiles
             showBackButton: isSmallScreen && mobileViewMode === "messages"
             canSendMessages: homePage.canSendInCurrentChannel
-            customEmojis: homePage.allEmojis  // Use global emoji cache for cross-server emojis
             
             onBackClicked: {
                 mobileViewMode = "channels"
@@ -637,13 +632,10 @@ Page {
                 currentUserAvatar = SerchatAPI.apiBaseUrl + profile.profilePicture
             }
 
-            // Cache own profile in QML
-            var profiles = Object.assign({}, userProfiles)
-            profiles[profile.id] = profile
-            userProfiles = profiles
-
-            // Sync to C++ MessageModel for proper sender name resolution
-            SerchatAPI.messageModel.updateUserProfile(profile.id, profile)
+            // Cache own profile in C++ cache (MessageModel uses this automatically)
+            if (SerchatAPI.userProfileCache) {
+                SerchatAPI.userProfileCache.updateProfile(profile.id, profile)
+            }
         }
         
         onMyProfileFetchFailed: {
@@ -776,47 +768,8 @@ Page {
             }
         }
         
-        // Server Emojis
-        onServerEmojisFetched: {
-            if (serverId === currentServerId) {
-                // Build emoji lookup map by emoji ID
-                var emojiMap = {}
-                for (var i = 0; i < emojis.length; i++) {
-                    var emoji = emojis[i]
-                    var emojiId = emoji._id || emoji.id
-                    emojiMap[emojiId] = emoji
-                }
-                homePage.serverEmojis = emojiMap
-                console.log("[HomePage] Server emojis loaded:", Object.keys(emojiMap).length)
-            }
-        }
-        
-        onServerEmojisFetchFailed: {
-            if (serverId === currentServerId) {
-                console.log("[HomePage] Failed to fetch server emojis:", error)
-                // Clear emojis but don't block other operations
-                homePage.serverEmojis = {}
-            }
-        }
-        
-        // All Emojis (from all servers user is a member of)
-        onAllEmojisFetched: {
-            // Build global emoji lookup map by emoji ID
-            var emojiMap = {}
-            for (var i = 0; i < emojis.length; i++) {
-                var emoji = emojis[i]
-                var emojiId = emoji._id || emoji.id
-                emojiMap[emojiId] = emoji
-            }
-            homePage.allEmojis = emojiMap
-            console.log("[HomePage] All emojis loaded:", Object.keys(emojiMap).length)
-        }
-        
-        onAllEmojisFetchFailed: {
-            console.log("[HomePage] Failed to fetch all emojis:", error)
-            // Fall back to server emojis if global fetch fails
-            homePage.allEmojis = homePage.serverEmojis
-        }
+        // Server Emojis are now handled by C++ EmojiCache
+        // Signal handlers removed - cache auto-populates via C++ lambdas
         
         // Messages
         onMessagesFetched: function(requestId, serverId, channelId, fetchedMessages) {

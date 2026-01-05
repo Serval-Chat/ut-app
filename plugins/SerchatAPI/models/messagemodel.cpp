@@ -1,8 +1,10 @@
 #include "messagemodel.h"
+#include "../userprofilecache.h"
 #include <QDebug>
 
 MessageModel::MessageModel(QObject *parent)
     : QAbstractListModel(parent)
+    , m_userProfileCache(nullptr)
     , m_isDMMode(false)
     , m_hasMoreMessages(true)
 {
@@ -349,30 +351,28 @@ QVariantMap MessageModel::getMessageAt(int index) const
 // User Profile Cache
 // ============================================================================
 
-void MessageModel::setUserProfiles(const QVariantMap& profiles)
+void MessageModel::setUserProfileCache(UserProfileCache* cache)
 {
-    m_userProfiles = profiles;
-    
-    // Notify all rows that sender name/avatar may have changed
-    if (!m_messages.isEmpty()) {
-        QVector<int> roles;
-        roles << SenderNameRole << SenderAvatarRole;
-        emit dataChanged(createIndex(0, 0), createIndex(m_messages.count() - 1, 0), roles);
+    if (m_userProfileCache) {
+        disconnect(m_userProfileCache, nullptr, this, nullptr);
     }
-}
-
-void MessageModel::updateUserProfile(const QString& userId, const QVariantMap& profile)
-{
-    m_userProfiles[userId] = profile;
     
-    // Find all messages from this sender and update
-    QVector<int> roles;
-    roles << SenderNameRole << SenderAvatarRole;
+    m_userProfileCache = cache;
     
-    for (int i = 0; i < m_messages.count(); ++i) {
-        if (m_messages[i].data.value("senderId").toString() == userId) {
-            emit dataChanged(createIndex(i, 0), createIndex(i, 0), roles);
-        }
+    if (m_userProfileCache) {
+        // When profile cache updates, notify relevant rows
+        connect(m_userProfileCache, &UserProfileCache::profileLoaded,
+                this, [this](const QString& userId) {
+            // Find all messages from this sender and update
+            QVector<int> roles;
+            roles << SenderNameRole << SenderAvatarRole;
+            
+            for (int i = 0; i < m_messages.count(); ++i) {
+                if (m_messages[i].data.value("senderId").toString() == userId) {
+                    emit dataChanged(createIndex(i, 0), createIndex(i, 0), roles);
+                }
+            }
+        });
     }
 }
 
@@ -403,15 +403,12 @@ QString MessageModel::getSenderName(const QString& senderId) const
     if (senderId.isEmpty())
         return QString();
     
-    QVariantMap profile = m_userProfiles.value(senderId).toMap();
-    if (profile.isEmpty())
-        return senderId;  // Fallback to ID if no profile cached
+    if (!m_userProfileCache)
+        return senderId;  // Fallback to ID if no cache
     
-    QString displayName = profile.value("displayName").toString();
-    if (!displayName.isEmpty())
-        return displayName;
-    
-    return profile.value("username", senderId).toString();
+    // Use the shared UserProfileCache - returns empty if not cached (triggers auto-fetch)
+    QString displayName = m_userProfileCache->getDisplayName(senderId);
+    return displayName.isEmpty() ? QString() : displayName;
 }
 
 QString MessageModel::getSenderAvatar(const QString& senderId) const
@@ -419,6 +416,9 @@ QString MessageModel::getSenderAvatar(const QString& senderId) const
     if (senderId.isEmpty())
         return QString();
     
-    QVariantMap profile = m_userProfiles.value(senderId).toMap();
-    return profile.value("profilePicture").toString();
+    if (!m_userProfileCache)
+        return QString();
+    
+    // Use the shared UserProfileCache - returns empty if not cached (triggers auto-fetch)
+    return m_userProfileCache->getAvatarUrl(senderId);
 }

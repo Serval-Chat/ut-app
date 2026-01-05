@@ -6,6 +6,9 @@
 #include <QDateTime>
 #include <QHash>
 
+// Forward declaration
+class UserProfileCache;
+
 /**
  * @brief High-performance C++ model for chat messages.
  * 
@@ -181,20 +184,14 @@ public:
     Q_INVOKABLE QVariantMap getMessageAt(int index) const;
 
     // ========================================================================
-    // User Profile Caching (for sender names/avatars)
+    // User Profile Cache (for sender names/avatars)
     // ========================================================================
     
     /**
-     * @brief Set user profiles cache for sender name/avatar lookups.
-     * This is shared with the main API to avoid duplicate lookups.
+     * @brief Set the user profile cache for sender name/avatar lookups.
+     * Uses the shared UserProfileCache for all profile resolution.
      */
-    void setUserProfiles(const QVariantMap& profiles);
-    
-    /**
-     * @brief Update a single user profile.
-     * Triggers dataChanged for all messages from this sender.
-     */
-    Q_INVOKABLE void updateUserProfile(const QString& userId, const QVariantMap& profile);
+    void setUserProfileCache(UserProfileCache* cache);
 
 signals:
     void countChanged();
@@ -225,8 +222,8 @@ private:
     // Fast ID -> index lookup (O(1) instead of O(n))
     QHash<QString, int> m_idToIndex;
     
-    // User profiles for sender name/avatar resolution
-    QVariantMap m_userProfiles;
+    // User profile cache for sender name/avatar resolution (shared with SerchatAPI)
+    UserProfileCache* m_userProfileCache;
     
     // Current channel context
     QString m_serverId;

@@ -6,6 +6,8 @@ set(
     plugin.cpp
     serchatapi.cpp
     apibase.cpp
+    emojicache.cpp
+    userprofilecache.cpp
     network/networkclient.cpp
     network/socketclient.cpp
     auth/authclient.cpp

@@ -7,13 +7,17 @@ import "." as Components
 /*
  * ReactionPickerSheet - Bottom sheet for selecting emoji reactions
  * Uses the same bottom sheet pattern as UserProfileSheet
+ * Uses SerchatAPI.emojiCache for custom emojis
  */
 Item {
     id: reactionPickerSheet
     
     property string messageId: ""
-    property var customEmojis: ({})
+    property string serverId: ""  // For server-specific custom emojis
     property bool opened: false
+    
+    // Bind to cache version to trigger re-renders when cache updates
+    property int emojiCacheVersion: SerchatAPI.emojiCache ? SerchatAPI.emojiCache.version : 0
     
     signal reactionSelected(string messageId, string emoji, string emojiType, string emojiId)
     signal closed()
@@ -326,21 +330,27 @@ Item {
         ScriptAction { script: closed() }
     }
     
-    // Get emojis for a category using EmojiData singleton
+    // Get emojis for a category using EmojiData singleton and cache
     function getEmojisForCategory(category) {
+        // Reference emojiCacheVersion to ensure reactivity
+        var v = emojiCacheVersion;
+        
         if (category === "custom") {
-            // Return custom emojis from the server
-            var customList = []
-            for (var id in customEmojis) {
-                var emoji = customEmojis[id]
-                customList.push({
+            // Return custom emojis from the cache
+            if (!SerchatAPI.emojiCache) return [];
+            
+            var emojiList = serverId ? 
+                SerchatAPI.emojiCache.getServerEmojis(serverId) :
+                SerchatAPI.emojiCache.getAllEmojis();
+            
+            return emojiList.map(function(emoji) {
+                return {
                     isCustom: true,
-                    id: id,
-                    name: emoji.name || id,
-                    imageUrl: emoji.imageUrl || ""
-                })
-            }
-            return customList
+                    id: emoji._id || emoji.id,
+                    name: emoji.name,
+                    imageUrl: emoji.url || ""
+                }
+            });
         }
         
         // Use EmojiData component for unicode emojis

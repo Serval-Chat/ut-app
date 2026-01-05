@@ -10,6 +10,8 @@
 #include "models/messagemodel.h"
 #include "models/genericlistmodel.h"
 #include "models/channellistmodel.h"
+#include "emojicache.h"
+#include "userprofilecache.h"
 
 SerchatAPI::SerchatAPI() {
     // Initialize persistent storage
@@ -32,11 +34,25 @@ SerchatAPI::SerchatAPI() {
     m_friendsModel = new GenericListModel("_id", this);
     m_rolesModel = new GenericListModel("_id", this);
     m_channelListModel = new ChannelListModel(this);
+    
+    // Initialize global caches
+    // These provide centralized storage, eliminating prop drilling in QML
+    m_emojiCache = new EmojiCache(this);
+    m_userProfileCache = new UserProfileCache(this);
+    
+    // Connect MessageModel to UserProfileCache for sender name/avatar lookups
+    m_messageModel->setUserProfileCache(m_userProfileCache);
 
     // Configure base URLs
     QString baseUrl = apiBaseUrl();
     m_authClient->setBaseUrl(baseUrl);
     m_apiClient->setBaseUrl(baseUrl);
+    
+    // Configure caches with API client for auto-fetch and base URL for image URLs
+    m_emojiCache->setApiClient(m_apiClient);
+    m_emojiCache->setBaseUrl(baseUrl);
+    m_userProfileCache->setApiClient(m_apiClient);
+    m_userProfileCache->setBaseUrl(baseUrl);
 
     // Connect auth client signals
     connect(m_authClient, &AuthClient::loginSuccessful, 
@@ -50,15 +66,33 @@ SerchatAPI::SerchatAPI() {
     connect(m_authClient, &AuthClient::networkError, 
             this, &SerchatAPI::onAuthNetworkError);
 
-    // Connect API client signals (with request IDs)
+    // Connect API client signals (with request IDs) - also populate profile cache
     connect(m_apiClient, &ApiClient::profileFetched, 
-            this, &SerchatAPI::profileFetched);
+            this, [this](int requestId, const QVariantMap& profile) {
+                QString userId = profile.value("_id").toString();
+                if (userId.isEmpty()) {
+                    userId = profile.value("id").toString();
+                }
+                if (!userId.isEmpty()) {
+                    m_userProfileCache->updateProfile(userId, profile);
+                }
+                emit profileFetched(requestId, profile);
+            });
     connect(m_apiClient, &ApiClient::profileFetchFailed, 
             this, &SerchatAPI::profileFetchFailed);
     
-    // Connect convenience signals for current user's profile
+    // Connect convenience signals for current user's profile - also populate cache
     connect(m_apiClient, &ApiClient::myProfileFetched, 
-            this, &SerchatAPI::myProfileFetched);
+            this, [this](const QVariantMap& profile) {
+                QString userId = profile.value("_id").toString();
+                if (userId.isEmpty()) {
+                    userId = profile.value("id").toString();
+                }
+                if (!userId.isEmpty()) {
+                    m_userProfileCache->updateProfile(userId, profile);
+                }
+                emit myProfileFetched(profile);
+            });
     connect(m_apiClient, &ApiClient::myProfileFetchFailed, 
             this, &SerchatAPI::myProfileFetchFailed);
     
@@ -100,21 +134,30 @@ SerchatAPI::SerchatAPI() {
     connect(m_apiClient, &ApiClient::serverRolesFetchFailed,
             this, &SerchatAPI::serverRolesFetchFailed);
     
-    // Connect server emojis signals
+    // Connect server emojis signals - also populate cache
     connect(m_apiClient, &ApiClient::serverEmojisFetched,
-            this, &SerchatAPI::serverEmojisFetched);
+            this, [this](int requestId, const QString& serverId, const QVariantList& emojis) {
+                m_emojiCache->loadServerEmojis(serverId, emojis);
+                emit serverEmojisFetched(requestId, serverId, emojis);
+            });
     connect(m_apiClient, &ApiClient::serverEmojisFetchFailed,
             this, &SerchatAPI::serverEmojisFetchFailed);
     
-    // Connect all emojis signals
+    // Connect all emojis signals - also populate cache
     connect(m_apiClient, &ApiClient::allEmojisFetched,
-            this, &SerchatAPI::allEmojisFetched);
+            this, [this](int requestId, const QVariantList& emojis) {
+                m_emojiCache->loadAllEmojis(emojis);
+                emit allEmojisFetched(requestId, emojis);
+            });
     connect(m_apiClient, &ApiClient::allEmojisFetchFailed,
             this, &SerchatAPI::allEmojisFetchFailed);
     
-    // Connect single emoji signals (for cross-server emoji lookup)
+    // Connect single emoji signals (for cross-server emoji lookup) - also populate cache
     connect(m_apiClient, &ApiClient::emojiFetched,
-            this, &SerchatAPI::emojiFetched);
+            this, [this](int requestId, const QString& emojiId, const QVariantMap& emoji) {
+                m_emojiCache->addEmoji(emoji);
+                emit emojiFetched(requestId, emojiId, emoji);
+            });
     connect(m_apiClient, &ApiClient::emojiFetchFailed,
             this, &SerchatAPI::emojiFetchFailed);
     
@@ -340,6 +383,8 @@ void SerchatAPI::setApiBaseUrl(const QString& baseUrl) {
         m_settings->setValue("apiBaseUrl", baseUrl);
         m_authClient->setBaseUrl(baseUrl);
         m_apiClient->setBaseUrl(baseUrl);
+        m_emojiCache->setBaseUrl(baseUrl);
+        m_userProfileCache->setBaseUrl(baseUrl);
         emit apiBaseUrlChanged();
         qDebug() << "[SerchatAPI] API base URL changed to:" << baseUrl;
     }
@@ -924,6 +969,10 @@ void SerchatAPI::handleServerMembersFetched(int requestId, const QString& server
     // Populate the members model with the fetched data
     m_membersModel->setItems(members);
     qDebug() << "[SerchatAPI] Members model populated with" << members.size() << "members for server:" << serverId;
+    
+    // Also populate user profile cache with member data
+    // This helps resolve user mentions and avatars without per-user API calls
+    m_userProfileCache->updateProfiles(members);
     
     // Forward the signal to QML for any additional handling
     emit serverMembersFetched(requestId, serverId, members);

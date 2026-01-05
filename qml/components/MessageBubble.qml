@@ -24,8 +24,6 @@ Item {
     property string replyToText: ""
     property string replyToSender: ""
     property var reactions: []
-    property var customEmojis: ({})  // Custom emoji map for markdown rendering
-    property var userProfiles: ({})  // User profiles map for mention rendering
     
     // Expose swipe state to parent for scroll locking
     property bool isSwipeActive: swipeArea.horizontalSwipeDetected
@@ -223,8 +221,6 @@ Item {
                     text: messageBubble.text
                     fontSize: "small"
                     textColor: Theme.palette.normal.baseText
-                    customEmojis: messageBubble.customEmojis
-                    userProfiles: messageBubble.userProfiles
                     
                     onUserMentionClicked: {
                         // Bubble up to parent - open profile for mentioned user

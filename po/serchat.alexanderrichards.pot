@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-05 03:11+0000\n"
+"POT-Creation-Date: 2026-01-05 14:32+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -273,23 +273,23 @@ msgstr ""
 msgid "Profile update not yet implemented"
 msgstr ""
 
-#: ../qml/HomePage.qml:278 ../qml/components/DMListView.qml:44
+#: ../qml/HomePage.qml:273 ../qml/components/DMListView.qml:44
 msgid "Direct Messages"
 msgstr ""
 
-#: ../qml/HomePage.qml:301
+#: ../qml/HomePage.qml:296
 msgid "Select a conversation"
 msgstr ""
 
-#: ../qml/HomePage.qml:302
+#: ../qml/HomePage.qml:297
 msgid "Select a channel"
 msgstr ""
 
-#: ../qml/HomePage.qml:310
+#: ../qml/HomePage.qml:305
 msgid "Choose a conversation from the list or start a new one"
 msgstr ""
 
-#: ../qml/HomePage.qml:311
+#: ../qml/HomePage.qml:306
 msgid "Pick a channel from the list to start chatting"
 msgstr ""
 
@@ -415,7 +415,8 @@ msgstr ""
 
 #: ../qml/ProfilePage.qml:265 ../qml/components/CreateDMDialog.qml:216
 #: ../qml/components/MemberListItem.qml:32
-#: ../qml/components/MessageView.qml:600 ../qml/components/MessageView.qml:605
+#: ../qml/components/MessageView.qml:299 ../qml/components/MessageView.qml:589
+#: ../qml/components/MessageView.qml:593
 #: ../qml/components/SearchOverlay.qml:224
 msgid "Unknown"
 msgstr ""
@@ -620,15 +621,15 @@ msgstr ""
 msgid "Start a new conversation!"
 msgstr ""
 
-#: ../qml/components/EmojiPicker.qml:76
+#: ../qml/components/EmojiPicker.qml:90
 msgid "Search emojis"
 msgstr ""
 
-#: ../qml/components/EmojiPicker.qml:140
+#: ../qml/components/EmojiPicker.qml:154
 msgid "Search Results"
 msgstr ""
 
-#: ../qml/components/EmojiPicker.qml:141
+#: ../qml/components/EmojiPicker.qml:155
 msgid "Custom Emojis"
 msgstr ""
 
@@ -656,36 +657,36 @@ msgstr ""
 msgid "No members found"
 msgstr ""
 
-#: ../qml/components/MessageActionSheet.qml:206
+#: ../qml/components/MessageActionSheet.qml:205
 msgid "Reply"
 msgstr ""
 
-#: ../qml/components/MessageActionSheet.qml:243
-#: ../qml/components/ReactionPickerSheet.qml:122
+#: ../qml/components/MessageActionSheet.qml:242
+#: ../qml/components/ReactionPickerSheet.qml:126
 msgid "Add Reaction"
 msgstr ""
 
-#: ../qml/components/MessageActionSheet.qml:280
+#: ../qml/components/MessageActionSheet.qml:279
 msgid "Copy Text"
 msgstr ""
 
-#: ../qml/components/MessageActionSheet.qml:319
+#: ../qml/components/MessageActionSheet.qml:318
 msgid "Edit Message"
 msgstr ""
 
-#: ../qml/components/MessageActionSheet.qml:357
+#: ../qml/components/MessageActionSheet.qml:356
 msgid "Delete Message"
 msgstr ""
 
-#: ../qml/components/MessageBubble.qml:237
+#: ../qml/components/MessageBubble.qml:233
 msgid "(edited)"
 msgstr ""
 
-#: ../qml/components/MessageBubble.qml:438
+#: ../qml/components/MessageBubble.qml:434
 msgid "Today at %1"
 msgstr ""
 
-#: ../qml/components/MessageBubble.qml:440
+#: ../qml/components/MessageBubble.qml:436
 msgid "Yesterday at %1"
 msgstr ""
 
@@ -693,55 +694,55 @@ msgstr ""
 msgid "Send a message..."
 msgstr ""
 
-#: ../qml/components/MessageComposer.qml:76
+#: ../qml/components/MessageComposer.qml:73
 msgid "Replying to %1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:286
+#: ../qml/components/MessageView.qml:277
 msgid "NEW MESSAGES"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:375
+#: ../qml/components/MessageView.qml:364
 msgid "Load more messages"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:403
+#: ../qml/components/MessageView.qml:392
 msgid "This is the beginning of your conversation with %1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:404
+#: ../qml/components/MessageView.qml:393
 msgid "This is the beginning of #%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:448
+#: ../qml/components/MessageView.qml:437
 msgid "Welcome to #%1!"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:455
+#: ../qml/components/MessageView.qml:444
 msgid "This is the start of the #%1 channel. There are no messages yet."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:536
+#: ../qml/components/MessageView.qml:525
 msgid "%1 is typing..."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:537
+#: ../qml/components/MessageView.qml:526
 msgid "%1 and %2 are typing..."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:538
+#: ../qml/components/MessageView.qml:527
 msgid "%1 and %2 others are typing..."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:578
+#: ../qml/components/MessageView.qml:567
 msgid "Message #%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:578
+#: ../qml/components/MessageView.qml:567
 msgid "Message @%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:579
+#: ../qml/components/MessageView.qml:568
 msgid "You don't have permission to send messages"
 msgstr ""
 
