@@ -32,6 +32,11 @@ struct CacheEntry {
 enum class RequestType {
     Profile,
     MyProfile,
+    UpdateDisplayName,
+    UpdatePronouns,
+    UpdateBio,
+    UploadProfilePicture,
+    UploadBanner,
     Servers,
     ServerDetails,
     ServerMembers,
@@ -99,6 +104,41 @@ public:
     
     int getMyProfile();
     int getProfile(const QString& userId, bool useCache = true);
+    
+    /**
+     * @brief Update the current user's display name.
+     * @param displayName The new display name
+     * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
+     */
+    int updateDisplayName(const QString& displayName);
+    
+    /**
+     * @brief Update the current user's pronouns.
+     * @param pronouns The new pronouns
+     * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
+     */
+    int updatePronouns(const QString& pronouns);
+    
+    /**
+     * @brief Update the current user's bio.
+     * @param bio The new bio
+     * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
+     */
+    int updateBio(const QString& bio);
+    
+    /**
+     * @brief Upload a new profile picture.
+     * @param filePath Path to the image file
+     * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
+     */
+    int uploadProfilePicture(const QString& filePath);
+    
+    /**
+     * @brief Upload a new profile banner.
+     * @param filePath Path to the image file
+     * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
+     */
+    int uploadBanner(const QString& filePath);
     
     // ========================================================================
     // Servers API (implemented in servers.cpp)
@@ -327,6 +367,8 @@ signals:
     void profileFetchFailed(int requestId, const QString& error);
     void myProfileFetched(const QVariantMap& profile);
     void myProfileFetchFailed(const QString& error);
+    void profileUpdateSuccess(int requestId);
+    void profileUpdateFailed(int requestId, const QString& error);
     
     // ========================================================================
     // Server Signals
@@ -454,6 +496,19 @@ protected:
                          const QVariantMap& context = {});
     
     /**
+     * @brief Start a PATCH request.
+     * @param type The request type for signal routing
+     * @param endpoint The API endpoint
+     * @param payload The JSON payload to send
+     * @param cacheKey Key for caching (usually empty for PATCH)
+     * @param context Additional context to store with the request
+     * @return Request ID
+     */
+    int startPatchRequest(RequestType type, const QString& endpoint,
+                          const QJsonObject& payload, const QString& cacheKey = QString(),
+                          const QVariantMap& context = {});
+    
+    /**
      * @brief Start a DELETE request.
      * @param type The request type for signal routing
      * @param endpoint The API endpoint
@@ -464,6 +519,19 @@ protected:
     int startDeleteRequest(RequestType type, const QString& endpoint,
                            const QString& cacheKey = QString(),
                            const QVariantMap& context = {});
+    
+    /**
+     * @brief Start a multipart/form-data POST request for file uploads.
+     * @param type The request type for signal routing
+     * @param endpoint The API endpoint
+     * @param filePath The path to the file to upload
+     * @param fieldName The form field name for the file
+     * @param context Additional context to store with the request
+     * @return Request ID
+     */
+    int startMultipartPostRequest(RequestType type, const QString& endpoint,
+                                  const QString& filePath, const QString& fieldName,
+                                  const QVariantMap& context = {});
     
     /**
      * @brief Called when a request completes. Routes to appropriate signal.

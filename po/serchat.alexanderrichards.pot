@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-05 23:24+0000\n"
+"POT-Creation-Date: 2026-01-05 23:33+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -41,7 +41,7 @@ msgid ""
 "Only change this if you're connecting to a self-hosted Serchat instance."
 msgstr ""
 
-#: ../qml/ApiSettingsPage.qml:56 ../qml/EditProfilePage.qml:29
+#: ../qml/ApiSettingsPage.qml:56 ../qml/EditProfilePage.qml:32
 msgid "Save"
 msgstr ""
 
@@ -203,75 +203,71 @@ msgstr ""
 msgid "API responses will appear here..."
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:16 ../qml/ProfilePage.qml:39
+#: ../qml/EditProfilePage.qml:19 ../qml/ProfilePage.qml:39
 #: ../qml/components/UserProfileSheet.qml:316
 msgid "Edit Profile"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:21 ../qml/ProfilePage.qml:413
+#: ../qml/EditProfilePage.qml:24 ../qml/ProfilePage.qml:413
 msgid "Cancel"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:102
+#: ../qml/EditProfilePage.qml:105
 msgid "Change"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:122
+#: ../qml/EditProfilePage.qml:126
 msgid "Display Name"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:131
+#: ../qml/EditProfilePage.qml:135
 msgid "How you want to be known"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:136 ../qml/LoginPage.qml:80
+#: ../qml/EditProfilePage.qml:140 ../qml/LoginPage.qml:80
 #: ../qml/SettingsPage.qml:145
 msgid "Username"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:146
+#: ../qml/EditProfilePage.qml:150
 msgid "Your unique username"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:150
+#: ../qml/EditProfilePage.qml:154
 msgid "Username changes are not yet supported"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:157
+#: ../qml/EditProfilePage.qml:161
 msgid "Pronouns"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:166
+#: ../qml/EditProfilePage.qml:170
 msgid "e.g., they/them, she/her, he/him"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:171 ../qml/ProfilePage.qml:259
+#: ../qml/EditProfilePage.qml:175 ../qml/ProfilePage.qml:259
 #: ../qml/components/UserProfileSheet.qml:270
 msgid "About Me"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:181
+#: ../qml/EditProfilePage.qml:185
 msgid "Tell others about yourself"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:185
+#: ../qml/EditProfilePage.qml:189
 msgid "You can use markdown formatting"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:192
+#: ../qml/EditProfilePage.qml:196
 msgid "Profile Banner"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:235
+#: ../qml/EditProfilePage.qml:239
 msgid "Change Banner"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:265
+#: ../qml/EditProfilePage.qml:270
 msgid "Saving..."
-msgstr ""
-
-#: ../qml/EditProfilePage.qml:286
-msgid "Profile update not yet implemented"
 msgstr ""
 
 #: ../qml/HomePage.qml:279 ../qml/components/DMListView.qml:44

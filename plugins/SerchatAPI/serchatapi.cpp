@@ -95,6 +95,10 @@ SerchatAPI::SerchatAPI() {
             });
     connect(m_apiClient, &ApiClient::profileFetchFailed, 
             this, &SerchatAPI::profileFetchFailed);
+    connect(m_apiClient, &ApiClient::profileUpdateSuccess,
+            this, &SerchatAPI::profileUpdateSuccess);
+    connect(m_apiClient, &ApiClient::profileUpdateFailed,
+            this, &SerchatAPI::profileUpdateFailed);
     
     // Connect convenience signals for current user's profile - also populate cache
     connect(m_apiClient, &ApiClient::myProfileFetched, 
@@ -561,6 +565,26 @@ int SerchatAPI::getMyProfile() {
 
 int SerchatAPI::getProfile(const QString& userId, bool useCache) {
     return m_apiClient->getProfile(userId, useCache);
+}
+
+int SerchatAPI::updateDisplayName(const QString& displayName) {
+    return m_apiClient->updateDisplayName(displayName);
+}
+
+int SerchatAPI::updatePronouns(const QString& pronouns) {
+    return m_apiClient->updatePronouns(pronouns);
+}
+
+int SerchatAPI::updateBio(const QString& bio) {
+    return m_apiClient->updateBio(bio);
+}
+
+int SerchatAPI::uploadProfilePicture(const QString& filePath) {
+    return m_apiClient->uploadProfilePicture(filePath);
+}
+
+int SerchatAPI::uploadBanner(const QString& filePath) {
+    return m_apiClient->uploadBanner(filePath);
 }
 
 // ============================================================================

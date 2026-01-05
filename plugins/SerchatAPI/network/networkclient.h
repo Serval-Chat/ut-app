@@ -36,6 +36,7 @@ public:
     // HTTP methods - return QNetworkReply* that caller must manage
     QNetworkReply* get(const QUrl& url, const QVariantMap& headers = {});
     QNetworkReply* post(const QUrl& url, const QByteArray& data, const QVariantMap& headers = {});
+    QNetworkReply* post(const QUrl& url, QHttpMultiPart* multiPart, const QVariantMap& headers = {});
     QNetworkReply* put(const QUrl& url, const QByteArray& data, const QVariantMap& headers = {});
     QNetworkReply* patch(const QUrl& url, const QByteArray& data, const QVariantMap& headers = {});
     QNetworkReply* deleteResource(const QUrl& url, const QVariantMap& headers = {});

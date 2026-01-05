@@ -1,6 +1,9 @@
 #include "apiclient.h"
 #include "../network/networkclient.h"
 #include <QDebug>
+#include <QHttpMultiPart>
+#include <QFile>
+#include <QFileInfo>
 
 ApiClient::ApiClient(NetworkClient* networkClient, QObject* parent)
     : ApiBase(parent)
@@ -182,6 +185,43 @@ int ApiClient::startPostRequest(RequestType type, const QString& endpoint,
     return requestId;
 }
 
+int ApiClient::startPatchRequest(RequestType type, const QString& endpoint,
+                                 const QJsonObject& payload, const QString& cacheKey,
+                                 const QVariantMap& context) {
+    int requestId = generateRequestId();
+    
+    if (m_baseUrl.isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, requestId, type, context]() {
+            PendingRequest req;
+            req.type = type;
+            req.context = context;
+            emitFailure(requestId, req, "API base URL not configured");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    // Make the actual network request
+    QUrl url = buildUrl(m_baseUrl, endpoint);
+    QByteArray data = QJsonDocument(payload).toJson();
+    QNetworkReply* reply = m_networkClient->patch(url, data);
+    
+    // Track the request
+    PendingRequest pending;
+    pending.reply = reply;
+    pending.endpoint = endpoint;
+    pending.cacheKey = cacheKey;
+    pending.type = type;
+    pending.context = context;
+    m_pendingRequests[requestId] = pending;
+    
+    // Store requestId in reply for lookup in slot
+    reply->setProperty("requestId", requestId);
+    connect(reply, &QNetworkReply::finished, this, &ApiClient::onReplyFinished);
+    
+    qDebug() << "[ApiClient] Started PATCH request" << requestId << "for" << endpoint;
+    return requestId;
+}
+
 int ApiClient::startDeleteRequest(RequestType type, const QString& endpoint,
                                    const QString& cacheKey, const QVariantMap& context) {
     int requestId = generateRequestId();
@@ -214,6 +254,67 @@ int ApiClient::startDeleteRequest(RequestType type, const QString& endpoint,
     connect(reply, &QNetworkReply::finished, this, &ApiClient::onReplyFinished);
     
     qDebug() << "[ApiClient] Started DELETE request" << requestId << "for" << endpoint;
+    return requestId;
+}
+
+int ApiClient::startMultipartPostRequest(RequestType type, const QString& endpoint,
+                                         const QString& filePath, const QString& fieldName,
+                                         const QVariantMap& context) {
+    int requestId = generateRequestId();
+    
+    if (m_baseUrl.isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, requestId, type, context]() {
+            PendingRequest req;
+            req.type = type;
+            req.context = context;
+            emitFailure(requestId, req, "API base URL not configured");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    // Create multipart data
+    QHttpMultiPart* multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+    
+    // Add the file
+    QFile* file = new QFile(filePath);
+    if (!file->open(QIODevice::ReadOnly)) {
+        delete multiPart;
+        delete file;
+        QMetaObject::invokeMethod(this, [this, requestId, type, context, filePath]() {
+            PendingRequest req;
+            req.type = type;
+            req.context = context;
+            emitFailure(requestId, req, "Failed to open file: " + filePath);
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    QHttpPart filePart;
+    filePart.setHeader(QNetworkRequest::ContentDispositionHeader, 
+                       QString("form-data; name=\"%1\"; filename=\"%2\"").arg(fieldName, QFileInfo(filePath).fileName()));
+    filePart.setBodyDevice(file);
+    file->setParent(multiPart); // MultiPart will take ownership
+    multiPart->append(filePart);
+    
+    // Make the actual network request
+    QUrl url = buildUrl(m_baseUrl, endpoint);
+    QNetworkReply* reply = m_networkClient->post(url, multiPart);
+    multiPart->setParent(reply); // Reply will take ownership
+    
+    // Track the request
+    PendingRequest pending;
+    pending.reply = reply;
+    pending.endpoint = endpoint;
+    pending.cacheKey = QString(); // Don't cache file uploads
+    pending.type = type;
+    pending.context = context;
+    m_pendingRequests[requestId] = pending;
+    
+    // Store requestId in reply for lookup in slot
+    reply->setProperty("requestId", requestId);
+    connect(reply, &QNetworkReply::finished, this, &ApiClient::onReplyFinished);
+    
+    qDebug() << "[ApiClient] Started multipart POST request" << requestId << "for" << endpoint;
     return requestId;
 }
 
@@ -277,6 +378,14 @@ void ApiClient::emitSuccess(int requestId, const PendingRequest& req, const QVar
         case RequestType::MyProfile:
             emit profileFetched(requestId, data);
             emit myProfileFetched(data);
+            break;
+            
+        case RequestType::UpdateDisplayName:
+        case RequestType::UpdatePronouns:
+        case RequestType::UpdateBio:
+        case RequestType::UploadProfilePicture:
+        case RequestType::UploadBanner:
+            emit profileUpdateSuccess(requestId);
             break;
             
         case RequestType::Servers:
@@ -378,6 +487,14 @@ void ApiClient::emitFailure(int requestId, const PendingRequest& req, const QStr
         case RequestType::MyProfile:
             emit profileFetchFailed(requestId, error);
             emit myProfileFetchFailed(error);
+            break;
+            
+        case RequestType::UpdateDisplayName:
+        case RequestType::UpdatePronouns:
+        case RequestType::UpdateBio:
+        case RequestType::UploadProfilePicture:
+        case RequestType::UploadBanner:
+            emit profileUpdateFailed(requestId, error);
             break;
             
         case RequestType::Servers:

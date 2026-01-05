@@ -10,6 +10,9 @@ Page {
     
     property var userProfile: ({})
     property bool saving: false
+    property var requests: []
+    property int completedRequests: 0
+    property var failedRequests: []
     
     header: PageHeader {
         id: header
@@ -111,7 +114,8 @@ Page {
                         anchors.fill: parent
                         hoverEnabled: true
                         onClicked: {
-                            // TODO: Open image picker
+                            // TODO: Open image picker for avatar
+                            errorLabel.text = "Image picker not yet implemented"
                         }
                     }
                 }
@@ -243,6 +247,7 @@ Page {
                     anchors.fill: parent
                     onClicked: {
                         // TODO: Open image picker for banner
+                        errorLabel.text = "Image picker not yet implemented"
                     }
                 }
             }
@@ -273,17 +278,99 @@ Page {
         saving = true
         errorLabel.text = ""
         
-        // TODO: Implement actual profile update API calls
-        console.log("Saving profile:", {
-            displayName: displayNameField.text,
-            pronouns: pronounsField.text,
-            bio: bioField.text
-        })
+        var requests = []
+        var hasChanges = false
         
-        // Simulate for now
-        Qt.callLater(function() {
+        // Check for changes and queue API calls
+        if (displayNameField.text !== (userProfile.displayName || "")) {
+            requests.push({
+                type: "displayName",
+                requestId: SerchatAPI.updateDisplayName(displayNameField.text)
+            })
+            hasChanges = true
+        }
+        
+        if (pronounsField.text !== (userProfile.pronouns || "")) {
+            requests.push({
+                type: "pronouns", 
+                requestId: SerchatAPI.updatePronouns(pronounsField.text)
+            })
+            hasChanges = true
+        }
+        
+        if (bioField.text !== (userProfile.bio || "")) {
+            requests.push({
+                type: "bio",
+                requestId: SerchatAPI.updateBio(bioField.text)
+            })
+            hasChanges = true
+        }
+        
+        if (!hasChanges) {
             saving = false
-            errorLabel.text = i18n.tr("Profile update not yet implemented")
-        })
+            errorLabel.text = "No changes to save"
+            return
+        }
+        
+        // Store requests for tracking completion
+        page.requests = requests
+        page.completedRequests = 0
+        page.failedRequests = []
+        
+        // Connect to signals
+        var successConnection = SerchatAPI.profileUpdateSuccess.connect(onProfileUpdateSuccess)
+        var failureConnection = SerchatAPI.profileUpdateFailed.connect(onProfileUpdateFailed)
+        
+        // Store connections for cleanup
+        page.successConnection = successConnection
+        page.failureConnection = failureConnection
+    }
+    
+    function onProfileUpdateSuccess(requestId) {
+        page.completedRequests++
+        
+        // Check if all requests completed
+        if (page.completedRequests >= page.requests.length) {
+            cleanupConnections()
+            saving = false
+            
+            if (page.failedRequests.length === 0) {
+                // All successful
+                pageStack.pop()
+            } else {
+                // Some failed
+                errorLabel.text = "Some updates failed: " + page.failedRequests.join(", ")
+            }
+        }
+    }
+    
+    function onProfileUpdateFailed(requestId, error) {
+        page.failedRequests.push(error)
+        page.completedRequests++
+        
+        // Check if all requests completed
+        if (page.completedRequests >= page.requests.length) {
+            cleanupConnections()
+            saving = false
+            
+            if (page.failedRequests.length === page.requests.length) {
+                // All failed
+                errorLabel.text = "All updates failed: " + page.failedRequests.join(", ")
+            } else {
+                // Some failed
+                errorLabel.text = "Some updates failed: " + page.failedRequests.join(", ")
+            }
+        }
+    }
+    
+    function cleanupConnections() {
+        if (page.successConnection) {
+            SerchatAPI.profileUpdateSuccess.disconnect(page.successConnection)
+            page.successConnection = null
+        }
+        if (page.failureConnection) {
+            SerchatAPI.profileUpdateFailed.disconnect(page.failureConnection)
+            page.failureConnection = null
+        }
     }
 }

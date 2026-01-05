@@ -40,6 +40,14 @@ QNetworkReply* NetworkClient::post(const QUrl& url, const QByteArray& data, cons
     return reply;
 }
 
+QNetworkReply* NetworkClient::post(const QUrl& url, QHttpMultiPart* multiPart, const QVariantMap& headers) {
+    QNetworkRequest request = createRequest(url, headers);
+    logRequest("POST", url, "multipart data");
+    QNetworkReply* reply = m_networkManager->post(request, multiPart);
+    trackReply(reply);
+    return reply;
+}
+
 QNetworkReply* NetworkClient::put(const QUrl& url, const QByteArray& data, const QVariantMap& headers) {
     QNetworkRequest request = createRequest(url, headers);
     logRequest("PUT", url, data);

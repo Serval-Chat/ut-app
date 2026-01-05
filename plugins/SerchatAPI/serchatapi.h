@@ -119,6 +119,41 @@ public:
      */
     Q_INVOKABLE int getProfile(const QString& userId, bool useCache = true);
     
+    /**
+     * @brief Update the current user's display name.
+     * @param displayName The new display name
+     * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
+     */
+    Q_INVOKABLE int updateDisplayName(const QString& displayName);
+    
+    /**
+     * @brief Update the current user's pronouns.
+     * @param pronouns The new pronouns
+     * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
+     */
+    Q_INVOKABLE int updatePronouns(const QString& pronouns);
+    
+    /**
+     * @brief Update the current user's bio.
+     * @param bio The new bio
+     * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
+     */
+    Q_INVOKABLE int updateBio(const QString& bio);
+    
+    /**
+     * @brief Upload a new profile picture.
+     * @param filePath Path to the image file
+     * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
+     */
+    Q_INVOKABLE int uploadProfilePicture(const QString& filePath);
+    
+    /**
+     * @brief Upload a new profile banner.
+     * @param filePath Path to the image file
+     * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
+     */
+    Q_INVOKABLE int uploadBanner(const QString& filePath);
+    
     // ========================================================================
     // Servers API
     // ========================================================================
@@ -612,6 +647,8 @@ signals:
     // Profile signals (with request ID for parallel request tracking)
     void profileFetched(int requestId, const QVariantMap& profile);
     void profileFetchFailed(int requestId, const QString& error);
+    void profileUpdateSuccess(int requestId);
+    void profileUpdateFailed(int requestId, const QString& error);
     
     // Convenience signals for simple use (current user's profile only)
     void myProfileFetched(const QVariantMap& profile);
