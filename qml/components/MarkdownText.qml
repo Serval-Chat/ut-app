@@ -45,19 +45,6 @@ Item {
     readonly property var fileAttachments: hasFiles ? SerchatAPI.markdownParser.extractFileAttachments(text) : []
     readonly property string textWithoutFiles: hasFiles ? SerchatAPI.markdownParser.removeFileAttachments(text) : text
 
-    // Debug logging for file attachments
-    onTextChanged: {
-        // Log ALL messages briefly to confirm we're receiving them
-        if (text.length > 0) {
-            console.log("[MarkdownText] Processing text (first 100 chars):", text.substring(0, 100))
-        }
-        if (text.indexOf("%file%") !== -1 || text.indexOf("/download") !== -1) {
-            console.log("[MarkdownText] Text contains file-related content:", text)
-            console.log("[MarkdownText] hasFiles:", hasFiles)
-            console.log("[MarkdownText] fileAttachments:", JSON.stringify(fileAttachments))
-        }
-    }
-
     // Check if the message is emoji-only using C++ (for larger display)
     // Use text without files to avoid false negatives
     readonly property bool isEmojiOnly: SerchatAPI.markdownParser.isEmojiOnly(textWithoutFiles)
