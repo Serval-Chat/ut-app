@@ -47,13 +47,6 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - addButton.width - units.gu(2)
                 }
-                
-                // New DM button
-                Components.IconButton {
-                    id: addButton
-                    iconName: "add"
-                    onClicked: createDMClicked()
-                }
             }
             
             // Bottom border

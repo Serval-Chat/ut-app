@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-05 19:50+0000\n"
+"POT-Creation-Date: 2026-01-05 19:54+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -606,19 +606,19 @@ msgstr ""
 msgid "Add friends to start messaging!"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:72
+#: ../qml/components/DMListView.qml:65
 msgid "Find or start a conversation"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:85
+#: ../qml/components/DMListView.qml:78
 msgid "DIRECT MESSAGES"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:107
+#: ../qml/components/DMListView.qml:100
 msgid "No conversations yet"
 msgstr ""
 
-#: ../qml/components/DMListView.qml:108
+#: ../qml/components/DMListView.qml:101
 msgid "Start a new conversation!"
 msgstr ""
 
