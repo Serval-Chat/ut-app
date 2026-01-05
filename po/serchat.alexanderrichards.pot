@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-05 15:03+0000\n"
+"POT-Creation-Date: 2026-01-05 15:29+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -469,7 +469,7 @@ msgstr ""
 msgid "Create and configure roles"
 msgstr ""
 
-#: ../qml/ServerSettingsPage.qml:159 ../qml/components/MembersListView.qml:224
+#: ../qml/ServerSettingsPage.qml:159 ../qml/components/MembersListView.qml:227
 msgid "Members"
 msgstr ""
 
@@ -637,23 +637,23 @@ msgstr ""
 msgid "(you)"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:191
+#: ../qml/components/MembersListView.qml:194
 msgid "ONLINE — %1"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:193
+#: ../qml/components/MembersListView.qml:196
 msgid "OFFLINE — %1"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:250
+#: ../qml/components/MembersListView.qml:253
 msgid "Search members"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:330
+#: ../qml/components/MembersListView.qml:333
 msgid "No members"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:330
+#: ../qml/components/MembersListView.qml:333
 msgid "No members found"
 msgstr ""
 

@@ -31,6 +31,9 @@ Rectangle {
     property int membersVersion: 0
     property int rolesVersion: 0
     
+    // Track which server's data is currently loaded in the model
+    property string loadedServerId: ""
+    
     signal memberClicked(string userId)
     signal close()
     
@@ -343,9 +346,13 @@ Rectangle {
         }
     }
     
-    // Also fetch when the panel becomes visible (first open)
+    // Also fetch when the panel becomes visible if we have stale data
     onVisibleChanged: {
-        if (visible && serverId && SerchatAPI.membersModel.count === 0 && !loading) {
+        // Fetch if visible and either:
+        // 1. No data loaded yet (model empty), or
+        // 2. Data is from a different server than we're currently viewing
+        var needsFetch = SerchatAPI.membersModel.count === 0 || loadedServerId !== serverId
+        if (visible && serverId && needsFetch && !loading) {
             fetchMembers()
             fetchRoles()
         }
@@ -368,7 +375,8 @@ Rectangle {
         
         onServerMembersFetched: {
             if (serverId === membersPanel.serverId) {
-                // Model is populated by C++, just update loading state
+                // Model is populated by C++, track which server's data we have
+                membersPanel.loadedServerId = serverId
                 loading = false
             }
         }
