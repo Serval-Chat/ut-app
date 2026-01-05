@@ -163,6 +163,20 @@ public:
      */
     Q_INVOKABLE int getFriends(bool useCache = true);
     
+    /**
+     * @brief Send a friend request to a user.
+     * @param username The username to send request to
+     * @return Request ID for matching with friendRequestSent signal
+     */
+    Q_INVOKABLE int sendFriendRequest(const QString& username);
+    
+    /**
+     * @brief Remove a friend.
+     * @param friendId The user ID of the friend to remove
+     * @return Request ID for matching with friendRemoved signal
+     */
+    Q_INVOKABLE int removeFriend(const QString& friendId);
+    
     // ========================================================================
     // System API
     // ========================================================================
@@ -659,6 +673,10 @@ signals:
     // Friends signals
     void friendsFetched(int requestId, const QVariantList& friends);
     void friendsFetchFailed(int requestId, const QString& error);
+    void friendRequestSent(int requestId, const QVariantMap& response);
+    void friendRequestSendFailed(int requestId, const QString& error);
+    void friendRemovedApi(int requestId, const QVariantMap& response);
+    void friendRemoveFailed(int requestId, const QString& error);
     
     // Server management signals
     void serverJoined(int requestId, const QString& serverId);
@@ -880,6 +898,12 @@ private slots:
     void handleCategoryCreated(const QString& serverId, const QVariantMap& category);
     void handleCategoryUpdated(const QString& serverId, const QVariantMap& category);
     void handleCategoryDeleted(const QString& serverId, const QString& categoryId);
+    
+    // Friend handlers
+    void handleFriendsFetched(int requestId, const QVariantList& friends);
+    void handleFriendRemovedApi(int requestId, const QVariantMap& response);
+    void handleFriendAdded(const QVariantMap& friendData);
+    void handleFriendRemoved(const QString& username, const QString& userId);
 
 private:
     // Persistent storage

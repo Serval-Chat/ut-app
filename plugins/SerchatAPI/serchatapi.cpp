@@ -198,9 +198,17 @@ SerchatAPI::SerchatAPI() {
     
     // Connect friends signals
     connect(m_apiClient, &ApiClient::friendsFetched,
-            this, &SerchatAPI::friendsFetched);
+            this, &SerchatAPI::handleFriendsFetched);
     connect(m_apiClient, &ApiClient::friendsFetchFailed,
             this, &SerchatAPI::friendsFetchFailed);
+    connect(m_apiClient, &ApiClient::friendRequestSent,
+            this, &SerchatAPI::friendRequestSent);
+    connect(m_apiClient, &ApiClient::friendRequestSendFailed,
+            this, &SerchatAPI::friendRequestSendFailed);
+    connect(m_apiClient, &ApiClient::friendRemoved,
+            this, &SerchatAPI::handleFriendRemovedApi);
+    connect(m_apiClient, &ApiClient::friendRemoveFailed,
+            this, &SerchatAPI::friendRemoveFailed);
     
     // Connect system signals
     connect(m_apiClient, &ApiClient::systemInfoFetched,
@@ -311,9 +319,9 @@ SerchatAPI::SerchatAPI() {
     
     // Real-time friend events
     connect(m_socketClient, &SocketClient::friendAdded,
-            this, &SerchatAPI::friendAdded);
+            this, &SerchatAPI::handleFriendAdded);
     connect(m_socketClient, &SocketClient::friendRemoved,
-            this, &SerchatAPI::friendRemoved);
+            this, &SerchatAPI::handleFriendRemoved);
     connect(m_socketClient, &SocketClient::incomingRequestAdded,
             this, &SerchatAPI::incomingRequestAdded);
     connect(m_socketClient, &SocketClient::incomingRequestRemoved,
@@ -581,6 +589,14 @@ int SerchatAPI::createNewServer(const QString& name) {
 
 int SerchatAPI::getFriends(bool useCache) {
     return m_apiClient->getFriends(useCache);
+}
+
+int SerchatAPI::sendFriendRequest(const QString& username) {
+    return m_apiClient->sendFriendRequest(username);
+}
+
+int SerchatAPI::removeFriend(const QString& friendId) {
+    return m_apiClient->removeFriend(friendId);
 }
 
 // ============================================================================
@@ -1557,4 +1573,28 @@ void SerchatAPI::handleCategoryDeleted(const QString& serverId, const QString& c
     }
     
     emit categoryDeleted(serverId, categoryId);
+}
+
+void SerchatAPI::handleFriendsFetched(int requestId, const QVariantList& friends) {
+    // Populate the friends model with the fetched data
+    m_friendsModel->setItems(friends);
+    
+    // Forward the signal to QML
+    emit friendsFetched(requestId, friends);
+}
+
+void SerchatAPI::handleFriendRemovedApi(int requestId, const QVariantMap& response) {
+    emit friendRemovedApi(requestId, response);
+}
+
+void SerchatAPI::handleFriendAdded(const QVariantMap& friendData) {
+    // Add to friends model
+    m_friendsModel->append(friendData);
+    emit friendAdded(friendData);
+}
+
+void SerchatAPI::handleFriendRemoved(const QString& username, const QString& userId) {
+    // Remove from friends model
+    m_friendsModel->removeItem(userId);
+    emit friendRemoved(username, userId);
 }

@@ -8,6 +8,8 @@
 #include <QPointer>
 #include <QMap>
 #include <QDateTime>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <functional>
 
 #include "../apibase.h"
@@ -45,6 +47,8 @@ enum class RequestType {
     SendMessage,
     SendDMMessage,
     Friends,
+    SendFriendRequest,
+    RemoveFriend,
     JoinServer,
     CreateServer,
     SystemInfo
@@ -251,6 +255,20 @@ public:
      */
     int getFriends(bool useCache = true);
     
+    /**
+     * @brief Send a friend request to a user.
+     * @param username The username to send request to
+     * @return Request ID for matching with friendRequestSent signal
+     */
+    int sendFriendRequest(const QString& username);
+    
+    /**
+     * @brief Remove a friend.
+     * @param friendId The user ID of the friend to remove
+     * @return Request ID for matching with friendRemoved signal
+     */
+    int removeFriend(const QString& friendId);
+    
     // ========================================================================
     // Server Management API (implemented in servers.cpp)
     // ========================================================================
@@ -385,6 +403,10 @@ signals:
     // ========================================================================
     void friendsFetched(int requestId, const QVariantList& friends);
     void friendsFetchFailed(int requestId, const QString& error);
+    void friendRequestSent(int requestId, const QVariantMap& response);
+    void friendRequestSendFailed(int requestId, const QString& error);
+    void friendRemoved(int requestId, const QVariantMap& response);
+    void friendRemoveFailed(int requestId, const QString& error);
     
     // ========================================================================
     // Server Management Signals
@@ -417,6 +439,31 @@ protected:
     int startGetRequest(RequestType type, const QString& endpoint, 
                         const QString& cacheKey = QString(), bool useCache = true,
                         const QVariantMap& context = {});
+    
+    /**
+     * @brief Start a POST request.
+     * @param type The request type for signal routing
+     * @param endpoint The API endpoint
+     * @param payload The JSON payload to send
+     * @param cacheKey Key for caching (usually empty for POST)
+     * @param context Additional context to store with the request
+     * @return Request ID
+     */
+    int startPostRequest(RequestType type, const QString& endpoint,
+                         const QJsonObject& payload, const QString& cacheKey = QString(),
+                         const QVariantMap& context = {});
+    
+    /**
+     * @brief Start a DELETE request.
+     * @param type The request type for signal routing
+     * @param endpoint The API endpoint
+     * @param cacheKey Key for caching (usually empty for DELETE)
+     * @param context Additional context to store with the request
+     * @return Request ID
+     */
+    int startDeleteRequest(RequestType type, const QString& endpoint,
+                           const QString& cacheKey = QString(),
+                           const QVariantMap& context = {});
     
     /**
      * @brief Called when a request completes. Routes to appropriate signal.

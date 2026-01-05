@@ -145,6 +145,78 @@ int ApiClient::startGetRequest(RequestType type, const QString& endpoint,
     return requestId;
 }
 
+int ApiClient::startPostRequest(RequestType type, const QString& endpoint,
+                                 const QJsonObject& payload, const QString& cacheKey,
+                                 const QVariantMap& context) {
+    int requestId = generateRequestId();
+    
+    if (m_baseUrl.isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, requestId, type, context]() {
+            PendingRequest req;
+            req.type = type;
+            req.context = context;
+            emitFailure(requestId, req, "API base URL not configured");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    // Make the actual network request
+    QUrl url = buildUrl(m_baseUrl, endpoint);
+    QByteArray data = QJsonDocument(payload).toJson();
+    QNetworkReply* reply = m_networkClient->post(url, data);
+    
+    // Track the request
+    PendingRequest pending;
+    pending.reply = reply;
+    pending.endpoint = endpoint;
+    pending.cacheKey = cacheKey;
+    pending.type = type;
+    pending.context = context;
+    m_pendingRequests[requestId] = pending;
+    
+    // Store requestId in reply for lookup in slot
+    reply->setProperty("requestId", requestId);
+    connect(reply, &QNetworkReply::finished, this, &ApiClient::onReplyFinished);
+    
+    qDebug() << "[ApiClient] Started POST request" << requestId << "for" << endpoint;
+    return requestId;
+}
+
+int ApiClient::startDeleteRequest(RequestType type, const QString& endpoint,
+                                   const QString& cacheKey, const QVariantMap& context) {
+    int requestId = generateRequestId();
+    
+    if (m_baseUrl.isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, requestId, type, context]() {
+            PendingRequest req;
+            req.type = type;
+            req.context = context;
+            emitFailure(requestId, req, "API base URL not configured");
+        }, Qt::QueuedConnection);
+        return requestId;
+    }
+    
+    // Make the actual network request
+    QUrl url = buildUrl(m_baseUrl, endpoint);
+    QNetworkReply* reply = m_networkClient->deleteResource(url);
+    
+    // Track the request
+    PendingRequest pending;
+    pending.reply = reply;
+    pending.endpoint = endpoint;
+    pending.cacheKey = cacheKey;
+    pending.type = type;
+    pending.context = context;
+    m_pendingRequests[requestId] = pending;
+    
+    // Store requestId in reply for lookup in slot
+    reply->setProperty("requestId", requestId);
+    connect(reply, &QNetworkReply::finished, this, &ApiClient::onReplyFinished);
+    
+    qDebug() << "[ApiClient] Started DELETE request" << requestId << "for" << endpoint;
+    return requestId;
+}
+
 void ApiClient::onReplyFinished() {
     QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
     if (!reply) return;
@@ -243,6 +315,14 @@ void ApiClient::emitSuccess(int requestId, const PendingRequest& req, const QVar
             emit friendsFetched(requestId, data.value("items").toList());
             break;
             
+        case RequestType::SendFriendRequest:
+            emit friendRequestSent(requestId, data);
+            break;
+            
+        case RequestType::RemoveFriend:
+            emit friendRemoved(requestId, data);
+            break;
+            
         case RequestType::JoinServer:
             emit serverJoined(requestId, data.value("serverId").toString());
             break;
@@ -331,6 +411,14 @@ void ApiClient::emitFailure(int requestId, const PendingRequest& req, const QStr
             
         case RequestType::Friends:
             emit friendsFetchFailed(requestId, error);
+            break;
+            
+        case RequestType::SendFriendRequest:
+            emit friendRequestSendFailed(requestId, error);
+            break;
+            
+        case RequestType::RemoveFriend:
+            emit friendRemoveFailed(requestId, error);
             break;
             
         case RequestType::JoinServer:

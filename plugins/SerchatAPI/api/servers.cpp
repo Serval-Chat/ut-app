@@ -206,6 +206,43 @@ int ApiClient::getFriends(bool useCache) {
     return startGetRequest(RequestType::Friends, endpoint, cacheKey, useCache);
 }
 
+int ApiClient::sendFriendRequest(const QString& username) {
+    int requestId = generateRequestId();
+    
+    if (username.isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, requestId]() {
+            PendingRequest req;
+            req.type = RequestType::SendFriendRequest;
+            emitFailure(requestId, req, "Username is required");
+        });
+        return requestId;
+    }
+    
+    QJsonObject payload;
+    payload["username"] = username;
+    
+    QString endpoint = "/api/v1/friends";
+    
+    return startPostRequest(RequestType::SendFriendRequest, endpoint, payload, QString());
+}
+
+int ApiClient::removeFriend(const QString& friendId) {
+    int requestId = generateRequestId();
+    
+    if (friendId.isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, requestId]() {
+            PendingRequest req;
+            req.type = RequestType::RemoveFriend;
+            emitFailure(requestId, req, "Friend ID is required");
+        });
+        return requestId;
+    }
+    
+    QString endpoint = QString("/api/v1/friends/%1").arg(friendId);
+    
+    return startDeleteRequest(RequestType::RemoveFriend, endpoint, QString());
+}
+
 // ============================================================================
 // Server Management API
 // ============================================================================
