@@ -46,7 +46,8 @@ enum class RequestType {
     SendDMMessage,
     Friends,
     JoinServer,
-    CreateServer
+    CreateServer,
+    SystemInfo
 };
 
 /**
@@ -269,6 +270,16 @@ public:
     int createServer(const QString& name);
 
     // ========================================================================
+    // System API
+    // ========================================================================
+    
+    /**
+     * @brief Fetch system information including version.
+     * @return Request ID for matching with systemInfoFetched signal
+     */
+    int getSystemInfo();
+
+    // ========================================================================
     // Cache Management (implemented in cache.cpp)
     // ========================================================================
     
@@ -382,6 +393,12 @@ signals:
     void serverJoinFailed(int requestId, const QString& error);
     void serverCreated(int requestId, const QVariantMap& server);
     void serverCreateFailed(int requestId, const QString& error);
+    
+    // ========================================================================
+    // System Signals
+    // ========================================================================
+    void systemInfoFetched(int requestId, const QVariantMap& systemInfo);
+    void systemInfoFetchFailed(int requestId, const QString& error);
 
 protected:
     // ========================================================================

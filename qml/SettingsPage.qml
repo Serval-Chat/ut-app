@@ -23,6 +23,7 @@ Page {
     
     property var userProfile: ({})
     property bool loading: true
+    property var systemInfo: ({})
     
     Flickable {
         anchors {
@@ -313,6 +314,16 @@ Page {
                 }
             }
             
+            ListItem {
+                height: backendVersionLayout.height + divider.height
+                
+                ListItemLayout {
+                    id: backendVersionLayout
+                    title.text: i18n.tr("Backend Version")
+                    subtitle.text: systemInfo.version || i18n.tr("Loading...")
+                }
+            }
+            
             // Logout button
             Item {
                 width: parent.width
@@ -350,9 +361,18 @@ Page {
             loading = false
             console.log("Failed to load profile:", error)
         }
+        
+        onSystemInfoFetched: function(requestId, info) {
+            systemInfo = info
+        }
+        
+        onSystemInfoFetchFailed: {
+            console.log("Failed to load system info:", error)
+        }
     }
     
     Component.onCompleted: {
         SerchatAPI.getMyProfile()
+        SerchatAPI.getSystemInfo()
     }
 }

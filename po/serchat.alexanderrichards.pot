@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-05 19:57+0000\n"
+"POT-Creation-Date: 2026-01-05 20:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: ../qml/ApiSettingsPage.qml:12 ../qml/SettingsPage.qml:246
+#: ../qml/ApiSettingsPage.qml:12 ../qml/SettingsPage.qml:247
 msgid "API Settings"
 msgstr ""
 
@@ -115,7 +115,7 @@ msgstr ""
 msgid "Creating..."
 msgstr ""
 
-#: ../qml/DebugPage.qml:9 ../qml/SettingsPage.qml:265
+#: ../qml/DebugPage.qml:9 ../qml/SettingsPage.qml:266
 msgid "Debug"
 msgstr ""
 
@@ -179,7 +179,7 @@ msgstr ""
 msgid "Cache"
 msgstr ""
 
-#: ../qml/DebugPage.qml:161 ../qml/SettingsPage.qml:284
+#: ../qml/DebugPage.qml:161 ../qml/SettingsPage.qml:285
 msgid "Clear Cache"
 msgstr ""
 
@@ -224,7 +224,7 @@ msgid "How you want to be known"
 msgstr ""
 
 #: ../qml/EditProfilePage.qml:136 ../qml/LoginPage.qml:80
-#: ../qml/SettingsPage.qml:137
+#: ../qml/SettingsPage.qml:138
 msgid "Username"
 msgstr ""
 
@@ -513,68 +513,73 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:81 ../qml/components/FilePreview.qml:415
+#: ../qml/SettingsPage.qml:82 ../qml/SettingsPage.qml:323
+#: ../qml/components/FilePreview.qml:415
 #: ../qml/components/LoadingOverlay.qml:16
 msgid "Loading..."
 msgstr ""
 
-#: ../qml/SettingsPage.qml:107
+#: ../qml/SettingsPage.qml:108
 msgid "Edit"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:124
+#: ../qml/SettingsPage.qml:125
 msgid "Account"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:156
+#: ../qml/SettingsPage.qml:157
 msgid "Login / Email"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:157
+#: ../qml/SettingsPage.qml:158
 msgid "Not set"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:175
+#: ../qml/SettingsPage.qml:176
 msgid "Change Password"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:191
+#: ../qml/SettingsPage.qml:192
 msgid "Notifications"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:201
+#: ../qml/SettingsPage.qml:202
 msgid "Enable Notifications"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:216
+#: ../qml/SettingsPage.qml:217
 msgid "Mention Notifications Only"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:217
+#: ../qml/SettingsPage.qml:218
 msgid "Only notify for @mentions"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:233
+#: ../qml/SettingsPage.qml:234
 msgid "Advanced"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:266
+#: ../qml/SettingsPage.qml:267
 msgid "Developer tools"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:285
+#: ../qml/SettingsPage.qml:286
 msgid "Clear locally stored data"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:301
+#: ../qml/SettingsPage.qml:302
 msgid "About"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:311
+#: ../qml/SettingsPage.qml:312
 msgid "Version"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:324
+#: ../qml/SettingsPage.qml:322
+msgid "Backend Version"
+msgstr ""
+
+#: ../qml/SettingsPage.qml:335
 msgid "Log Out"
 msgstr ""
 

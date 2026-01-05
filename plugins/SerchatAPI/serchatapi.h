@@ -164,6 +164,16 @@ public:
     Q_INVOKABLE int getFriends(bool useCache = true);
     
     // ========================================================================
+    // System API
+    // ========================================================================
+    
+    /**
+     * @brief Fetch system information including backend version.
+     * @return Request ID for matching with systemInfoFetched signal
+     */
+    Q_INVOKABLE int getSystemInfo();
+    
+    // ========================================================================
     // Channels API
     // ========================================================================
     
@@ -768,6 +778,10 @@ signals:
     
     // Real-time emoji signals
     void emojiUpdated(const QString& serverId);
+    
+    // System signals
+    void systemInfoFetched(int requestId, const QVariantMap& systemInfo);
+    void systemInfoFetchFailed(int requestId, const QString& error);
 
 public:
     // ========================================================================

@@ -202,6 +202,12 @@ SerchatAPI::SerchatAPI() {
     connect(m_apiClient, &ApiClient::friendsFetchFailed,
             this, &SerchatAPI::friendsFetchFailed);
     
+    // Connect system signals
+    connect(m_apiClient, &ApiClient::systemInfoFetched,
+            this, &SerchatAPI::systemInfoFetched);
+    connect(m_apiClient, &ApiClient::systemInfoFetchFailed,
+            this, &SerchatAPI::systemInfoFetchFailed);
+    
     // Connect server management signals
     connect(m_apiClient, &ApiClient::serverJoined,
             this, &SerchatAPI::serverJoined);
@@ -575,6 +581,14 @@ int SerchatAPI::createNewServer(const QString& name) {
 
 int SerchatAPI::getFriends(bool useCache) {
     return m_apiClient->getFriends(useCache);
+}
+
+// ============================================================================
+// API Methods - System
+// ============================================================================
+
+int SerchatAPI::getSystemInfo() {
+    return m_apiClient->getSystemInfo();
 }
 
 // ============================================================================

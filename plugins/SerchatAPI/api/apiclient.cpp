@@ -282,6 +282,10 @@ void ApiClient::emitSuccess(int requestId, const PendingRequest& req, const QVar
         case RequestType::SendDMMessage:
             emit dmMessageSent(requestId, data);
             break;
+            
+        case RequestType::SystemInfo:
+            emit systemInfoFetched(requestId, data);
+            break;
     }
 }
 
@@ -364,5 +368,17 @@ void ApiClient::emitFailure(int requestId, const PendingRequest& req, const QStr
         case RequestType::SendDMMessage:
             emit dmMessageSendFailed(requestId, error);
             break;
+            
+        case RequestType::SystemInfo:
+            emit systemInfoFetchFailed(requestId, error);
+            break;
     }
+}
+
+// ============================================================================
+// System API
+// ============================================================================
+
+int ApiClient::getSystemInfo() {
+    return startGetRequest(RequestType::SystemInfo, "/api/v1/system/info", QString(), false);
 }
