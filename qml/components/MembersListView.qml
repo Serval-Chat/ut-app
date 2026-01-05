@@ -230,12 +230,6 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - closeButton.width - units.gu(2)
                 }
-                
-                Components.IconButton {
-                    id: closeButton
-                    iconName: "close"
-                    onClicked: close()
-                }
             }
             
             Rectangle {
