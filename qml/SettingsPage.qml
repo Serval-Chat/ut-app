@@ -153,7 +153,7 @@ Page {
                 
                 ListItemLayout {
                     id: layout2
-                    title.text: i18n.tr("Email")
+                    title.text: i18n.tr("Login / Email")
                     subtitle.text: userProfile.login || i18n.tr("Not set")
                     
                     Icon {
@@ -173,33 +173,6 @@ Page {
                 ListItemLayout {
                     id: layout3
                     title.text: i18n.tr("Change Password")
-                    
-                    Icon {
-                        name: "go-next"
-                        SlotsLayout.position: SlotsLayout.Trailing
-                        width: units.gu(2)
-                    }
-                }
-            }
-            
-            // Appearance Section
-            ListItem {
-                height: appearanceSection.height + divider.height
-                
-                ListItemLayout {
-                    id: appearanceSection
-                    title.text: i18n.tr("Appearance")
-                    title.font.bold: true
-                }
-            }
-            
-            ListItem {
-                height: themeLayout.height + divider.height
-                
-                ListItemLayout {
-                    id: themeLayout
-                    title.text: i18n.tr("Theme")
-                    subtitle.text: i18n.tr("System default")
                     
                     Icon {
                         name: "go-next"
