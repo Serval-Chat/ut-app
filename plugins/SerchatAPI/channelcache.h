@@ -173,7 +173,10 @@ private:
     struct CacheEntry {
         QVariantList data;
         QDateTime fetchedAt;
-        bool isStale() const;
+        bool isStale(int ttlSeconds) const {
+            return fetchedAt.isNull() || 
+                   fetchedAt.secsTo(QDateTime::currentDateTime()) > ttlSeconds;
+        }
     };
     
     // Channel storage: serverId -> list of channels

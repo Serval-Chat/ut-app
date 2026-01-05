@@ -2,13 +2,6 @@
 #include "api/apiclient.h"
 #include <QDebug>
 
-// Check if entry is stale based on TTL
-bool ChannelCache::CacheEntry::isStale() const {
-    static const int defaultTTL = 300;  // Fallback TTL
-    return fetchedAt.isNull() || 
-           fetchedAt.secsTo(QDateTime::currentDateTime()) > defaultTTL;
-}
-
 ChannelCache::ChannelCache(QObject *parent)
     : QObject(parent)
 {
@@ -54,8 +47,7 @@ QVariantList ChannelCache::getChannels(const QString& serverId) {
     if (hasData) {
         const CacheEntry& entry = m_channels[serverId];
         // Check if data is stale
-        if (entry.fetchedAt.isNull() || 
-            entry.fetchedAt.secsTo(QDateTime::currentDateTime()) > m_ttlSeconds) {
+        if (entry.isStale(m_ttlSeconds)) {
             needsRefresh = true;
         }
     }
@@ -100,7 +92,7 @@ bool ChannelCache::isFresh(const QString& serverId) const {
     if (entry.fetchedAt.isNull()) {
         return false;
     }
-    return entry.fetchedAt.secsTo(QDateTime::currentDateTime()) <= m_ttlSeconds;
+    return !entry.isStale(m_ttlSeconds);
 }
 
 void ChannelCache::refreshChannels(const QString& serverId) {
@@ -133,8 +125,7 @@ QVariantList ChannelCache::getCategories(const QString& serverId) {
     
     if (hasData) {
         const CacheEntry& entry = m_categories[serverId];
-        if (entry.fetchedAt.isNull() || 
-            entry.fetchedAt.secsTo(QDateTime::currentDateTime()) > m_ttlSeconds) {
+        if (entry.isStale(m_ttlSeconds)) {
             needsRefresh = true;
         }
     }
@@ -345,8 +336,7 @@ void ChannelCache::refreshStaleEntries(const QStringList& serverIds) {
         // Refresh categories if stale
         if (m_categories.contains(serverId)) {
             const CacheEntry& entry = m_categories[serverId];
-            if (entry.fetchedAt.isNull() || 
-                entry.fetchedAt.secsTo(QDateTime::currentDateTime()) > m_ttlSeconds) {
+            if (entry.isStale(m_ttlSeconds)) {
                 if (m_apiClient && !m_pendingCategoryFetches.contains(serverId)) {
                     m_pendingCategoryFetches.insert(serverId);
                     int requestId = m_apiClient->getCategories(serverId, false);
