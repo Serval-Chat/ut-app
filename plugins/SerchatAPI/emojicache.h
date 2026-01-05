@@ -121,6 +121,12 @@ public:
     void addEmoji(const QVariantMap& emoji);
     
     /**
+     * @brief Mark all entries as potentially stale.
+     * Call this after reconnection to trigger re-fetch of all emojis.
+     */
+    void markAllStale();
+    
+    /**
      * @brief Clear all cached emojis.
      */
     void clear();

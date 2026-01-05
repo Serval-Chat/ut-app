@@ -120,6 +120,12 @@ public:
     void updateProfiles(const QVariantList& profiles);
     
     /**
+     * @brief Mark all entries as potentially stale.
+     * Call this after reconnection - doesn't clear data but allows refresh.
+     */
+    void markAllStale();
+    
+    /**
      * @brief Clear all cached profiles.
      */
     void clear();

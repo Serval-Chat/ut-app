@@ -12,6 +12,8 @@
 #include "models/channellistmodel.h"
 #include "emojicache.h"
 #include "userprofilecache.h"
+#include "channelcache.h"
+#include "messagecache.h"
 
 SerchatAPI::SerchatAPI() {
     // Initialize persistent storage
@@ -39,6 +41,8 @@ SerchatAPI::SerchatAPI() {
     // These provide centralized storage, eliminating prop drilling in QML
     m_emojiCache = new EmojiCache(this);
     m_userProfileCache = new UserProfileCache(this);
+    m_channelCache = new ChannelCache(this);
+    m_messageCache = new MessageCache(this);
     
     // Connect MessageModel to UserProfileCache for sender name/avatar lookups
     m_messageModel->setUserProfileCache(m_userProfileCache);
@@ -53,6 +57,8 @@ SerchatAPI::SerchatAPI() {
     m_emojiCache->setBaseUrl(baseUrl);
     m_userProfileCache->setApiClient(m_apiClient);
     m_userProfileCache->setBaseUrl(baseUrl);
+    m_channelCache->setApiClient(m_apiClient);
+    m_messageCache->setApiClient(m_apiClient);
 
     // Connect auth client signals
     connect(m_authClient, &AuthClient::loginSuccessful, 
@@ -98,7 +104,7 @@ SerchatAPI::SerchatAPI() {
     
     // Connect server signals
     connect(m_apiClient, &ApiClient::serversFetched,
-            this, &SerchatAPI::serversFetched);
+            this, &SerchatAPI::handleServersFetched);
     connect(m_apiClient, &ApiClient::serversFetchFailed,
             this, &SerchatAPI::serversFetchFailed);
     connect(m_apiClient, &ApiClient::serverDetailsFetched,
@@ -207,21 +213,21 @@ SerchatAPI::SerchatAPI() {
     connect(m_socketClient, &SocketClient::socketIdChanged,
             this, &SerchatAPI::socketIdChanged);
     connect(m_socketClient, &SocketClient::connected,
-            this, &SerchatAPI::socketConnected);
+            this, &SerchatAPI::handleSocketConnected);  // Internal handler for cache refresh
     connect(m_socketClient, &SocketClient::disconnected,
-            this, &SerchatAPI::socketDisconnected);
+            this, &SerchatAPI::handleSocketDisconnected);  // Internal handler
     connect(m_socketClient, &SocketClient::reconnecting,
             this, &SerchatAPI::socketReconnecting);
     connect(m_socketClient, &SocketClient::error,
             this, &SerchatAPI::socketError);
     
-    // Real-time server message events
+    // Real-time server message events - route through internal handlers to update caches
     connect(m_socketClient, &SocketClient::serverMessageReceived,
-            this, &SerchatAPI::serverMessageReceived);
+            this, &SerchatAPI::handleServerMessageReceived);
     connect(m_socketClient, &SocketClient::serverMessageEdited,
-            this, &SerchatAPI::serverMessageEdited);
+            this, &SerchatAPI::handleServerMessageEdited);
     connect(m_socketClient, &SocketClient::serverMessageDeleted,
-            this, &SerchatAPI::serverMessageDeleted);
+            this, &SerchatAPI::handleServerMessageDeleted);
     
     // Real-time DM events
     connect(m_socketClient, &SocketClient::directMessageReceived,
@@ -231,24 +237,24 @@ SerchatAPI::SerchatAPI() {
     connect(m_socketClient, &SocketClient::directMessageDeleted,
             this, &SerchatAPI::directMessageDeleted);
     
-    // Real-time channel events
+    // Real-time channel events - route through internal handlers to update caches
     connect(m_socketClient, &SocketClient::channelUpdated,
-            this, &SerchatAPI::channelUpdated);
+            this, &SerchatAPI::handleChannelUpdated);
     connect(m_socketClient, &SocketClient::channelCreated,
-            this, &SerchatAPI::channelCreated);
+            this, &SerchatAPI::handleChannelCreated);
     connect(m_socketClient, &SocketClient::channelDeleted,
-            this, &SerchatAPI::channelDeleted);
+            this, &SerchatAPI::handleChannelDeleted);
     // Route through internal handler for unread tracking
     connect(m_socketClient, &SocketClient::channelUnread,
             this, &SerchatAPI::handleChannelUnread);
     
-    // Real-time category events
+    // Real-time category events - route through internal handlers
     connect(m_socketClient, &SocketClient::categoryCreated,
-            this, &SerchatAPI::categoryCreated);
+            this, &SerchatAPI::handleCategoryCreated);
     connect(m_socketClient, &SocketClient::categoryUpdated,
-            this, &SerchatAPI::categoryUpdated);
+            this, &SerchatAPI::handleCategoryUpdated);
     connect(m_socketClient, &SocketClient::categoryDeleted,
-            this, &SerchatAPI::categoryDeleted);
+            this, &SerchatAPI::handleCategoryDeleted);
     
     // Real-time DM unread - route through internal handler
     connect(m_socketClient, &SocketClient::dmUnread,
@@ -965,6 +971,28 @@ void SerchatAPI::handleUserOffline(const QString& username) {
 // Model Population Handlers
 // ============================================================================
 
+void SerchatAPI::handleServersFetched(int requestId, const QVariantList& servers) {
+    // Preload channel cache for all servers at startup
+    // This ensures the channel list is available quickly when switching servers
+    for (const QVariant& serverVar : servers) {
+        QVariantMap server = serverVar.toMap();
+        QString serverId = server.value("_id").toString();
+        if (serverId.isEmpty()) {
+            serverId = server.value("id").toString();
+        }
+        
+        if (!serverId.isEmpty()) {
+            // Trigger channel fetch for this server (will populate cache)
+            m_channelCache->refreshChannels(serverId);
+        }
+    }
+    
+    qDebug() << "[SerchatAPI] Preloading channels for" << servers.size() << "servers";
+    
+    // Forward signal to QML
+    emit serversFetched(requestId, servers);
+}
+
 void SerchatAPI::handleServerMembersFetched(int requestId, const QString& serverId, const QVariantList& members) {
     // Populate the members model with the fetched data
     m_membersModel->setItems(members);
@@ -1027,6 +1055,9 @@ void SerchatAPI::handleChannelsFetched(int requestId, const QString& serverId, c
     emit unreadStateVersionChanged();
     qDebug() << "[SerchatAPI] Extracted lastReadAt for" << channels.size() << "channels in server:" << serverId;
 
+    // Update channel cache
+    m_channelCache->loadChannels(serverId, channels);
+
     // Forward the signal to QML
     emit channelsFetched(requestId, serverId, channels);
 }
@@ -1034,6 +1065,9 @@ void SerchatAPI::handleChannelsFetched(int requestId, const QString& serverId, c
 void SerchatAPI::handleMessagesFetched(int requestId, const QString& serverId, const QString& channelId, const QVariantList& messages) {
     // Calculate the first unread message based on timestamps
     calculateFirstUnreadMessage(serverId, channelId, messages);
+
+    // Update message cache with serverId for future refresh
+    m_messageCache->loadMessages(serverId, channelId, messages);
 
     // Forward the signal to QML
     emit messagesFetched(requestId, serverId, channelId, messages);
@@ -1381,4 +1415,123 @@ void SerchatAPI::handleDMUnread(const QString& peer, int count) {
     
     // Forward the raw signal for any other handlers
     emit dmUnread(peer, count);
+}
+
+// ============================================================================
+// Socket Connection Handlers (for cache refresh)
+// ============================================================================
+
+void SerchatAPI::handleSocketConnected() {
+    qDebug() << "[SerchatAPI] Socket connected - marking caches as stale for refresh";
+    
+    // Mark all caches as stale so they'll refresh on next access
+    m_emojiCache->markAllStale();
+    m_userProfileCache->markAllStale();
+    m_channelCache->markAllStale();
+    m_messageCache->markAllStale();
+    
+    // Refresh the active channel immediately for fluid UX
+    m_messageCache->refreshActiveChannel();
+    
+    // Forward signal to QML
+    emit socketConnected();
+}
+
+void SerchatAPI::handleSocketDisconnected() {
+    qDebug() << "[SerchatAPI] Socket disconnected";
+    
+    // Clear presence tracking since we'll get fresh state on reconnect
+    m_onlineUsers.clear();
+    
+    // Forward signal to QML
+    emit socketDisconnected();
+}
+
+// ============================================================================
+// Socket Event Handlers for Cache Updates
+// ============================================================================
+
+void SerchatAPI::handleServerMessageReceived(const QVariantMap& message) {
+    // Extract channel ID and add to message cache
+    QString channelId = message.value("channelId").toString();
+    if (channelId.isEmpty()) {
+        channelId = message.value("channel").toMap().value("_id").toString();
+    }
+    
+    if (!channelId.isEmpty()) {
+        m_messageCache->addMessage(channelId, message);
+    }
+    
+    // Forward signal to QML
+    emit serverMessageReceived(message);
+}
+
+void SerchatAPI::handleServerMessageEdited(const QVariantMap& message) {
+    QString channelId = message.value("channelId").toString();
+    if (channelId.isEmpty()) {
+        channelId = message.value("channel").toMap().value("_id").toString();
+    }
+    
+    if (!channelId.isEmpty()) {
+        m_messageCache->updateMessage(channelId, message);
+    }
+    
+    emit serverMessageEdited(message);
+}
+
+void SerchatAPI::handleServerMessageDeleted(const QString& messageId, const QString& channelId) {
+    if (!channelId.isEmpty() && !messageId.isEmpty()) {
+        m_messageCache->removeMessage(channelId, messageId);
+    }
+    
+    emit serverMessageDeleted(messageId, channelId);
+}
+
+void SerchatAPI::handleChannelUpdated(const QString& serverId, const QVariantMap& channel) {
+    if (!serverId.isEmpty()) {
+        m_channelCache->updateChannel(serverId, channel);
+    }
+    
+    emit channelUpdated(serverId, channel);
+}
+
+void SerchatAPI::handleChannelCreated(const QString& serverId, const QVariantMap& channel) {
+    if (!serverId.isEmpty()) {
+        m_channelCache->addChannel(serverId, channel);
+    }
+    
+    emit channelCreated(serverId, channel);
+}
+
+void SerchatAPI::handleChannelDeleted(const QString& serverId, const QString& channelId) {
+    if (!serverId.isEmpty() && !channelId.isEmpty()) {
+        m_channelCache->removeChannel(serverId, channelId);
+        m_messageCache->clearChannel(channelId);
+    }
+    
+    emit channelDeleted(serverId, channelId);
+}
+
+void SerchatAPI::handleCategoryCreated(const QString& serverId, const QVariantMap& category) {
+    if (!serverId.isEmpty()) {
+        m_channelCache->addCategory(serverId, category);
+    }
+    
+    emit categoryCreated(serverId, category);
+}
+
+void SerchatAPI::handleCategoryUpdated(const QString& serverId, const QVariantMap& category) {
+    if (!serverId.isEmpty()) {
+        m_channelCache->updateCategory(serverId, category);
+    }
+    
+    emit categoryUpdated(serverId, category);
+}
+
+void SerchatAPI::handleCategoryDeleted(const QString& serverId, const QString& categoryId) {
+    if (!serverId.isEmpty() && !categoryId.isEmpty()) {
+        m_channelCache->removeCategory(serverId, categoryId);
+    }
+    
+    emit categoryDeleted(serverId, categoryId);
 }

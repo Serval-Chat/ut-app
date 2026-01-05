@@ -8,6 +8,8 @@ set(
     apibase.cpp
     emojicache.cpp
     userprofilecache.cpp
+    channelcache.cpp
+    messagecache.cpp
     network/networkclient.cpp
     network/socketclient.cpp
     auth/authclient.cpp

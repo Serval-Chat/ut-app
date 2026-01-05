@@ -19,6 +19,8 @@ class GenericListModel;
 class ChannelListModel;
 class EmojiCache;
 class UserProfileCache;
+class ChannelCache;
+class MessageCache;
 
 /**
  * @brief Main API facade exposed to QML.
@@ -69,6 +71,8 @@ class SerchatAPI : public QObject {
     // Global caches for emojis and user profiles - eliminates prop drilling in QML
     Q_PROPERTY(EmojiCache* emojiCache READ emojiCache CONSTANT)
     Q_PROPERTY(UserProfileCache* userProfileCache READ userProfileCache CONSTANT)
+    Q_PROPERTY(ChannelCache* channelCache READ channelCache CONSTANT)
+    Q_PROPERTY(MessageCache* messageCache READ messageCache CONSTANT)
 
 public:
     SerchatAPI();
@@ -814,6 +818,18 @@ public:
      * Provides centralized profile storage with automatic fetch for unknown users.
      */
     UserProfileCache* userProfileCache() const { return m_userProfileCache; }
+    
+    /**
+     * @brief Get the global channel cache.
+     * Provides centralized channel storage with TTL and automatic refresh.
+     */
+    ChannelCache* channelCache() const { return m_channelCache; }
+    
+    /**
+     * @brief Get the global message cache.
+     * Provides centralized message storage with TTL and automatic refresh.
+     */
+    MessageCache* messageCache() const { return m_messageCache; }
 
 private slots:
     // Auth client handlers
@@ -825,6 +841,21 @@ private slots:
     
     // Network client handlers
     void onNetworkAuthTokenExpired();
+    
+    // Socket connection handlers (for cache refresh)
+    void handleSocketConnected();
+    void handleSocketDisconnected();
+    
+    // Socket event handlers for cache updates
+    void handleServerMessageReceived(const QVariantMap& message);
+    void handleServerMessageEdited(const QVariantMap& message);
+    void handleServerMessageDeleted(const QString& messageId, const QString& channelId);
+    void handleChannelUpdated(const QString& serverId, const QVariantMap& channel);
+    void handleChannelCreated(const QString& serverId, const QVariantMap& channel);
+    void handleChannelDeleted(const QString& serverId, const QString& channelId);
+    void handleCategoryCreated(const QString& serverId, const QVariantMap& category);
+    void handleCategoryUpdated(const QString& serverId, const QVariantMap& category);
+    void handleCategoryDeleted(const QString& serverId, const QString& categoryId);
 
 private:
     // Persistent storage
@@ -848,6 +879,8 @@ private:
     // Global caches (owned by this class, exposed to QML)
     EmojiCache* m_emojiCache;
     UserProfileCache* m_userProfileCache;
+    ChannelCache* m_channelCache;
+    MessageCache* m_messageCache;
     
     // Presence tracking
     QSet<QString> m_onlineUsers;
@@ -912,6 +945,7 @@ private:
     void handleDMUnread(const QString& peer, int count);
     
     // Model population handlers
+    void handleServersFetched(int requestId, const QVariantList& servers);
     void handleServerMembersFetched(int requestId, const QString& serverId, const QVariantList& members);
     void handleServerRolesFetched(int requestId, const QString& serverId, const QVariantList& roles);
 

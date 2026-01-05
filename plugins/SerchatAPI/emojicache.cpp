@@ -215,6 +215,17 @@ void EmojiCache::addEmoji(const QVariantMap& emoji)
     emit emojiLoaded(emojiId);
 }
 
+void EmojiCache::markAllStale()
+{
+    // For emoji cache, we don't clear the cache but just trigger a reload
+    // The emojis themselves rarely change, so we keep existing data
+    // and let the next getAllEmojis() call refresh everything
+    qDebug() << "[EmojiCache] Marked as stale - will refresh on next getAllEmojis";
+    
+    // Just bump version to trigger UI refresh with existing data
+    bumpVersion();
+}
+
 void EmojiCache::clear()
 {
     qDebug() << "[EmojiCache] Clearing cache";

@@ -181,6 +181,16 @@ void UserProfileCache::updateProfiles(const QVariantList& profiles)
     bumpVersion();
 }
 
+void UserProfileCache::markAllStale()
+{
+    // For user profile cache, we don't clear the cache but just allow refresh
+    // The profiles themselves rarely change, so we keep existing data
+    qDebug() << "[UserProfileCache] Marked as stale - will refresh profiles as needed";
+    
+    // Just bump version to trigger UI refresh with existing data
+    bumpVersion();
+}
+
 void UserProfileCache::clear()
 {
     qDebug() << "[UserProfileCache] Clearing cache";
