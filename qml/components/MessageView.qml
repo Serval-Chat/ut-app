@@ -214,6 +214,9 @@ Rectangle {
             ListView {
                 id: messageList
                 anchors.fill: parent
+                anchors.leftMargin: units.gu(1)
+                anchors.rightMargin: units.gu(1)
+                
                 clip: true
                 verticalLayoutDirection: ListView.BottomToTop
                 spacing: units.gu(0.3)
