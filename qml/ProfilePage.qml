@@ -1,5 +1,6 @@
 import QtQuick 2.7
 import Lomiri.Components 1.3
+import Lomiri.Components.Popups 1.3
 import QtQuick.Layouts 1.3
 
 import SerchatAPI 1.0
@@ -12,6 +13,13 @@ Page {
     property var userProfile: ({})
     property bool loading: true
     property bool isOwnProfile: false
+    property bool isFriend: false
+    
+    // Generate banner color from user identity
+    function getBannerColor() {
+        var identifier = userProfile.displayName || userProfile.username || userId || ""
+        return Components.ColorUtils.colorFromString(identifier)
+    }
     
     header: PageHeader {
         id: header
@@ -34,6 +42,14 @@ Page {
                     pageStack.push(Qt.resolvedUrl("EditProfilePage.qml"), {
                         userProfile: userProfile
                     })
+                }
+            },
+            Action {
+                iconName: "list-remove"
+                text: i18n.tr("Remove Friend")
+                visible: isFriend && !isOwnProfile
+                onTriggered: {
+                    PopupUtils.open(removeFriendDialogComponent)
                 }
             },
             Action {
@@ -307,13 +323,17 @@ Page {
                         width: parent.width
                         text: i18n.tr("Send Friend Request")
                         color: LomiriColors.blue
-                        // TODO: Check if already friends
+                        visible: !isFriend
+                        onClicked: {
+                            SerchatAPI.sendFriendRequest(userProfile.username)
+                        }
                     }
                     
                     Button {
                         width: parent.width
                         text: i18n.tr("Block User")
                         color: Theme.palette.normal.base
+                        visible: !isFriend
                     }
                 }
             }
@@ -325,8 +345,22 @@ Page {
         visible: loading
     }
     
-    function getBannerColor() {
-        return Components.ColorUtils.colorFromString(userProfile.username)
+    function checkIfFriend() {
+        if (isOwnProfile || !userId || userId === "me") {
+            isFriend = false
+            return
+        }
+        
+        // Check if userId is in the friends list
+        var friendsModel = SerchatAPI.friendsModel
+        for (var i = 0; i < friendsModel.count; i++) {
+            var friend = friendsModel.getAt(i)
+            if (friend._id === userId) {
+                isFriend = true
+                return
+            }
+        }
+        isFriend = false
     }
     
     function formatDate(dateString) {
@@ -341,6 +375,7 @@ Page {
             if (requestId === profileRequestId) {
                 userProfile = profile
                 loading = false
+                checkIfFriend()
             }
         }
         
@@ -356,7 +391,62 @@ Page {
                 userProfile = profile
                 isOwnProfile = true
                 loading = false
+                checkIfFriend()
             }
+        }
+        
+        onFriendsFetched: {
+            checkIfFriend()
+        }
+    }
+    
+    // Remove friend confirmation dialog component
+    Component {
+        id: removeFriendDialogComponent
+        
+        Dialog {
+            id: removeFriendDialog
+            title: i18n.tr("Remove Friend")
+            text: i18n.tr("Are you sure you want to remove %1 from your friends?").arg(userProfile.displayName || userProfile.username || i18n.tr("this user"))
+            
+            Button {
+                text: i18n.tr("Cancel")
+                onClicked: PopupUtils.close(removeFriendDialog)
+            }
+            
+            Button {
+                text: i18n.tr("Remove")
+                color: LomiriColors.red
+                onClicked: {
+                    PopupUtils.close(removeFriendDialog)
+                    SerchatAPI.removeFriend(userId)
+                }
+            }
+        }
+    }
+    
+    Connections {
+        target: SerchatAPI
+        
+        onFriendRequestSent: {
+            // Refresh friends list to update UI
+            SerchatAPI.getFriends()
+        }
+        
+        onFriendRequestSendFailed: {
+            // TODO: Show error message
+            console.log("Failed to send friend request:", error)
+        }
+        
+        onFriendRemovedApi: {
+            // Refresh friends list and update UI
+            SerchatAPI.getFriends()
+            checkIfFriend()
+        }
+        
+        onFriendRemoveFailed: {
+            // TODO: Show error message
+            console.log("Failed to remove friend:", error)
         }
     }
     
@@ -368,6 +458,8 @@ Page {
             SerchatAPI.getMyProfile()
         } else {
             profileRequestId = SerchatAPI.getProfile(userId)
+            // Fetch friends to check friendship status
+            SerchatAPI.getFriends()
         }
     }
 }

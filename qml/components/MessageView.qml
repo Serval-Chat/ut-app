@@ -50,6 +50,7 @@ Rectangle {
     signal viewFullProfile(string userId)
     signal openDMWithUser(string recipientId, string recipientName, string recipientAvatar)
     signal sendFriendRequest(string userId, string username)
+    signal removeFriend(string userId)
     
     color: Theme.palette.normal.background
 
@@ -720,6 +721,11 @@ Rectangle {
             var profile = userProfileSheet.userProfile
             var username = profile.username || ""
             sendFriendRequest(userId, username)
+        }
+        
+        onRemoveFriendClicked: {
+            // Remove friend
+            removeFriend(userId)
         }
         
         onEditProfileClicked: {

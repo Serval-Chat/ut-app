@@ -23,15 +23,24 @@ Item {
     // Whether this is the current user's own profile
     readonly property bool isOwnProfile: userId === SerchatAPI.currentUserId
     
+    // Whether the user is a friend (reactive to friends model changes)
+    property bool isFriend: calculateIsFriend()
+    
     // Whether the sheet is currently visible
     property bool opened: false
     
     // Request tracking
     property int profileRequestId: -1
     
+    onUserIdChanged: {
+        console.log("[UserProfileSheet] userId changed to", userId, "recalculating isFriend")
+        isFriend = calculateIsFriend()
+    }
+    
     signal viewFullProfileClicked(string userId)
     signal sendMessageClicked(string userId)
     signal addFriendClicked(string userId)
+    signal removeFriendClicked(string userId)
     signal editProfileClicked()
     signal closed()
     
@@ -324,15 +333,27 @@ Item {
                         }
                     }
                     
-                    // Add Friend button (not for own profile)
+                    // Add Friend button (not for own profile, only when not friends)
                     Button {
                         width: parent.width
                         text: i18n.tr("Add Friend")
-                        visible: !isOwnProfile && !isFriend()
+                        visible: !isOwnProfile && !isFriend
                         color: Theme.palette.normal.positive
                         onClicked: {
                             close()
                             addFriendClicked(userId)
+                        }
+                    }
+                    
+                    // Remove Friend button (not for own profile, only when friends)
+                    Button {
+                        width: parent.width
+                        text: i18n.tr("Remove Friend")
+                        visible: !isOwnProfile && isFriend
+                        color: LomiriColors.red
+                        onClicked: {
+                            close()
+                            removeFriendClicked(userId)
                         }
                     }
                 }
@@ -395,9 +416,20 @@ Item {
         closed()
     }
     
-    // Check if user is a friend (TODO: implement properly)
-    function isFriend() {
-        // TODO: Check friendship status from API
+    // Check if user is a friend
+    function calculateIsFriend() {
+        if (isOwnProfile || !userId) {
+            return false
+        }
+        
+        // Check if userId is in the friends list
+        var friendsModel = SerchatAPI.friendsModel
+        for (var i = 0; i < friendsModel.count; i++) {
+            var friend = friendsModel.getAt(i)
+            if (friend._id === userId) {
+                return true
+            }
+        }
         return false
     }
     
@@ -421,6 +453,20 @@ Item {
                     displayName: i18n.tr("Could not load profile")
                 }
             }
+        }
+        
+        onFriendsFetched: {
+            // Update button visibility when friends list changes
+            // This ensures the sheet stays in sync if friends are added/removed while open
+            isFriend = calculateIsFriend()
+        }
+        
+        onFriendAdded: {
+            isFriend = calculateIsFriend()
+        }
+        
+        onFriendRemoved: {
+            isFriend = calculateIsFriend()
         }
     }
 }

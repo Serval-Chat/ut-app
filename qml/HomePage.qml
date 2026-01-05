@@ -222,9 +222,15 @@ Page {
             }
             
             onSendFriendRequest: {
-                // Send friend request via API (when implemented)
+                // Send friend request via API
                 console.log("Sending friend request to:", username, "userId:", userId)
-                // TODO: Call SerchatAPI.sendFriendRequest(username) when implemented
+                SerchatAPI.sendFriendRequest(username)
+            }
+            
+            onRemoveFriend: {
+                // Remove friend via API
+                console.log("Removing friend:", userId)
+                SerchatAPI.removeFriend(userId)
             }
         }
         

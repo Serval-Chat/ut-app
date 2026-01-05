@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-05 22:23+0000\n"
+"POT-Creation-Date: 2026-01-05 23:04+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -23,7 +23,7 @@ msgid "API Settings"
 msgstr ""
 
 #: ../qml/ApiSettingsPage.qml:17 ../qml/CreateServerPage.qml:17
-#: ../qml/JoinServerPage.qml:17 ../qml/ProfilePage.qml:23
+#: ../qml/JoinServerPage.qml:17 ../qml/ProfilePage.qml:31
 #: ../qml/ServerSettingsPage.qml:23 ../qml/SettingsPage.qml:18
 msgid "Back"
 msgstr ""
@@ -139,7 +139,7 @@ msgstr ""
 msgid "Validate Token"
 msgstr ""
 
-#: ../qml/DebugPage.qml:76 ../qml/ProfilePage.qml:18
+#: ../qml/DebugPage.qml:76 ../qml/ProfilePage.qml:26
 msgid "Profile"
 msgstr ""
 
@@ -203,12 +203,12 @@ msgstr ""
 msgid "API responses will appear here..."
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:16 ../qml/ProfilePage.qml:31
-#: ../qml/components/UserProfileSheet.qml:307
+#: ../qml/EditProfilePage.qml:16 ../qml/ProfilePage.qml:39
+#: ../qml/components/UserProfileSheet.qml:316
 msgid "Edit Profile"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:21
+#: ../qml/EditProfilePage.qml:21 ../qml/ProfilePage.qml:413
 msgid "Cancel"
 msgstr ""
 
@@ -245,8 +245,8 @@ msgstr ""
 msgid "e.g., they/them, she/her, he/him"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:171 ../qml/ProfilePage.qml:243
-#: ../qml/components/UserProfileSheet.qml:261
+#: ../qml/EditProfilePage.qml:171 ../qml/ProfilePage.qml:259
+#: ../qml/components/UserProfileSheet.qml:270
 msgid "About Me"
 msgstr ""
 
@@ -274,23 +274,23 @@ msgstr ""
 msgid "Profile update not yet implemented"
 msgstr ""
 
-#: ../qml/HomePage.qml:273 ../qml/components/DMListView.qml:44
+#: ../qml/HomePage.qml:279 ../qml/components/DMListView.qml:44
 msgid "Direct Messages"
 msgstr ""
 
-#: ../qml/HomePage.qml:296
+#: ../qml/HomePage.qml:302
 msgid "Select a conversation"
 msgstr ""
 
-#: ../qml/HomePage.qml:297
+#: ../qml/HomePage.qml:303
 msgid "Select a channel"
 msgstr ""
 
-#: ../qml/HomePage.qml:305
+#: ../qml/HomePage.qml:311
 msgid "Choose a conversation from the list or start a new one"
 msgstr ""
 
-#: ../qml/HomePage.qml:306
+#: ../qml/HomePage.qml:312
 msgid "Pick a channel from the list to start chatting"
 msgstr ""
 
@@ -402,32 +402,49 @@ msgstr ""
 msgid "Password must be at least 6 characters"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:41
+#: ../qml/ProfilePage.qml:49 ../qml/ProfilePage.qml:409
+#: ../qml/components/UserProfileSheet.qml:351
+msgid "Remove Friend"
+msgstr ""
+
+#: ../qml/ProfilePage.qml:57
 msgid "Message"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:142 ../qml/components/UserProfileSheet.qml:151
+#: ../qml/ProfilePage.qml:158 ../qml/components/UserProfileSheet.qml:160
 msgid "Unknown User"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:274
+#: ../qml/ProfilePage.qml:290
 msgid "Member Since"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:282 ../qml/components/CreateDMDialog.qml:222
+#: ../qml/ProfilePage.qml:298 ../qml/components/CreateDMDialog.qml:222
 #: ../qml/components/MemberListItem.qml:32
-#: ../qml/components/MessageView.qml:302 ../qml/components/MessageView.qml:595
-#: ../qml/components/MessageView.qml:599
+#: ../qml/components/MessageView.qml:303 ../qml/components/MessageView.qml:596
+#: ../qml/components/MessageView.qml:600
 #: ../qml/components/SearchOverlay.qml:224
 msgid "Unknown"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:308
+#: ../qml/ProfilePage.qml:324
 msgid "Send Friend Request"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:315
+#: ../qml/ProfilePage.qml:334
 msgid "Block User"
+msgstr ""
+
+#: ../qml/ProfilePage.qml:410
+msgid "Are you sure you want to remove %1 from your friends?"
+msgstr ""
+
+#: ../qml/ProfilePage.qml:410
+msgid "this user"
+msgstr ""
+
+#: ../qml/ProfilePage.qml:418
+msgid "Remove"
 msgstr ""
 
 #: ../qml/ServerSettingsPage.qml:18
@@ -726,51 +743,51 @@ msgstr ""
 msgid "Replying to %1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:280
+#: ../qml/components/MessageView.qml:281
 msgid "NEW MESSAGES"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:370
+#: ../qml/components/MessageView.qml:371
 msgid "Load more messages"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:398
+#: ../qml/components/MessageView.qml:399
 msgid "This is the beginning of your conversation with %1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:399
+#: ../qml/components/MessageView.qml:400
 msgid "This is the beginning of #%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:443
+#: ../qml/components/MessageView.qml:444
 msgid "Welcome to #%1!"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:450
+#: ../qml/components/MessageView.qml:451
 msgid "This is the start of the #%1 channel. There are no messages yet."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:531
+#: ../qml/components/MessageView.qml:532
 msgid "%1 is typing..."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:532
+#: ../qml/components/MessageView.qml:533
 msgid "%1 and %2 are typing..."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:533
+#: ../qml/components/MessageView.qml:534
 msgid "%1 and %2 others are typing..."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:573
+#: ../qml/components/MessageView.qml:574
 msgid "Message #%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:573
+#: ../qml/components/MessageView.qml:574
 msgid "Message @%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:574
+#: ../qml/components/MessageView.qml:575
 msgid "You don't have permission to send messages"
 msgstr ""
 
@@ -820,23 +837,23 @@ msgstr ""
 msgid "Offline"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:295
+#: ../qml/components/UserProfileSheet.qml:304
 msgid "View Full Profile"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:319
+#: ../qml/components/UserProfileSheet.qml:328
 msgid "Send Message"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:330
+#: ../qml/components/UserProfileSheet.qml:339
 msgid "Add Friend"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:420
+#: ../qml/components/UserProfileSheet.qml:452
 msgid "Error"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:421
+#: ../qml/components/UserProfileSheet.qml:453
 msgid "Could not load profile"
 msgstr ""
 
