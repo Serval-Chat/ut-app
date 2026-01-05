@@ -62,6 +62,23 @@ Rectangle {
     
     color: Theme.palette.normal.background
     
+    // Update last read message ID when channel changes
+    onChannelIdChanged: {
+        if (channelId !== "" && serverId !== "") {
+            messageList.lastReadMessageId = SerchatAPI.getLastReadMessageId(serverId, channelId)
+        } else {
+            messageList.lastReadMessageId = ""
+        }
+    }
+    
+    onDmRecipientIdChanged: {
+        if (dmRecipientId !== "") {
+            messageList.lastReadMessageId = SerchatAPI.getDMLastReadMessageId(dmRecipientId)
+        } else {
+            messageList.lastReadMessageId = ""
+        }
+    }
+    
     // Channel header
     Rectangle {
         id: channelHeader
@@ -202,7 +219,7 @@ Rectangle {
         Item {
             id: contentArea
             anchors.top: channelHeader.bottom
-            anchors.bottom: composer.top
+            anchors.bottom: typingIndicator.top
             width: parent.width
             
             // Messages list
@@ -230,61 +247,121 @@ Rectangle {
             property real savedContentHeight: 0
             property int savedMessageCount: 0
             
-            delegate: Components.MessageBubble {
-                id: messageDelegate
+            // Track the last read message ID for "NEW" divider
+            property string lastReadMessageId: ""
+            
+            delegate: Item {
+                id: messageDelegateContainer
                 width: messageList.width
-                // Use C++ model role names directly (no modelData needed)
-                messageId: model.id || ""
-                senderId: model.senderId || ""
-                senderName: model.senderName || getSenderName(model.senderId)
-                senderAvatar: model.senderAvatar || getSenderAvatar(model.senderId)
-                text: model.text || ""  // Raw text - MarkdownText handles all formatting
-                timestamp: model.timestamp || ""
-                isOwn: model.senderId === currentUserId
-                isEdited: model.isEdited || false
-                showAvatar: shouldShowAvatar(index)
-                isReply: model.replyToId ? true : false
-                replyToText: model.repliedMessage ? model.repliedMessage.text : ""
-                replyToSender: model.repliedMessage ? getSenderName(model.repliedMessage.senderId) : ""
-                reactions: model.reactions || []
-                customEmojis: messageView.customEmojis
-                userProfiles: messageView.userProfiles
+                height: messageBubble.height + (newMessagesDivider.visible ? newMessagesDivider.height : 0)
                 
-                // Bind swipe state to list scroll lock
-                onIsSwipeActiveChanged: {
-                    messageList.swipeLockActive = isSwipeActive
+                // Show "NEW MESSAGES" divider above this message if it's the first unread
+                // In a BottomToTop list, messages are reversed, so we show it below the last read message
+                property bool isFirstUnread: {
+                    if (messageList.lastReadMessageId === "") return false
+                    // Check if the previous message (index + 1) is the last read message
+                    if (index + 1 < SerchatAPI.messageModel.count) {
+                        var prevMsg = SerchatAPI.messageModel.getMessageAt(index + 1)
+                        if (prevMsg && (prevMsg._id === messageList.lastReadMessageId || prevMsg.id === messageList.lastReadMessageId)) {
+                            return true
+                        }
+                    }
+                    return false
                 }
                 
-                onAvatarClicked: openProfileSheet(senderId)
-                onReplyRequested: {
-                    // Set up reply in composer (messageId, senderName, messageText)
-                    composer.setReplyTo(messageId, senderName, messageText)
-                }
-                onReplyClicked: {
-                    if (model.repliedMessage) {
-                        scrollToMessage(model.repliedMessage._id)
+                // "NEW MESSAGES" divider
+                Rectangle {
+                    id: newMessagesDivider
+                    width: parent.width
+                    height: visible ? units.gu(3) : 0
+                    visible: messageDelegateContainer.isFirstUnread
+                    color: "transparent"
+                    
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: units.gu(1)
+                        
+                        Rectangle {
+                            width: (messageDelegateContainer.width - newMessagesLabel.width - units.gu(4)) / 2
+                            height: units.dp(1)
+                            color: "#f04747"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        
+                        Label {
+                            id: newMessagesLabel
+                            text: i18n.tr("NEW MESSAGES")
+                            fontSize: "x-small"
+                            font.bold: true
+                            color: "#f04747"
+                        }
+                        
+                        Rectangle {
+                            width: (messageDelegateContainer.width - newMessagesLabel.width - units.gu(4)) / 2
+                            height: units.dp(1)
+                            color: "#f04747"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
                     }
                 }
-                onReactRequested: {
-                    showReactionPicker(messageId)
-                }
-                onReactionTapped: {
-                    // Toggle reaction - add if not reacted, remove if already reacted
-                    toggleReaction(messageId, emoji, emojiType, emojiId)
-                }
-                onMenuRequested: {
-                    // Open bottom sheet action menu
-                    messageActionSheet.open(messageId, messageText, senderName, senderId, isOwn)
-                }
-                onCopyRequested: {
-                    console.log("[MessageView] Text copied to clipboard")
-                }
-                onDeleteRequested: {
-                    deleteMessage(messageId)
-                }
-                onEditRequested: {
-                    // TODO: Implement edit message
-                    console.log("[MessageView] Edit message:", messageId)
+                
+                Components.MessageBubble {
+                    id: messageBubble
+                    width: parent.width
+                    anchors.top: newMessagesDivider.visible ? newMessagesDivider.bottom : parent.top
+                    // Use C++ model role names directly (no modelData needed)
+                    messageId: model.id || ""
+                    senderId: model.senderId || ""
+                    senderName: model.senderName || getSenderName(model.senderId)
+                    senderAvatar: model.senderAvatar || getSenderAvatar(model.senderId)
+                    text: model.text || ""  // Raw text - MarkdownText handles all formatting
+                    timestamp: model.timestamp || ""
+                    isOwn: model.senderId === currentUserId
+                    isEdited: model.isEdited || false
+                    showAvatar: shouldShowAvatar(index)
+                    isReply: model.replyToId ? true : false
+                    replyToText: model.repliedMessage ? model.repliedMessage.text : ""
+                    replyToSender: model.repliedMessage ? getSenderName(model.repliedMessage.senderId) : ""
+                    reactions: model.reactions || []
+                    customEmojis: messageView.customEmojis
+                    userProfiles: messageView.userProfiles
+                    
+                    // Bind swipe state to list scroll lock
+                    onIsSwipeActiveChanged: {
+                        messageList.swipeLockActive = isSwipeActive
+                    }
+                    
+                    onAvatarClicked: openProfileSheet(senderId)
+                    onReplyRequested: {
+                        // Set up reply in composer (messageId, senderName, messageText)
+                        composer.setReplyTo(messageId, senderName, messageText)
+                    }
+                    onReplyClicked: {
+                        if (model.repliedMessage) {
+                            scrollToMessage(model.repliedMessage._id)
+                        }
+                    }
+                    onReactRequested: {
+                        showReactionPicker(messageId)
+                    }
+                    onReactionTapped: {
+                        // Toggle reaction - add if not reacted, remove if already reacted
+                        toggleReaction(messageId, emoji, emojiType, emojiId)
+                    }
+                    onMenuRequested: {
+                        // Open bottom sheet action menu
+                        messageActionSheet.open(messageId, messageText, senderName, senderId, isOwn)
+                    }
+                    onCopyRequested: {
+                        console.log("[MessageView] Text copied to clipboard")
+                    }
+                    onDeleteRequested: {
+                        deleteMessage(messageId)
+                    }
+                    onEditRequested: {
+                        // TODO: Implement edit message
+                        console.log("[MessageView] Edit message:", messageId)
+                    }
                 }
             }
             
@@ -393,6 +470,109 @@ Rectangle {
         }
     }
     
+    // Typing indicator bar
+    Rectangle {
+        id: typingIndicator
+        anchors.bottom: composer.top
+        width: parent.width
+        height: typingLabel.visible ? units.gu(3) : 0
+        color: Qt.darker(messageView.color, 1.02)
+        clip: true
+        
+        Behavior on height {
+            NumberAnimation { duration: 150; easing.type: Easing.OutQuad }
+        }
+        
+        property var typingUsers: []
+        property int typingVersion: 0
+        
+        // Update typing users list
+        function updateTypingUsers() {
+            if (isDMMode) {
+                // DM typing events use username, not userId
+                typingUsers = SerchatAPI.getDMTypingUsers(dmRecipientName)
+            } else if (serverId !== "" && channelId !== "") {
+                typingUsers = SerchatAPI.getTypingUsers(serverId, channelId)
+            } else {
+                typingUsers = []
+            }
+            typingVersion++
+        }
+        
+        Row {
+            anchors.left: parent.left
+            anchors.leftMargin: units.gu(1.5)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: units.gu(0.5)
+            
+            // Animated typing dots
+            Row {
+                spacing: units.gu(0.3)
+                visible: typingLabel.visible
+                
+                Repeater {
+                    model: 3
+                    Rectangle {
+                        width: units.gu(0.8)
+                        height: units.gu(0.8)
+                        radius: width / 2
+                        color: Theme.palette.normal.backgroundSecondaryText
+                        
+                        SequentialAnimation on opacity {
+                            loops: Animation.Infinite
+                            running: typingLabel.visible
+                            NumberAnimation { to: 0.3; duration: 300; easing.type: Easing.InOutQuad }
+                            NumberAnimation { to: 1.0; duration: 300; easing.type: Easing.InOutQuad }
+                            PauseAnimation { duration: index * 150 }
+                        }
+                    }
+                }
+            }
+            
+            Label {
+                id: typingLabel
+                visible: typingIndicator.typingUsers.length > 0
+                fontSize: "x-small"
+                color: Theme.palette.normal.backgroundSecondaryText
+                text: {
+                    var v = typingIndicator.typingVersion  // Force binding update
+                    var users = typingIndicator.typingUsers
+                    if (users.length === 0) return ""
+                    if (users.length === 1) return i18n.tr("%1 is typing...").arg(users[0])
+                    if (users.length === 2) return i18n.tr("%1 and %2 are typing...").arg(users[0]).arg(users[1])
+                    return i18n.tr("%1 and %2 others are typing...").arg(users[0]).arg(users.length - 1)
+                }
+            }
+        }
+        
+        // Connection for typing updates
+        Connections {
+            target: SerchatAPI
+            
+            onTypingUsersChanged: {
+                // Backend doesn't send serverId, so serverId === channelId
+                // Just compare channelId
+                if (channelId === messageView.channelId) {
+                    typingIndicator.updateTypingUsers()
+                }
+            }
+            
+            onDmTypingUsersChanged: {
+                // The signal sends username, but we have recipientId - check both
+                if (recipientId === messageView.dmRecipientId || recipientId === messageView.dmRecipientName) {
+                    typingIndicator.updateTypingUsers()
+                }
+            }
+        }
+        
+        // Update when channel/DM changes
+        Connections {
+            target: messageView
+            onChannelIdChanged: typingIndicator.updateTypingUsers()
+            onDmRecipientIdChanged: typingIndicator.updateTypingUsers()
+        }
+    }
+    
     // Message composer
     Components.MessageComposer {
         id: composer
@@ -403,6 +583,11 @@ Rectangle {
                          (isDMMode ? i18n.tr("Message @%1").arg(dmRecipientName) : i18n.tr("Message #%1").arg(displayTitle)) :
                          i18n.tr("You don't have permission to send messages")
         enabled: canSendMessages && (isDMMode || channelType === "text")
+        
+        // Pass context for typing indicators
+        serverId: messageView.serverId
+        channelId: messageView.channelId
+        dmRecipientId: messageView.dmRecipientId
         
         onSendMessage: {
             messageView.sendMessage(message, replyToId)

@@ -8,6 +8,7 @@
 #include <QMap>
 #include <QSet>
 #include <QSettings>
+#include <QTimer>
 
 class NetworkClient;
 class AuthClient;
@@ -42,6 +43,9 @@ class SerchatAPI : public QObject {
     Q_PROPERTY(bool loggedIn READ isLoggedIn NOTIFY loggedInChanged)
     Q_PROPERTY(bool socketConnected READ isSocketConnected NOTIFY socketConnectedChanged)
     Q_PROPERTY(QString socketId READ socketId NOTIFY socketIdChanged)
+    
+    // Unread state version counter - triggers QML re-binding when unread state changes
+    Q_PROPERTY(int unreadStateVersion READ unreadStateVersion NOTIFY unreadStateVersionChanged)
     
     // C++ models for better performance and proper scroll behavior
     Q_PROPERTY(MessageModel* messageModel READ messageModel CONSTANT)
@@ -209,6 +213,111 @@ public:
     Q_INVOKABLE QStringList getOnlineUsers() const;
     
     // ========================================================================
+    // Typing Indicators
+    // ========================================================================
+    
+    /**
+     * @brief Get list of users currently typing in a channel.
+     * @param serverId The server ID
+     * @param channelId The channel ID
+     * @return List of usernames currently typing
+     */
+    Q_INVOKABLE QStringList getTypingUsers(const QString& serverId, const QString& channelId) const;
+    
+    /**
+     * @brief Get list of users currently typing in a DM.
+     * @param recipientId The DM recipient ID
+     * @return List of usernames currently typing (usually 0 or 1)
+     */
+    Q_INVOKABLE QStringList getDMTypingUsers(const QString& recipientId) const;
+    
+    /**
+     * @brief Check if any users are typing in a channel.
+     * @param serverId The server ID
+     * @param channelId The channel ID
+     * @return true if at least one user is typing
+     */
+    Q_INVOKABLE bool hasTypingUsers(const QString& serverId, const QString& channelId) const;
+    
+    /**
+     * @brief Check if any users are typing in a DM.
+     * @param recipientId The DM recipient ID
+     * @return true if at least one user is typing
+     */
+    Q_INVOKABLE bool hasDMTypingUsers(const QString& recipientId) const;
+    
+    // ========================================================================
+    // Unread State Tracking
+    // ========================================================================
+    
+    /**
+     * @brief Check if a channel has unread messages.
+     * @param serverId The server ID
+     * @param channelId The channel ID
+     * @return true if channel has unread messages
+     */
+    Q_INVOKABLE bool hasUnreadMessages(const QString& serverId, const QString& channelId) const;
+    
+    /**
+     * @brief Check if a DM has unread messages.
+     * @param recipientId The DM recipient ID
+     * @return true if DM has unread messages
+     */
+    Q_INVOKABLE bool hasDMUnreadMessages(const QString& recipientId) const;
+    
+    /**
+     * @brief Check if a server has any unread channels.
+     * @param serverId The server ID
+     * @return true if any channel in the server has unread messages
+     */
+    Q_INVOKABLE bool hasServerUnread(const QString& serverId) const;
+    
+    /**
+     * @brief Get the last read message ID for a channel.
+     * Used to display the "NEW" divider in message view.
+     * @param serverId The server ID
+     * @param channelId The channel ID
+     * @return The last read message ID, or empty string if none
+     */
+    Q_INVOKABLE QString getLastReadMessageId(const QString& serverId, const QString& channelId) const;
+    
+    /**
+     * @brief Get the last read message ID for a DM.
+     * @param recipientId The DM recipient ID
+     * @return The last read message ID, or empty string if none
+     */
+    Q_INVOKABLE QString getDMLastReadMessageId(const QString& recipientId) const;
+    
+    /**
+     * @brief Set the last read message ID for a channel.
+     * Called when user views messages to update the "NEW" divider position.
+     * @param serverId The server ID
+     * @param channelId The channel ID
+     * @param messageId The ID of the last read message
+     */
+    Q_INVOKABLE void setLastReadMessageId(const QString& serverId, const QString& channelId, const QString& messageId);
+    
+    /**
+     * @brief Set the last read message ID for a DM.
+     * @param recipientId The DM recipient ID
+     * @param messageId The ID of the last read message
+     */
+    Q_INVOKABLE void setDMLastReadMessageId(const QString& recipientId, const QString& messageId);
+    
+    /**
+     * @brief Clear unread state for a channel and notify server.
+     * @param serverId The server ID
+     * @param channelId The channel ID
+     */
+    Q_INVOKABLE void clearChannelUnread(const QString& serverId, const QString& channelId);
+    
+    /**
+     * @brief Clear unread state for a DM and notify server.
+     * @param recipientId The DM recipient ID
+     */
+    Q_INVOKABLE void clearDMUnread(const QString& recipientId);
+    
+    // ========================================================================
     // Server Emojis API
     // ========================================================================
     
@@ -322,6 +431,9 @@ public:
     
     /// Get socket ID
     Q_INVOKABLE QString socketId() const;
+    
+    /// Get unread state version (for QML binding updates)
+    int unreadStateVersion() const { return m_unreadStateVersion; }
     
     /// Connect to the real-time socket server (called automatically on login)
     Q_INVOKABLE void connectSocket();
@@ -502,6 +614,9 @@ signals:
     void socketReconnecting(int attempt);
     void socketError(const QString& message);
     
+    // Unread state version changed signal (for QML binding triggers)
+    void unreadStateVersionChanged();
+    
     // Real-time server message signals
     void serverMessageReceived(const QVariantMap& message);
     void serverMessageEdited(const QVariantMap& message);
@@ -548,6 +663,17 @@ signals:
     void userTyping(const QString& serverId, const QString& channelId,
                     const QString& username);
     void dmTyping(const QString& username);
+    
+    // Typing indicator state change signals (for UI updates)
+    void typingUsersChanged(const QString& serverId, const QString& channelId);
+    void dmTypingUsersChanged(const QString& recipientId);
+    
+    // Unread state change signals (for UI badge updates)
+    void channelUnreadStateChanged(const QString& serverId, const QString& channelId, bool hasUnread);
+    void dmUnreadStateChanged(const QString& recipientId, bool hasUnread);
+    void serverUnreadStateChanged(const QString& serverId, bool hasUnread);
+    void lastReadMessageChanged(const QString& serverId, const QString& channelId, const QString& messageId);
+    void dmLastReadMessageChanged(const QString& recipientId, const QString& messageId);
     
     // Real-time server membership signals
     void serverMemberJoined(const QString& serverId, const QString& userId);
@@ -667,6 +793,21 @@ private:
     
     // Presence tracking
     QSet<QString> m_onlineUsers;
+    
+    // Typing indicator tracking
+    // Key format for channels: "serverId:channelId", for DMs: "dm:recipientId"
+    // Value: map of username -> expiry timer
+    QMap<QString, QMap<QString, QTimer*>> m_typingUsers;
+    static const int TYPING_TIMEOUT_MS = 5000;  // 5 seconds
+    
+    // Unread state tracking
+    // Key: "serverId:channelId" for channels, "dm:recipientId" for DMs
+    // Value: true if has unread messages
+    QMap<QString, bool> m_unreadState;
+    // Track last read message ID per channel/DM for "NEW" divider
+    QMap<QString, QString> m_lastReadMessageId;
+    // Version counter to trigger QML binding updates
+    int m_unreadStateVersion = 0;
 
     // State tracking for network error handling
     bool m_loginInProgress = false;
@@ -683,6 +824,16 @@ private:
     void handlePresenceState(const QVariantMap& presence);
     void handleUserOnline(const QString& username);
     void handleUserOffline(const QString& username);
+    
+    // Typing event handlers
+    void handleUserTyping(const QString& serverId, const QString& channelId, const QString& username);
+    void handleDMTyping(const QString& username);
+    void removeTypingUser(const QString& key, const QString& username);
+    
+    // Unread event handlers
+    void handleChannelUnread(const QString& serverId, const QString& channelId,
+                             const QString& lastMessageAt, const QString& senderId);
+    void handleDMUnread(const QString& peer, int count);
     
     // Model population handlers
     void handleServerMembersFetched(int requestId, const QString& serverId, const QVariantList& members);

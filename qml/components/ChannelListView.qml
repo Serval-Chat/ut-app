@@ -173,7 +173,14 @@ Rectangle {
             channelIcon: itemIcon
             description: itemDescription
             selected: selectedChannelId === channelId
-            unreadCount: unreadCounts[channelId] || 0
+            // Use C++ unread tracking, fall back to legacy counts
+            // Reference unreadStateVersion to trigger re-evaluation when state changes
+            unreadCount: {
+                var v = SerchatAPI.unreadStateVersion  // Trigger re-binding on change
+                return SerchatAPI.hasUnreadMessages(channelList.serverId, channelId) ? 
+                       Math.max(1, unreadCounts[channelId] || 0) : 
+                       (unreadCounts[channelId] || 0)
+            }
             hasMention: mentionChannels[channelId] || false
             muted: mutedChannels[channelId] || false
             

@@ -195,8 +195,9 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::channelCreated);
     connect(m_socketClient, &SocketClient::channelDeleted,
             this, &SerchatAPI::channelDeleted);
+    // Route through internal handler for unread tracking
     connect(m_socketClient, &SocketClient::channelUnread,
-            this, &SerchatAPI::channelUnread);
+            this, &SerchatAPI::handleChannelUnread);
     
     // Real-time category events
     connect(m_socketClient, &SocketClient::categoryCreated,
@@ -206,9 +207,9 @@ SerchatAPI::SerchatAPI() {
     connect(m_socketClient, &SocketClient::categoryDeleted,
             this, &SerchatAPI::categoryDeleted);
     
-    // Real-time DM unread
+    // Real-time DM unread - route through internal handler
     connect(m_socketClient, &SocketClient::dmUnread,
-            this, &SerchatAPI::dmUnread);
+            this, &SerchatAPI::handleDMUnread);
     
     // Real-time presence events
     connect(m_socketClient, &SocketClient::userOnline,
@@ -232,11 +233,11 @@ SerchatAPI::SerchatAPI() {
     connect(m_socketClient, &SocketClient::reactionRemoved,
             this, &SerchatAPI::reactionRemoved);
     
-    // Real-time typing events
+    // Real-time typing events - route through internal handlers for tracking
     connect(m_socketClient, &SocketClient::userTyping,
-            this, &SerchatAPI::userTyping);
+            this, &SerchatAPI::handleUserTyping);
     connect(m_socketClient, &SocketClient::dmTyping,
-            this, &SerchatAPI::dmTyping);
+            this, &SerchatAPI::handleDMTyping);
     
     // Real-time server membership events
     connect(m_socketClient, &SocketClient::serverMemberJoined,
@@ -889,4 +890,240 @@ void SerchatAPI::handleServerRolesFetched(int requestId, const QString& serverId
     
     // Forward the signal to QML for any additional handling
     emit serverRolesFetched(requestId, serverId, roles);
+}
+
+// ============================================================================
+// Typing Indicator Tracking
+// ============================================================================
+
+QStringList SerchatAPI::getTypingUsers(const QString& serverId, const QString& channelId) const {
+    Q_UNUSED(serverId);  // serverId not used since backend doesn't send it in typing events
+    QString key = channelId;  // Just use channelId as key
+    if (m_typingUsers.contains(key)) {
+        return m_typingUsers[key].keys();
+    }
+    return QStringList();
+}
+
+QStringList SerchatAPI::getDMTypingUsers(const QString& recipientId) const {
+    QString key = "dm:" + recipientId;
+    if (m_typingUsers.contains(key)) {
+        return m_typingUsers[key].keys();
+    }
+    return QStringList();
+}
+
+bool SerchatAPI::hasTypingUsers(const QString& serverId, const QString& channelId) const {
+    Q_UNUSED(serverId);  // serverId not used since backend doesn't send it in typing events
+    QString key = channelId;  // Just use channelId as key
+    return m_typingUsers.contains(key) && !m_typingUsers[key].isEmpty();
+}
+
+bool SerchatAPI::hasDMTypingUsers(const QString& recipientId) const {
+    QString key = "dm:" + recipientId;
+    return m_typingUsers.contains(key) && !m_typingUsers[key].isEmpty();
+}
+
+void SerchatAPI::handleUserTyping(const QString& serverId, const QString& channelId, const QString& username) {
+    // Note: serverId may be empty as backend only sends channelId
+    // Use just channelId as the key since channels are globally unique
+    QString key = channelId;  // Just use channelId as key
+    
+    // Check if user already has a typing timer
+    if (m_typingUsers.contains(key) && m_typingUsers[key].contains(username)) {
+        // Reset the existing timer
+        m_typingUsers[key][username]->start(TYPING_TIMEOUT_MS);
+    } else {
+        // Create new timer for this user
+        QTimer* timer = new QTimer(this);
+        timer->setSingleShot(true);
+        connect(timer, &QTimer::timeout, this, [this, key, username]() {
+            removeTypingUser(key, username);
+        });
+        timer->start(TYPING_TIMEOUT_MS);
+        
+        m_typingUsers[key][username] = timer;
+        
+        // Emit signal for UI update (pass channelId as both for compatibility)
+        emit typingUsersChanged(channelId, channelId);
+    }
+    
+    // Also emit the raw event for any handlers that want it
+    emit userTyping(serverId, channelId, username);
+}
+
+void SerchatAPI::handleDMTyping(const QString& username) {
+    // For DMs, we use the username as both the key identifier and the typing user
+    // The socket event gives us the username of who is typing
+    QString key = "dm:" + username;
+    
+    // Check if user already has a typing timer
+    if (m_typingUsers.contains(key) && m_typingUsers[key].contains(username)) {
+        // Reset the existing timer
+        m_typingUsers[key][username]->start(TYPING_TIMEOUT_MS);
+    } else {
+        // Create new timer for this user
+        QTimer* timer = new QTimer(this);
+        timer->setSingleShot(true);
+        connect(timer, &QTimer::timeout, this, [this, key, username]() {
+            removeTypingUser(key, username);
+        });
+        timer->start(TYPING_TIMEOUT_MS);
+        
+        m_typingUsers[key][username] = timer;
+        
+        // Emit signal for UI update
+        emit dmTypingUsersChanged(username);
+    }
+    
+    // Also emit the raw event for any handlers that want it
+    emit dmTyping(username);
+}
+
+void SerchatAPI::removeTypingUser(const QString& key, const QString& username) {
+    if (!m_typingUsers.contains(key)) return;
+    
+    // Delete and remove the timer
+    if (m_typingUsers[key].contains(username)) {
+        QTimer* timer = m_typingUsers[key].take(username);
+        timer->deleteLater();
+    }
+    
+    // Clean up empty maps
+    if (m_typingUsers[key].isEmpty()) {
+        m_typingUsers.remove(key);
+    }
+    
+    // Emit appropriate signal based on key type
+    if (key.startsWith("dm:")) {
+        QString recipientId = key.mid(3);  // Remove "dm:" prefix
+        emit dmTypingUsersChanged(recipientId);
+    } else {
+        // Key is just the channelId for server channels
+        emit typingUsersChanged(key, key);  // Pass channelId as both params for compatibility
+    }
+}
+
+// ============================================================================
+// Unread State Tracking
+// ============================================================================
+
+bool SerchatAPI::hasUnreadMessages(const QString& serverId, const QString& channelId) const {
+    QString key = serverId + ":" + channelId;
+    return m_unreadState.value(key, false);
+}
+
+bool SerchatAPI::hasDMUnreadMessages(const QString& recipientId) const {
+    QString key = "dm:" + recipientId;
+    return m_unreadState.value(key, false);
+}
+
+bool SerchatAPI::hasServerUnread(const QString& serverId) const {
+    // Check if any channel in this server has unread messages
+    QString prefix = serverId + ":";
+    for (auto it = m_unreadState.constBegin(); it != m_unreadState.constEnd(); ++it) {
+        if (it.key().startsWith(prefix) && it.value()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QString SerchatAPI::getLastReadMessageId(const QString& serverId, const QString& channelId) const {
+    QString key = serverId + ":" + channelId;
+    return m_lastReadMessageId.value(key, QString());
+}
+
+QString SerchatAPI::getDMLastReadMessageId(const QString& recipientId) const {
+    QString key = "dm:" + recipientId;
+    return m_lastReadMessageId.value(key, QString());
+}
+
+void SerchatAPI::setLastReadMessageId(const QString& serverId, const QString& channelId, const QString& messageId) {
+    QString key = serverId + ":" + channelId;
+    if (m_lastReadMessageId.value(key) != messageId) {
+        m_lastReadMessageId[key] = messageId;
+        emit lastReadMessageChanged(serverId, channelId, messageId);
+    }
+}
+
+void SerchatAPI::setDMLastReadMessageId(const QString& recipientId, const QString& messageId) {
+    QString key = "dm:" + recipientId;
+    if (m_lastReadMessageId.value(key) != messageId) {
+        m_lastReadMessageId[key] = messageId;
+        emit dmLastReadMessageChanged(recipientId, messageId);
+    }
+}
+
+void SerchatAPI::clearChannelUnread(const QString& serverId, const QString& channelId) {
+    QString key = serverId + ":" + channelId;
+    bool hadUnread = m_unreadState.value(key, false);
+    
+    if (hadUnread) {
+        m_unreadState[key] = false;
+        m_unreadStateVersion++;
+        emit unreadStateVersionChanged();
+        emit channelUnreadStateChanged(serverId, channelId, false);
+        
+        // Check if server still has any unread channels
+        if (!hasServerUnread(serverId)) {
+            emit serverUnreadStateChanged(serverId, false);
+        }
+    }
+    
+    // Also notify the server via socket
+    m_socketClient->markChannelRead(serverId, channelId);
+}
+
+void SerchatAPI::clearDMUnread(const QString& recipientId) {
+    QString key = "dm:" + recipientId;
+    bool hadUnread = m_unreadState.value(key, false);
+    
+    if (hadUnread) {
+        m_unreadState[key] = false;
+        m_unreadStateVersion++;
+        emit unreadStateVersionChanged();
+        emit dmUnreadStateChanged(recipientId, false);
+    }
+    
+    // Also notify the server via socket
+    m_socketClient->markDMRead(recipientId);
+}
+
+void SerchatAPI::handleChannelUnread(const QString& serverId, const QString& channelId,
+                                      const QString& lastMessageAt, const QString& senderId) {
+    QString key = serverId + ":" + channelId;
+    bool wasUnread = m_unreadState.value(key, false);
+    
+    // Set as unread
+    m_unreadState[key] = true;
+    
+    // Emit state change if this is a new unread
+    if (!wasUnread) {
+        m_unreadStateVersion++;
+        emit unreadStateVersionChanged();
+        emit channelUnreadStateChanged(serverId, channelId, true);
+        emit serverUnreadStateChanged(serverId, true);
+    }
+    
+    // Forward the raw signal for any other handlers
+    emit channelUnread(serverId, channelId, lastMessageAt, senderId);
+}
+
+void SerchatAPI::handleDMUnread(const QString& peer, int count) {
+    QString key = "dm:" + peer;
+    bool wasUnread = m_unreadState.value(key, false);
+    bool isNowUnread = count > 0;
+    
+    m_unreadState[key] = isNowUnread;
+    
+    // Emit state change
+    if (wasUnread != isNowUnread) {
+        m_unreadStateVersion++;
+        emit unreadStateVersionChanged();
+        emit dmUnreadStateChanged(peer, isNowUnread);
+    }
+    
+    // Forward the raw signal for any other handlers
+    emit dmUnread(peer, count);
 }

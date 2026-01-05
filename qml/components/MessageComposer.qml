@@ -1,5 +1,6 @@
 import QtQuick 2.7
 import Lomiri.Components 1.3
+import SerchatAPI 1.0
 import "." as Components
 
 /*
@@ -14,6 +15,11 @@ Item {
     property bool showAttachmentButton: true
     property bool showEmojiButton: true
     property alias textField: inputField
+    
+    // Context for typing indicators
+    property string serverId: ""
+    property string channelId: ""
+    property string dmRecipientId: ""
     
     // Custom emojis for the server (passed from parent)
     property var customEmojis: ({})
@@ -150,6 +156,17 @@ Item {
                     
                     // Multi-line support would be nice but Lomiri TextField doesn't support it well
                     // For now, single line with enter to send
+                    
+                    // Send typing indicator when text changes
+                    onTextChanged: {
+                        if (text.length > 0 && composer.enabled) {
+                            if (composer.dmRecipientId !== "") {
+                                SerchatAPI.sendDMTyping(composer.dmRecipientId)
+                            } else if (composer.serverId !== "" && composer.channelId !== "") {
+                                SerchatAPI.sendTyping(composer.serverId, composer.channelId)
+                            }
+                        }
+                    }
                     
                     onAccepted: {
                         if (text.trim().length > 0) {

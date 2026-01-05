@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-04 23:42+0000\n"
+"POT-Creation-Date: 2026-01-05 00:35+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -415,7 +415,7 @@ msgstr ""
 
 #: ../qml/ProfilePage.qml:265 ../qml/components/CreateDMDialog.qml:216
 #: ../qml/components/MemberListItem.qml:32
-#: ../qml/components/MessageView.qml:414 ../qml/components/MessageView.qml:419
+#: ../qml/components/MessageView.qml:599 ../qml/components/MessageView.qml:604
 #: ../qml/components/SearchOverlay.qml:224
 msgid "Unknown"
 msgstr ""
@@ -697,43 +697,59 @@ msgstr ""
 msgid "Yesterday at %1"
 msgstr ""
 
-#: ../qml/components/MessageComposer.qml:11
+#: ../qml/components/MessageComposer.qml:12
 msgid "Send a message..."
 msgstr ""
 
-#: ../qml/components/MessageComposer.qml:70
+#: ../qml/components/MessageComposer.qml:76
 msgid "Replying to %1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:305
+#: ../qml/components/MessageView.qml:293
+msgid "NEW MESSAGES"
+msgstr ""
+
+#: ../qml/components/MessageView.qml:382
 msgid "Load more messages"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:333
+#: ../qml/components/MessageView.qml:410
 msgid "This is the beginning of your conversation with %1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:334
+#: ../qml/components/MessageView.qml:411
 msgid "This is the beginning of #%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:378
+#: ../qml/components/MessageView.qml:455
 msgid "Welcome to #%1!"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:385
+#: ../qml/components/MessageView.qml:462
 msgid "This is the start of the #%1 channel. There are no messages yet."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:403
+#: ../qml/components/MessageView.qml:541
+msgid "%1 is typing..."
+msgstr ""
+
+#: ../qml/components/MessageView.qml:542
+msgid "%1 and %2 are typing..."
+msgstr ""
+
+#: ../qml/components/MessageView.qml:543
+msgid "%1 and %2 others are typing..."
+msgstr ""
+
+#: ../qml/components/MessageView.qml:583
 msgid "Message #%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:403
+#: ../qml/components/MessageView.qml:583
 msgid "Message @%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:404
+#: ../qml/components/MessageView.qml:584
 msgid "You don't have permission to send messages"
 msgstr ""
 

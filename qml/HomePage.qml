@@ -785,6 +785,13 @@ Page {
                     // With BottomToTop ListView: index 0 = bottom, so we need newest at index 0
                     // reversedMessages is [newest, ..., oldest], appendMessages preserves this order
                     SerchatAPI.messageModel.appendMessages(reversedMessages)
+                    
+                    // Update last read message ID to the newest message for "NEW" divider
+                    if (reversedMessages.length > 0) {
+                        var newestMsg = reversedMessages[0]
+                        var newestId = newestMsg._id || newestMsg.id
+                        SerchatAPI.setLastReadMessageId(serverId, channelId, newestId)
+                    }
                 }
                 console.log("[HomePage] Messages updated, total:", SerchatAPI.messageModel.count)
                 
@@ -924,6 +931,13 @@ Page {
                     // With BottomToTop ListView: index 0 = bottom, so we need newest at index 0
                     // reversedMessages is [newest, ..., oldest], appendMessages preserves this order
                     SerchatAPI.messageModel.appendMessages(reversedMessages)
+                    
+                    // Update last read message ID to the newest message for "NEW" divider
+                    if (reversedMessages.length > 0) {
+                        var newestMsg = reversedMessages[0]
+                        var newestId = newestMsg._id || newestMsg.id
+                        SerchatAPI.setDMLastReadMessageId(recipientId, newestId)
+                    }
                 }
                 console.log("[HomePage] DM Messages updated, total:", SerchatAPI.messageModel.count)
                 
@@ -1099,11 +1113,36 @@ Page {
         onChannelUnread: {
             console.log("[HomePage] Channel unread:", serverId, channelId)
             
-            // Update unread counts
+            // Update channel-level unread counts
             var newCounts = Object.assign({}, unreadCounts)
             var key = serverId + ":" + channelId
             newCounts[key] = (newCounts[key] || 0) + 1
             unreadCounts = newCounts
+        }
+        
+        // Channel unread state changes (from C++ tracking)
+        onChannelUnreadStateChanged: {
+            console.log("[HomePage] Channel unread state changed:", serverId, channelId, hasUnread)
+            var key = serverId + ":" + channelId
+            var newCounts = Object.assign({}, unreadCounts)
+            if (hasUnread) {
+                // If we don't have a count yet, set to 1
+                if (!newCounts[key]) {
+                    newCounts[key] = 1
+                }
+            } else {
+                // Clear the unread count
+                newCounts[key] = 0
+            }
+            unreadCounts = newCounts
+        }
+        
+        // Server unread state changes (any channel in server has unread)
+        onServerUnreadStateChanged: {
+            console.log("[HomePage] Server unread state changed:", serverId, hasUnread)
+            // Force UI update by triggering servers refresh
+            // The ServerListView will check hasServerUnread() for each server
+            homePage.servers = homePage.servers.slice()  // Create new array reference to trigger binding update
         }
         
         // DM unread notifications
@@ -1432,6 +1471,9 @@ Page {
         // Join the channel room for real-time updates
         SerchatAPI.joinChannel(serverId, channelId)
         
+        // Mark channel as read when viewing
+        SerchatAPI.clearChannelUnread(serverId, channelId)
+        
         SerchatAPI.getMessages(serverId, channelId, 50, "")
     }
     
@@ -1473,6 +1515,9 @@ Page {
         loadingMessages = true
         // Set DM mode and clear messages using proper model signals
         SerchatAPI.messageModel.setDMRecipient(recipientId)
+        
+        // Mark DM as read when viewing
+        SerchatAPI.clearDMUnread(recipientId)
         
         // Fetch DM messages from API
         SerchatAPI.getDMMessages(recipientId, 50, "")

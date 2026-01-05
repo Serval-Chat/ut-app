@@ -117,7 +117,12 @@ Rectangle {
                     serverName: modelData.name || ""
                     iconUrl: modelData.icon ? (SerchatAPI.apiBaseUrl + modelData.icon) : ""
                     selected: selectedServerId === serverId
-                    unreadCount: unreadCounts[serverId] || 0
+                    // Show unread indicator if server has any unread channels
+                    // Reference unreadStateVersion to trigger re-evaluation when state changes
+                    unreadCount: {
+                        var v = SerchatAPI.unreadStateVersion  // Trigger re-binding on change
+                        return SerchatAPI.hasServerUnread(serverId) ? 1 : (unreadCounts[serverId] || 0)
+                    }
                     hasMention: mentionServers[serverId] || false
                     anchors.horizontalCenter: parent.horizontalCenter
                     

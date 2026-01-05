@@ -31,7 +31,14 @@ ListItem {
     readonly property string recipientStatus: conversation.recipientStatus || "offline"
     readonly property string lastMessage: conversation.lastMessage || ""
     readonly property bool selected: selectedId === recipientId
-    readonly property int unread: unreadCounts[recipientId] || 0
+    // Use C++ unread tracking, fall back to legacy counts
+    // Reference unreadStateVersion to trigger re-evaluation when state changes
+    readonly property int unread: {
+        var v = SerchatAPI.unreadStateVersion  // Trigger re-binding on change
+        return SerchatAPI.hasDMUnreadMessages(recipientId) ? 
+               Math.max(1, unreadCounts[recipientId] || 0) : 
+               (unreadCounts[recipientId] || 0)
+    }
     
     color: selected ? Qt.darker(panelColor, 1.15) : 
            (mouseArea.containsMouse ? Qt.darker(panelColor, 1.08) : "transparent")
