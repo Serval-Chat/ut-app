@@ -127,8 +127,14 @@ Item {
                         source: userProfile.profilePicture ? 
                                 (SerchatAPI.apiBaseUrl + userProfile.profilePicture) : ""
                         showStatus: true
-                        status: userProfile.customStatus ? 
-                                (userProfile.customStatus.status || "online") : "online"
+                        status: {
+                            var username = userProfile.username || ""
+                            if (!SerchatAPI.isUserOnline(username)) {
+                                return "offline"
+                            }
+                            return userProfile.customStatus ? 
+                                   (userProfile.customStatus.status || "online") : "online"
+                        }
                     }
                     
                     // Name and info

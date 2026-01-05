@@ -70,7 +70,14 @@ Page {
                         source: userProfile.profilePicture ? 
                                 (SerchatAPI.apiBaseUrl + userProfile.profilePicture) : ""
                         showStatus: true
-                        status: "online"
+                        status: {
+                            var username = userProfile.username || ""
+                            if (!SerchatAPI.isUserOnline(username)) {
+                                return "offline"
+                            }
+                            return userProfile.customStatus ? 
+                                   (userProfile.customStatus.status || "online") : "online"
+                        }
                     }
                     
                     Column {

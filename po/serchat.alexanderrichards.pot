@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-05 20:03+0000\n"
+"POT-Creation-Date: 2026-01-05 20:08+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: ../qml/ApiSettingsPage.qml:12 ../qml/SettingsPage.qml:247
+#: ../qml/ApiSettingsPage.qml:12 ../qml/SettingsPage.qml:254
 msgid "API Settings"
 msgstr ""
 
@@ -115,7 +115,7 @@ msgstr ""
 msgid "Creating..."
 msgstr ""
 
-#: ../qml/DebugPage.qml:9 ../qml/SettingsPage.qml:266
+#: ../qml/DebugPage.qml:9 ../qml/SettingsPage.qml:273
 msgid "Debug"
 msgstr ""
 
@@ -179,7 +179,7 @@ msgstr ""
 msgid "Cache"
 msgstr ""
 
-#: ../qml/DebugPage.qml:161 ../qml/SettingsPage.qml:285
+#: ../qml/DebugPage.qml:161 ../qml/SettingsPage.qml:292
 msgid "Clear Cache"
 msgstr ""
 
@@ -224,7 +224,7 @@ msgid "How you want to be known"
 msgstr ""
 
 #: ../qml/EditProfilePage.qml:136 ../qml/LoginPage.qml:80
-#: ../qml/SettingsPage.qml:138
+#: ../qml/SettingsPage.qml:145
 msgid "Username"
 msgstr ""
 
@@ -244,8 +244,8 @@ msgstr ""
 msgid "e.g., they/them, she/her, he/him"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:171 ../qml/ProfilePage.qml:226
-#: ../qml/components/UserProfileSheet.qml:252
+#: ../qml/EditProfilePage.qml:171 ../qml/ProfilePage.qml:233
+#: ../qml/components/UserProfileSheet.qml:258
 msgid "About Me"
 msgstr ""
 
@@ -405,15 +405,15 @@ msgstr ""
 msgid "Message"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:125 ../qml/components/UserProfileSheet.qml:142
+#: ../qml/ProfilePage.qml:132 ../qml/components/UserProfileSheet.qml:148
 msgid "Unknown User"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:257
+#: ../qml/ProfilePage.qml:264
 msgid "Member Since"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:265 ../qml/components/CreateDMDialog.qml:216
+#: ../qml/ProfilePage.qml:272 ../qml/components/CreateDMDialog.qml:222
 #: ../qml/components/MemberListItem.qml:32
 #: ../qml/components/MessageView.qml:299 ../qml/components/MessageView.qml:592
 #: ../qml/components/MessageView.qml:596
@@ -421,11 +421,11 @@ msgstr ""
 msgid "Unknown"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:291
+#: ../qml/ProfilePage.qml:298
 msgid "Send Friend Request"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:298
+#: ../qml/ProfilePage.qml:305
 msgid "Block User"
 msgstr ""
 
@@ -513,73 +513,73 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:82 ../qml/SettingsPage.qml:323
+#: ../qml/SettingsPage.qml:89 ../qml/SettingsPage.qml:330
 #: ../qml/components/FilePreview.qml:415
 #: ../qml/components/LoadingOverlay.qml:16
 msgid "Loading..."
 msgstr ""
 
-#: ../qml/SettingsPage.qml:108
+#: ../qml/SettingsPage.qml:115
 msgid "Edit"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:125
+#: ../qml/SettingsPage.qml:132
 msgid "Account"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:157
+#: ../qml/SettingsPage.qml:164
 msgid "Login / Email"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:158
+#: ../qml/SettingsPage.qml:165
 msgid "Not set"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:176
+#: ../qml/SettingsPage.qml:183
 msgid "Change Password"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:192
+#: ../qml/SettingsPage.qml:199
 msgid "Notifications"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:202
+#: ../qml/SettingsPage.qml:209
 msgid "Enable Notifications"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:217
+#: ../qml/SettingsPage.qml:224
 msgid "Mention Notifications Only"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:218
+#: ../qml/SettingsPage.qml:225
 msgid "Only notify for @mentions"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:234
+#: ../qml/SettingsPage.qml:241
 msgid "Advanced"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:267
+#: ../qml/SettingsPage.qml:274
 msgid "Developer tools"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:286
+#: ../qml/SettingsPage.qml:293
 msgid "Clear locally stored data"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:302
+#: ../qml/SettingsPage.qml:309
 msgid "About"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:312
+#: ../qml/SettingsPage.qml:319
 msgid "Version"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:322
+#: ../qml/SettingsPage.qml:329
 msgid "Backend Version"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:335
+#: ../qml/SettingsPage.qml:342
 msgid "Log Out"
 msgstr ""
 
@@ -595,19 +595,19 @@ msgstr ""
 msgid "Select a friend to start a conversation"
 msgstr ""
 
-#: ../qml/components/CreateDMDialog.qml:266
+#: ../qml/components/CreateDMDialog.qml:272
 msgid "No friends found"
 msgstr ""
 
-#: ../qml/components/CreateDMDialog.qml:267
+#: ../qml/components/CreateDMDialog.qml:273
 msgid "No friends yet"
 msgstr ""
 
-#: ../qml/components/CreateDMDialog.qml:275
+#: ../qml/components/CreateDMDialog.qml:281
 msgid "Try a different search term"
 msgstr ""
 
-#: ../qml/components/CreateDMDialog.qml:276
+#: ../qml/components/CreateDMDialog.qml:282
 msgid "Add friends to start messaging!"
 msgstr ""
 
@@ -819,23 +819,23 @@ msgstr ""
 msgid "Offline"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:286
+#: ../qml/components/UserProfileSheet.qml:292
 msgid "View Full Profile"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:297
+#: ../qml/components/UserProfileSheet.qml:303
 msgid "Send Message"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:308
+#: ../qml/components/UserProfileSheet.qml:314
 msgid "Add Friend"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:399
+#: ../qml/components/UserProfileSheet.qml:405
 msgid "Error"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:400
+#: ../qml/components/UserProfileSheet.qml:406
 msgid "Could not load profile"
 msgstr ""
 

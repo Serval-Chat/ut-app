@@ -204,8 +204,14 @@ Item {
                             source: modelData.profilePicture ? 
                                     SerchatAPI.apiBaseUrl + modelData.profilePicture : ""
                             showStatus: true
-                            status: modelData.customStatus ? 
-                                    (modelData.customStatus.status || "online") : "online"
+                            status: {
+                                var username = modelData.username || ""
+                                if (!SerchatAPI.isUserOnline(username)) {
+                                    return "offline"
+                                }
+                                return modelData.customStatus ? 
+                                       (modelData.customStatus.status || "online") : "online"
+                            }
                         }
                         
                         Column {
