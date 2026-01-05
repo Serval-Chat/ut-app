@@ -736,12 +736,56 @@ void SerchatAPI::persistAuthState(const QVariantMap& userData) {
 void SerchatAPI::clearAuthState() {
     bool wasLoggedIn = isLoggedIn();
 
+    // Disconnect from real-time updates first
+    disconnectSocket();
+
+    // Clear all cached data to prevent account data leakage
+    m_emojiCache->clear();
+    m_userProfileCache->clear();
+    m_channelCache->clear();
+    m_messageCache->clear();
+
+    // Clear API client cache to prevent stale data from previous account
+    m_apiClient->clearCache();
+
+    // Clear all models
+    m_messageModel->clear();
+    m_serversModel->clear();
+    m_channelsModel->clear();
+    m_membersModel->clear();
+    m_friendsModel->clear();
+    m_rolesModel->clear();
+    m_channelListModel->clear();
+
+    // Clear presence and typing state
+    m_onlineUsers.clear();
+    m_typingUsers.clear();
+
+    // Clear unread state
+    m_unreadState.clear();
+    m_channelLastReadAt.clear();
+    m_firstUnreadMessageId.clear();
+    m_unreadStateVersion = 0;
+
+    // Clear navigation state from settings
+    m_settings->remove("lastServerId");
+    m_settings->remove("lastChannelId");
+    m_settings->remove("lastDMRecipientId");
+
+    // Clear auth state from settings
     m_settings->setValue("loggedIn", false);
     m_settings->remove("username");
     m_settings->remove("authToken");
     m_settings->sync();
 
+    // Clear runtime auth state
     m_authClient->clearAuthToken();
+
+    // Reset current user and viewing state
+    setCurrentUserId("");
+    setViewingServerId("");
+    setViewingChannelId("");
+    setViewingDMRecipientId("");
 
     if (wasLoggedIn) {
         emit loggedInChanged();

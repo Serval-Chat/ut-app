@@ -23,4 +23,14 @@ MainView {
                 pageStack.push(Qt.resolvedUrl("LoginPage.qml"))
         }
     }
+
+    Connections {
+        target: SerchatAPI
+        onLoggedInChanged: {
+            if (!SerchatAPI.isLoggedIn()) {
+                pageStack.clear()
+                pageStack.push(Qt.resolvedUrl("LoginPage.qml"))
+            }
+        }
+    }
 }
