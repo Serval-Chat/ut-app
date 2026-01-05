@@ -90,7 +90,7 @@ Page {
             text: i18n.tr("Local Development")
             Layout.fillWidth: true
             onClicked: {
-                apiUrlField.text = "http://localhost:3000"
+                apiUrlField.text = "http://localhost:8001"
             }
         }
         
