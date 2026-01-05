@@ -159,7 +159,7 @@ Item {
                     
                     Label {
                         id: timestampLabel
-                        text: formatTimestamp(timestamp)
+                        text: SerchatAPI.markdownParser.formatTimestamp(timestamp)
                         fontSize: "x-small"
                         color: Theme.palette.normal.backgroundSecondaryText
                     }
@@ -419,23 +419,4 @@ Item {
         }
     }
     
-    function formatTimestamp(ts) {
-        if (!ts) return ""
-        var date = new Date(ts)
-        var now = new Date()
-        var isToday = date.toDateString() === now.toDateString()
-        var yesterday = new Date(now)
-        yesterday.setDate(yesterday.getDate() - 1)
-        var isYesterday = date.toDateString() === yesterday.toDateString()
-        
-        var timeStr = date.toLocaleTimeString(Qt.locale(), "HH:mm")
-        
-        if (isToday) {
-            return i18n.tr("Today at %1").arg(timeStr)
-        } else if (isYesterday) {
-            return i18n.tr("Yesterday at %1").arg(timeStr)
-        } else {
-            return date.toLocaleDateString(Qt.locale(), "dd/MM/yyyy") + " " + timeStr
-        }
-    }
 }

@@ -49,11 +49,11 @@ Item {
         radius: width / 2
         color: avatar.backgroundColor
 
-        // Fallback initials
+        // Fallback initials (using C++ for consistency)
         Label {
             id: initialsLabel
             anchors.centerIn: parent
-            text: getInitials(avatar.name)
+            text: SerchatAPI.markdownParser.getInitials(avatar.name)
             fontSize: "large"
             font.pixelSize: avatar.fontSize
             color: "white"
@@ -106,12 +106,4 @@ Item {
         border.color: Theme.palette.normal.background
     }
 
-    function getInitials(name) {
-        if (!name) return "?"
-        var parts = name.trim().split(" ")
-        if (parts.length >= 2) {
-            return (parts[0][0] + parts[1][0]).toUpperCase()
-        }
-        return name.substring(0, 2).toUpperCase()
-    }
 }

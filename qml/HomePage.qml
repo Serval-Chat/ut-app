@@ -811,56 +811,14 @@ Page {
         
         onMessageSent: {
             console.log("[HomePage] Message sent via HTTP:", message._id)
-            
-            // The HTTP response contains the real message. We need to:
-            // 1. Remove any temp message with matching text
-            // 2. Check if Socket.IO already delivered this message
-            var msgId = String(message._id || message.id || "")
-            
-            // Use C++ model's O(1) lookup to check for duplicates
-            var alreadyHasRealMessage = SerchatAPI.messageModel.hasMessage(msgId)
-            
-            if (alreadyHasRealMessage) {
-                console.log("[HomePage] Real message already exists from Socket.IO:", msgId)
-                // Just need to remove the temp message if any
-            } else {
-                // Try to replace a temp message first
-                // Find temp message with matching text using getMessageAt
-                var tempFound = false
-                var count = SerchatAPI.messageModel.count
-                for (var i = 0; i < count; i++) {
-                    var existingMsg = SerchatAPI.messageModel.getMessageAt(i)
-                    var existingId = String(existingMsg._id || existingMsg.id || "")
-                    if (existingId.indexOf("temp_") === 0) {
-                        if (existingMsg.text === message.text) {
-                            SerchatAPI.messageModel.replaceTempMessage(existingId, message)
-                            tempFound = true
-                            console.log("[HomePage] Replaced temp message with real message")
-                            break
-                        }
-                    }
-                }
-                
-                if (!tempFound) {
-                    // No temp message found, prepend the real message
-                    SerchatAPI.messageModel.prependMessage(message)
-                    console.log("[HomePage] Added real message (no temp found)")
-                }
-            }
+            // Use C++ method that handles duplicate detection and temp message replacement
+            SerchatAPI.messageModel.addRealMessage(message)
         }
-        
+
         onMessageSendFailed: {
             console.log("Failed to send message:", error)
-            // Remove temp messages using model method
-            // Find and remove any temp messages (iterate backwards for safe removal)
-            var count = SerchatAPI.messageModel.count
-            for (var i = count - 1; i >= 0; i--) {
-                var msg = SerchatAPI.messageModel.getMessageAt(i)
-                var id = String(msg._id || msg.id || "")
-                if (id.indexOf("temp_") === 0) {
-                    SerchatAPI.messageModel.deleteMessage(id)
-                }
-            }
+            // Use C++ method to remove all temp messages
+            SerchatAPI.messageModel.removeAllTempMessages()
         }
         
         // Friends (for DM list)
@@ -958,45 +916,14 @@ Page {
         
         onDmMessageSent: {
             console.log("[HomePage] DM Message sent via HTTP:", message._id)
-            
-            var msgId = String(message._id || message.id || "")
-            
-            // Use C++ model's O(1) lookup to check for duplicates
-            var alreadyHasRealMessage = SerchatAPI.messageModel.hasMessage(msgId)
-            
-            if (!alreadyHasRealMessage) {
-                // Try to find and replace temp message using getMessageAt
-                var tempFound = false
-                var count = SerchatAPI.messageModel.count
-                for (var i = 0; i < count; i++) {
-                    var existingMsg = SerchatAPI.messageModel.getMessageAt(i)
-                    var existingId = String(existingMsg._id || existingMsg.id || "")
-                    if (existingId.indexOf("temp_") === 0) {
-                        if (existingMsg.text === message.text) {
-                            SerchatAPI.messageModel.replaceTempMessage(existingId, message)
-                            tempFound = true
-                            break
-                        }
-                    }
-                }
-                
-                if (!tempFound) {
-                    SerchatAPI.messageModel.prependMessage(message)
-                }
-            }
+            // Use C++ method that handles duplicate detection and temp message replacement
+            SerchatAPI.messageModel.addRealMessage(message)
         }
-        
+
         onDmMessageSendFailed: {
             console.log("[HomePage] Failed to send DM message:", error)
-            // Remove temp messages (iterate backwards for safe removal)
-            var count = SerchatAPI.messageModel.count
-            for (var i = count - 1; i >= 0; i--) {
-                var msg = SerchatAPI.messageModel.getMessageAt(i)
-                var id = String(msg._id || msg.id || "")
-                if (id.indexOf("temp_") === 0) {
-                    SerchatAPI.messageModel.deleteMessage(id)
-                }
-            }
+            // Use C++ method to remove all temp messages
+            SerchatAPI.messageModel.removeAllTempMessages()
         }
         
         // Server management
@@ -1053,45 +980,14 @@ Page {
         // Real-time server messages
         onServerMessageReceived: {
             console.log("[HomePage] Server message received:", message._id, "channelId:", message.channelId)
-            
+
             // Only add if it's for the current channel
-            // channelId might be an ObjectId string or plain string - compare as strings
             var msgChannelId = String(message.channelId || "")
             var currChannelId = String(currentChannelId || "")
-            console.log("[HomePage] Comparing channels - message:", msgChannelId, "current:", currChannelId)
-            
+
             if (msgChannelId === currChannelId && msgChannelId !== "") {
-                // Check if we already have this message using C++ model's O(1) lookup
-                var newId = String(message._id || message.id || "")
-                var isDuplicate = SerchatAPI.messageModel.hasMessage(newId)
-                
-                if (!isDuplicate) {
-                    // Try to find and replace a matching temp message using getMessageAt
-                    var tempFound = false
-                    var count = SerchatAPI.messageModel.count
-                    for (var i = 0; i < count; i++) {
-                        var existingMsg = SerchatAPI.messageModel.getMessageAt(i)
-                        var existingId = String(existingMsg._id || existingMsg.id || "")
-                        if (existingId.indexOf("temp_") === 0) {
-                            if (existingMsg.text === message.text) {
-                                // Replace temp message - this uses dataChanged, preserving scroll
-                                SerchatAPI.messageModel.replaceTempMessage(existingId, message)
-                                tempFound = true
-                                console.log("[HomePage] Replaced temp message with real message via Socket.IO")
-                                break
-                            }
-                        }
-                    }
-                    
-                    if (!tempFound) {
-                        // Add new message at index 0 (displayed at bottom with BottomToTop)
-                        // Uses beginInsertRows/endInsertRows for proper scroll handling
-                        SerchatAPI.messageModel.prependMessage(message)
-                        console.log("[HomePage] Added message to list, new count:", SerchatAPI.messageModel.count)
-                    }
-                } else {
-                    console.log("[HomePage] Skipping duplicate message:", newId)
-                }
+                // Use C++ method that handles duplicate detection and temp message replacement
+                SerchatAPI.messageModel.addRealMessage(message)
             }
         }
         

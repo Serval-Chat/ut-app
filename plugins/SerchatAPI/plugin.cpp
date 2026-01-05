@@ -8,6 +8,7 @@
 #include "models/channellistmodel.h"
 #include "emojicache.h"
 #include "userprofilecache.h"
+#include "markdownparser.h"
 
 void SerchatAPIPlugin::registerTypes(const char *uri) {
     //@uri SerchatAPI
@@ -29,4 +30,8 @@ void SerchatAPIPlugin::registerTypes(const char *uri) {
         "EmojiCache is accessed via SerchatAPI.emojiCache");
     qmlRegisterUncreatableType<UserProfileCache>(uri, 1, 0, "UserProfileCache",
         "UserProfileCache is accessed via SerchatAPI.userProfileCache");
+
+    // Register markdown parser for text rendering (accessed via SerchatAPI)
+    qmlRegisterUncreatableType<MarkdownParser>(uri, 1, 0, "MarkdownParser",
+        "MarkdownParser is accessed via SerchatAPI.markdownParser");
 }

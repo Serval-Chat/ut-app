@@ -10,6 +10,7 @@ set(
     userprofilecache.cpp
     channelcache.cpp
     messagecache.cpp
+    markdownparser.cpp
     network/networkclient.cpp
     network/socketclient.cpp
     auth/authclient.cpp

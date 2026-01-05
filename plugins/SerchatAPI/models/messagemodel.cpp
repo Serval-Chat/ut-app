@@ -415,10 +415,94 @@ QString MessageModel::getSenderAvatar(const QString& senderId) const
 {
     if (senderId.isEmpty())
         return QString();
-    
+
     if (!m_userProfileCache)
         return QString();
-    
+
     // Use the shared UserProfileCache - returns empty if not cached (triggers auto-fetch)
     return m_userProfileCache->getAvatarUrl(senderId);
+}
+
+bool MessageModel::shouldShowAvatar(int index) const
+{
+    // First message (last in reversed list) always shows avatar
+    if (index >= m_messages.count() - 1) {
+        return true;
+    }
+
+    // Get current and previous messages
+    const QVariantMap& currentMsg = m_messages.at(index).data;
+    const QVariantMap& prevMsg = m_messages.at(index + 1).data;  // Previous in time (above in view)
+
+    // Show avatar if different sender
+    QString currentSender = currentMsg.value("senderId").toString();
+    QString prevSender = prevMsg.value("senderId").toString();
+    if (currentSender != prevSender) {
+        return true;
+    }
+
+    // Show avatar if more than 5 minutes apart
+    QDateTime currentTime = QDateTime::fromString(currentMsg.value("createdAt").toString(), Qt::ISODate);
+    QDateTime prevTime = QDateTime::fromString(prevMsg.value("createdAt").toString(), Qt::ISODate);
+
+    if (!currentTime.isValid() || !prevTime.isValid()) {
+        // Try with milliseconds format
+        currentTime = QDateTime::fromString(currentMsg.value("createdAt").toString(), Qt::ISODateWithMs);
+        prevTime = QDateTime::fromString(prevMsg.value("createdAt").toString(), Qt::ISODateWithMs);
+    }
+
+    if (currentTime.isValid() && prevTime.isValid()) {
+        qint64 diffMs = currentTime.toMSecsSinceEpoch() - prevTime.toMSecsSinceEpoch();
+        if (diffMs > 5 * 60 * 1000) {  // 5 minutes
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool MessageModel::addRealMessage(const QVariantMap& message)
+{
+    QString msgId = extractId(message);
+    if (msgId.isEmpty()) {
+        qWarning() << "[MessageModel] Cannot add message without ID";
+        return false;
+    }
+
+    // Check if real message already exists (duplicate from Socket.IO vs HTTP)
+    if (m_idToIndex.contains(msgId)) {
+        qDebug() << "[MessageModel] Duplicate message ignored:" << msgId;
+        return false;
+    }
+
+    // Look for temp message with matching text
+    QString msgText = message.value("text").toString();
+    for (int i = 0; i < m_messages.count(); ++i) {
+        const Message& existingMsg = m_messages.at(i);
+        if (existingMsg.id.startsWith(QStringLiteral("temp_"))) {
+            QString existingText = existingMsg.data.value("text").toString();
+            if (existingText == msgText) {
+                // Found matching temp message - replace it
+                qDebug() << "[MessageModel] Replacing temp message with real message:" << msgId;
+                replaceTempMessage(existingMsg.id, message);
+                return true;
+            }
+        }
+    }
+
+    // No matching temp message found - prepend the real message
+    qDebug() << "[MessageModel] Adding real message (no temp found):" << msgId;
+    prependMessage(message);
+    return true;
+}
+
+void MessageModel::removeAllTempMessages()
+{
+    // Iterate backwards for safe removal
+    for (int i = m_messages.count() - 1; i >= 0; --i) {
+        if (m_messages.at(i).id.startsWith(QStringLiteral("temp_"))) {
+            qDebug() << "[MessageModel] Removing temp message:" << m_messages.at(i).id;
+            deleteMessage(m_messages.at(i).id);
+        }
+    }
 }

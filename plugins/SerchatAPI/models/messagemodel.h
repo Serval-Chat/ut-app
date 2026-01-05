@@ -183,6 +183,36 @@ public:
      */
     Q_INVOKABLE QVariantMap getMessageAt(int index) const;
 
+    /**
+     * @brief Check if a message at the given index should show its avatar.
+     * Avatar is shown if:
+     * - It's the first message (last in the reversed list)
+     * - The sender is different from the previous message
+     * - More than 5 minutes have passed since the previous message
+     */
+    Q_INVOKABLE bool shouldShowAvatar(int index) const;
+
+    /**
+     * @brief Add a real message, replacing any matching temp message.
+     * This consolidates the temp message replacement logic from QML.
+     *
+     * Logic:
+     * 1. If message ID already exists, do nothing (duplicate)
+     * 2. Look for temp message with matching text
+     * 3. If found, replace temp with real message
+     * 4. If not found, prepend the real message
+     *
+     * @param message The real message to add
+     * @return true if message was added/replaced, false if duplicate
+     */
+    Q_INVOKABLE bool addRealMessage(const QVariantMap& message);
+
+    /**
+     * @brief Remove all temp messages from the model.
+     * Used when message send fails.
+     */
+    Q_INVOKABLE void removeAllTempMessages();
+
     // ========================================================================
     // User Profile Cache (for sender names/avatars)
     // ========================================================================

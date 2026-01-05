@@ -227,7 +227,7 @@ Rectangle {
                         }
                         
                         Label {
-                            text: formatDate(modelData.createdAt)
+                            text: SerchatAPI.markdownParser.formatTimestamp(modelData.createdAt)
                             fontSize: "x-small"
                             color: Theme.palette.normal.backgroundSecondaryText
                         }
@@ -307,18 +307,6 @@ Rectangle {
         
         var regex = new RegExp("(" + searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ")", "gi")
         return escaped.replace(regex, '<b><font color="#3498db">$1</font></b>')
-    }
-    
-    function formatDate(dateStr) {
-        if (!dateStr) return ""
-        var date = new Date(dateStr)
-        var now = new Date()
-        var isToday = date.toDateString() === now.toDateString()
-        
-        if (isToday) {
-            return date.toLocaleTimeString(Qt.locale(), "HH:mm")
-        }
-        return date.toLocaleDateString(Qt.locale(), "dd/MM/yyyy")
     }
     
     function open() {

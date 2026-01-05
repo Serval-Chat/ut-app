@@ -302,7 +302,7 @@ Rectangle {
                     timestamp: model.timestamp || ""
                     isOwn: model.senderId === currentUserId
                     isEdited: model.isEdited || false
-                    showAvatar: shouldShowAvatar(index)
+                    showAvatar: SerchatAPI.messageModel.shouldShowAvatar(index)
                     isReply: model.replyToId ? true : false
                     replyToText: model.repliedMessage ? model.repliedMessage.text : ""
                     replyToSender: model.repliedMessage ? getSenderName(model.repliedMessage.senderId) : ""
@@ -591,47 +591,6 @@ Rectangle {
         // Use C++ cache - it auto-fetches if not present
         var displayName = SerchatAPI.userProfileCache.getDisplayName(senderId)
         return displayName || i18n.tr("Unknown")
-    }
-    
-    // Check if we should show avatar for message grouping
-    function shouldShowAvatar(index) {
-        var messageModel = SerchatAPI.messageModel
-        if (index >= messageModel.count - 1) return true  // First message (reversed list)
-        
-        // Get messages from model using getMessageAt
-        var currentMsg = messageModel.getMessageAt(index)
-        var prevMsg = messageModel.getMessageAt(index + 1)  // Previous in time (above in view)
-        
-        if (!currentMsg || !prevMsg) return true
-        
-        // Show avatar if different sender
-        if (currentMsg.senderId !== prevMsg.senderId) return true
-        
-        // Show avatar if more than 5 minutes apart
-        var currentTime = new Date(currentMsg.createdAt).getTime()
-        var prevTime = new Date(prevMsg.createdAt).getTime()
-        if (currentTime - prevTime > 5 * 60 * 1000) return true
-        
-        return false
-    }
-    
-    // Format message text (links, mentions, etc.)
-    function formatMessageText(text) {
-        if (!text) return ""
-        
-        // Escape HTML
-        var escaped = text.replace(/&/g, '&amp;')
-                         .replace(/</g, '&lt;')
-                         .replace(/>/g, '&gt;')
-        
-        // Convert URLs to links
-        var urlRegex = /(https?:\/\/[^\s]+)/g
-        escaped = escaped.replace(urlRegex, '<a href="$1">$1</a>')
-        
-        // Convert newlines to <br>
-        escaped = escaped.replace(/\n/g, '<br>')
-        
-        return escaped
     }
     
     // Show message context menu (legacy - now handled by MessageBubble)

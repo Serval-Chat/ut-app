@@ -21,6 +21,7 @@ class EmojiCache;
 class UserProfileCache;
 class ChannelCache;
 class MessageCache;
+class MarkdownParser;
 
 /**
  * @brief Main API facade exposed to QML.
@@ -73,6 +74,9 @@ class SerchatAPI : public QObject {
     Q_PROPERTY(UserProfileCache* userProfileCache READ userProfileCache CONSTANT)
     Q_PROPERTY(ChannelCache* channelCache READ channelCache CONSTANT)
     Q_PROPERTY(MessageCache* messageCache READ messageCache CONSTANT)
+
+    // Markdown parser for text rendering - moves logic from QML to C++
+    Q_PROPERTY(MarkdownParser* markdownParser READ markdownParser CONSTANT)
 
 public:
     SerchatAPI();
@@ -831,6 +835,12 @@ public:
      */
     MessageCache* messageCache() const { return m_messageCache; }
 
+    /**
+     * @brief Get the markdown parser.
+     * Provides C++ text rendering for better performance.
+     */
+    MarkdownParser* markdownParser() const { return m_markdownParser; }
+
 private slots:
     // Auth client handlers
     void onAuthLoginSuccessful(const QVariantMap& userData);
@@ -881,6 +891,9 @@ private:
     UserProfileCache* m_userProfileCache;
     ChannelCache* m_channelCache;
     MessageCache* m_messageCache;
+
+    // Markdown parser (owned by this class, exposed to QML)
+    MarkdownParser* m_markdownParser;
     
     // Presence tracking
     QSet<QString> m_onlineUsers;

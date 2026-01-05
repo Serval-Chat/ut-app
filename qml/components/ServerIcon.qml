@@ -2,6 +2,8 @@ import QtQuick 2.7
 import Lomiri.Components 1.3
 import QtGraphicalEffects 1.0
 
+import SerchatAPI 1.0
+
 /*
  * ServerIcon - A clickable server icon with selection indicator
  */
@@ -42,16 +44,16 @@ Item {
         width: units.gu(5)
         height: units.gu(5)
         radius: selected || mouseArea.containsMouse ? units.gu(1.5) : width / 2
-        color: iconUrl && serverImage.status === Image.Ready ? "transparent" : getServerColor(serverName)
+        color: iconUrl && serverImage.status === Image.Ready ? "transparent" : SerchatAPI.markdownParser.colorFromString(serverName)
         
         Behavior on radius {
             NumberAnimation { duration: 150; easing.type: Easing.OutQuad }
         }
         
-        // Server initials fallback
+        // Server initials fallback (using C++ for consistency)
         Label {
             anchors.centerIn: parent
-            text: getServerInitials(serverName)
+            text: SerchatAPI.markdownParser.getInitials(serverName)
             fontSize: "large"
             color: "white"
             visible: !iconUrl || serverImage.status !== Image.Ready
@@ -114,25 +116,4 @@ Item {
         onClicked: serverIcon.clicked()
     }
     
-    function getServerInitials(name) {
-        if (!name) return "?"
-        var words = name.trim().split(" ")
-        if (words.length === 1) {
-            return name.substring(0, 1).toUpperCase()
-        }
-        return words.slice(0, 2).map(function(w) { return w[0] }).join("").toUpperCase()
-    }
-    
-    function getServerColor(name) {
-        // Generate a consistent color from the server name
-        var colors = [
-            "#7289da", "#43b581", "#faa61a", "#f04747",
-            "#9b59b6", "#e91e63", "#00bcd4", "#ff5722"
-        ]
-        var hash = 0
-        for (var i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 5) - hash)
-        }
-        return colors[Math.abs(hash) % colors.length]
-    }
 }

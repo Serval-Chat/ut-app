@@ -14,6 +14,7 @@
 #include "userprofilecache.h"
 #include "channelcache.h"
 #include "messagecache.h"
+#include "markdownparser.h"
 
 SerchatAPI::SerchatAPI() {
     // Initialize persistent storage
@@ -43,7 +44,12 @@ SerchatAPI::SerchatAPI() {
     m_userProfileCache = new UserProfileCache(this);
     m_channelCache = new ChannelCache(this);
     m_messageCache = new MessageCache(this);
-    
+
+    // Initialize markdown parser (moves text processing from QML to C++)
+    m_markdownParser = new MarkdownParser(this);
+    m_markdownParser->setEmojiCache(m_emojiCache);
+    m_markdownParser->setUserProfileCache(m_userProfileCache);
+
     // Connect MessageModel to UserProfileCache for sender name/avatar lookups
     m_messageModel->setUserProfileCache(m_userProfileCache);
 
@@ -59,6 +65,9 @@ SerchatAPI::SerchatAPI() {
     m_userProfileCache->setBaseUrl(baseUrl);
     m_channelCache->setApiClient(m_apiClient);
     m_messageCache->setApiClient(m_apiClient);
+
+    // Configure markdown parser with base URL
+    m_markdownParser->setBaseUrl(baseUrl);
 
     // Connect auth client signals
     connect(m_authClient, &AuthClient::loginSuccessful, 
