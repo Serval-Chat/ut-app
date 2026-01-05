@@ -98,8 +98,8 @@ Item {
         radius: width / 2
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.rightMargin: units.gu(0.2)
-        anchors.bottomMargin: units.gu(0.2)
+        anchors.rightMargin: -units.gu(0.1)
+        anchors.bottomMargin: -units.gu(0.1)
         visible: avatar.showStatus && avatar.status !== ""
         color: Components.ColorUtils.statusColor(avatar.status)
         // border.width: units.gu(0.2)
