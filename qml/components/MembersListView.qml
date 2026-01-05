@@ -228,7 +228,7 @@ Rectangle {
                     font.bold: true
                     fontSize: "medium"
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - closeButton.width - units.gu(2)
+                    width: parent.width - units.gu(2)
                 }
             }
             
