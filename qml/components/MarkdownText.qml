@@ -2,6 +2,7 @@ import QtQuick 2.7
 import Lomiri.Components 1.3
 
 import SerchatAPI 1.0
+import "." as Components
 
 /*
  * MarkdownText - Renders text with markdown formatting and custom emojis
@@ -19,6 +20,7 @@ import SerchatAPI 1.0
  * - User mentions (<userid:'id'>)
  * - Channel references (#channel)
  * - Emoji-only messages with larger emoji display
+ * - File attachments ([%file%](url))
  */
 Item {
     id: markdownText
@@ -38,8 +40,27 @@ Item {
     property int emojiCacheVersion: SerchatAPI.emojiCache.version
     property int profileCacheVersion: SerchatAPI.userProfileCache.version
 
+    // File attachment support
+    readonly property bool hasFiles: SerchatAPI.markdownParser.hasFileAttachments(text)
+    readonly property var fileAttachments: hasFiles ? SerchatAPI.markdownParser.extractFileAttachments(text) : []
+    readonly property string textWithoutFiles: hasFiles ? SerchatAPI.markdownParser.removeFileAttachments(text) : text
+
+    // Debug logging for file attachments
+    onTextChanged: {
+        // Log ALL messages briefly to confirm we're receiving them
+        if (text.length > 0) {
+            console.log("[MarkdownText] Processing text (first 100 chars):", text.substring(0, 100))
+        }
+        if (text.indexOf("%file%") !== -1 || text.indexOf("/download") !== -1) {
+            console.log("[MarkdownText] Text contains file-related content:", text)
+            console.log("[MarkdownText] hasFiles:", hasFiles)
+            console.log("[MarkdownText] fileAttachments:", JSON.stringify(fileAttachments))
+        }
+    }
+
     // Check if the message is emoji-only using C++ (for larger display)
-    readonly property bool isEmojiOnly: SerchatAPI.markdownParser.isEmojiOnly(text)
+    // Use text without files to avoid false negatives
+    readonly property bool isEmojiOnly: SerchatAPI.markdownParser.isEmojiOnly(textWithoutFiles)
 
     // Emoji sizes based on context
     readonly property int normalEmojiSize: 20  // Same as text
@@ -52,43 +73,68 @@ Item {
         // Reference cache versions to ensure binding updates
         var ev = emojiCacheVersion
         var pv = profileCacheVersion
-        return SerchatAPI.markdownParser.renderMarkdown(text, textColor, linkColor, codeBackground, currentEmojiSize)
+        // Render text without file markers
+        return SerchatAPI.markdownParser.renderMarkdown(textWithoutFiles, textColor, linkColor, codeBackground, currentEmojiSize)
     }
 
-    implicitWidth: textLabel.implicitWidth
-    implicitHeight: textLabel.implicitHeight
+    implicitWidth: contentColumn.implicitWidth
+    implicitHeight: contentColumn.implicitHeight
     width: parent ? parent.width : implicitWidth
-    height: textLabel.height
+    height: contentColumn.height
 
-    Label {
-        id: textLabel
+    Column {
+        id: contentColumn
         width: parent.width
-        text: renderedHtml
-        textFormat: Text.RichText  // Use RichText for full HTML support including images
-        fontSize: markdownText.isEmojiOnly ? "large" : markdownText.fontSize
-        color: markdownText.textColor
-        linkColor: markdownText.linkColor
-        wrapMode: markdownText.wrapMode
-        maximumLineCount: markdownText.maximumLineCount
-        elide: maximumLineCount > 0 ? Text.ElideRight : Text.ElideNone
-        lineHeight: 1.4  // Increase line height to accommodate emojis
+        spacing: units.gu(1)
 
-        onLinkActivated: {
-            if (link.startsWith("user:")) {
-                // User mention clicked
-                var userId = link.substring(5)
-                userMentionClicked(userId)
-            } else if (link.startsWith("channel:")) {
-                // Channel reference clicked
-                var channelId = link.substring(8)
-                channelMentionClicked(channelId)
-            } else {
-                // External link
-                Qt.openUrlExternally(link)
+        // Text content (if any text remains after removing file markers)
+        Label {
+            id: textLabel
+            width: parent.width
+            text: renderedHtml
+            textFormat: Text.RichText  // Use RichText for full HTML support including images
+            fontSize: markdownText.isEmojiOnly ? "large" : markdownText.fontSize
+            color: markdownText.textColor
+            linkColor: markdownText.linkColor
+            wrapMode: markdownText.wrapMode
+            maximumLineCount: markdownText.maximumLineCount
+            elide: maximumLineCount > 0 ? Text.ElideRight : Text.ElideNone
+            lineHeight: 1.4  // Increase line height to accommodate emojis
+            visible: renderedHtml.length > 0
+
+            onLinkActivated: {
+                if (link.startsWith("user:")) {
+                    // User mention clicked
+                    var userId = link.substring(5)
+                    userMentionClicked(userId)
+                } else if (link.startsWith("channel:")) {
+                    // Channel reference clicked
+                    var channelId = link.substring(8)
+                    channelMentionClicked(channelId)
+                } else {
+                    // External link
+                    Qt.openUrlExternally(link)
+                }
+            }
+        }
+
+        // File attachments
+        Repeater {
+            model: fileAttachments
+
+            Components.FilePreview {
+                width: Math.min(contentColumn.width, units.gu(35))
+                filename: modelData.filename
+                downloadUrl: modelData.downloadUrl
+                
+                onMediaViewRequested: {
+                    markdownText.mediaViewRequested(url, name, mime)
+                }
             }
         }
     }
 
     signal userMentionClicked(string userId)
     signal channelMentionClicked(string channelId)
+    signal mediaViewRequested(string url, string name, string mime)
 }

@@ -344,6 +344,9 @@ Rectangle {
                         // TODO: Implement edit message
                         console.log("[MessageView] Edit message:", messageId)
                     }
+                    onMediaViewRequested: {
+                        openMediaViewer(url, name, mime)
+                    }
                 }
             }
             
@@ -854,5 +857,16 @@ Rectangle {
         onReactionSelected: {
             addReaction(messageId, emoji, emojiType, emojiId)
         }
+    }
+    
+    // Media viewer for fullscreen image/video viewing
+    Components.MediaViewer {
+        id: mediaViewer
+        anchors.fill: parent
+    }
+    
+    // Function to open media viewer
+    function openMediaViewer(url, name, mime) {
+        mediaViewer.open(url, name, mime)
     }
 }

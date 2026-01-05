@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-05 19:10+0000\n"
+"POT-Creation-Date: 2026-01-05 19:50+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -415,8 +415,8 @@ msgstr ""
 
 #: ../qml/ProfilePage.qml:265 ../qml/components/CreateDMDialog.qml:216
 #: ../qml/components/MemberListItem.qml:32
-#: ../qml/components/MessageView.qml:299 ../qml/components/MessageView.qml:589
-#: ../qml/components/MessageView.qml:593
+#: ../qml/components/MessageView.qml:299 ../qml/components/MessageView.qml:592
+#: ../qml/components/MessageView.qml:596
 #: ../qml/components/SearchOverlay.qml:224
 msgid "Unknown"
 msgstr ""
@@ -513,7 +513,8 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: ../qml/SettingsPage.qml:81 ../qml/components/LoadingOverlay.qml:16
+#: ../qml/SettingsPage.qml:81 ../qml/components/FilePreview.qml:415
+#: ../qml/components/LoadingOverlay.qml:16
 msgid "Loading..."
 msgstr ""
 
@@ -633,6 +634,35 @@ msgstr ""
 msgid "Custom Emojis"
 msgstr ""
 
+#: ../qml/components/FilePreview.qml:142
+msgid "Binary file"
+msgstr ""
+
+#: ../qml/components/FilePreview.qml:142 ../qml/components/FilePreview.qml:152
+#: ../qml/components/FilePreview.qml:181
+msgid "Text file"
+msgstr ""
+
+#: ../qml/components/FilePreview.qml:178
+msgid "Image"
+msgstr ""
+
+#: ../qml/components/FilePreview.qml:179
+msgid "Audio"
+msgstr ""
+
+#: ../qml/components/FilePreview.qml:180
+msgid "Video"
+msgstr ""
+
+#: ../qml/components/FilePreview.qml:330
+msgid "Tap to view"
+msgstr ""
+
+#: ../qml/components/MediaViewer.qml:262
+msgid "Failed to load video"
+msgstr ""
+
 #: ../qml/components/MemberListItem.qml:70
 msgid "(you)"
 msgstr ""
@@ -678,7 +708,7 @@ msgstr ""
 msgid "Delete Message"
 msgstr ""
 
-#: ../qml/components/MessageBubble.qml:233
+#: ../qml/components/MessageBubble.qml:239
 msgid "(edited)"
 msgstr ""
 
@@ -694,47 +724,47 @@ msgstr ""
 msgid "NEW MESSAGES"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:364
+#: ../qml/components/MessageView.qml:367
 msgid "Load more messages"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:392
+#: ../qml/components/MessageView.qml:395
 msgid "This is the beginning of your conversation with %1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:393
+#: ../qml/components/MessageView.qml:396
 msgid "This is the beginning of #%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:437
+#: ../qml/components/MessageView.qml:440
 msgid "Welcome to #%1!"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:444
+#: ../qml/components/MessageView.qml:447
 msgid "This is the start of the #%1 channel. There are no messages yet."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:525
+#: ../qml/components/MessageView.qml:528
 msgid "%1 is typing..."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:526
+#: ../qml/components/MessageView.qml:529
 msgid "%1 and %2 are typing..."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:527
+#: ../qml/components/MessageView.qml:530
 msgid "%1 and %2 others are typing..."
 msgstr ""
 
-#: ../qml/components/MessageView.qml:567
+#: ../qml/components/MessageView.qml:570
 msgid "Message #%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:567
+#: ../qml/components/MessageView.qml:570
 msgid "Message @%1"
 msgstr ""
 
-#: ../qml/components/MessageView.qml:568
+#: ../qml/components/MessageView.qml:571
 msgid "You don't have permission to send messages"
 msgstr ""
 

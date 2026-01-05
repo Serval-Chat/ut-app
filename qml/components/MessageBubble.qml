@@ -37,6 +37,7 @@ Item {
     signal copyRequested(string messageText)
     signal deleteRequested(string messageId)
     signal editRequested(string messageId, string messageText)
+    signal mediaViewRequested(string url, string name, string mime)
     
     width: parent ? parent.width : units.gu(40)
     height: swipeContainer.height
@@ -225,6 +226,11 @@ Item {
                     onUserMentionClicked: {
                         // Bubble up to parent - open profile for mentioned user
                         messageBubble.avatarClicked(userId)
+                    }
+                    
+                    onMediaViewRequested: {
+                        // Bubble up to parent - open media viewer
+                        messageBubble.mediaViewRequested(url, name, mime)
                     }
                 }
                 

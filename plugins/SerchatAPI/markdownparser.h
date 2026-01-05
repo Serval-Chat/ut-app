@@ -9,6 +9,18 @@ class EmojiCache;
 class UserProfileCache;
 
 /**
+ * @brief Represents a file attachment extracted from markdown.
+ */
+struct FileAttachment {
+    Q_GADGET
+    Q_PROPERTY(QString filename MEMBER filename)
+    Q_PROPERTY(QString downloadUrl MEMBER downloadUrl)
+public:
+    QString filename;
+    QString downloadUrl;
+};
+
+/**
  * @brief Markdown parser for chat messages.
  *
  * Handles rendering of markdown-formatted text to HTML, including:
@@ -20,6 +32,7 @@ class UserProfileCache;
  * - Custom emojis (<emoji:id>)
  * - User mentions (<userid:'id'>)
  * - Channel references (#channel)
+ * - File attachments ([%file%](url))
  *
  * This class extracts text processing logic from QML for better performance
  * and maintainability.
@@ -72,6 +85,28 @@ public:
      * @return true if the text contains only emojis
      */
     Q_INVOKABLE bool isEmojiOnly(const QString& input) const;
+
+    /**
+     * @brief Check if text contains file attachments.
+     * @param input The text to check
+     * @return true if the text contains [%file%](url) patterns
+     */
+    Q_INVOKABLE bool hasFileAttachments(const QString& input) const;
+
+    /**
+     * @brief Extract file attachments from text.
+     * @param input The text to search
+     * @return List of file attachment objects with filename and downloadUrl
+     */
+    Q_INVOKABLE QVariantList extractFileAttachments(const QString& input) const;
+
+    /**
+     * @brief Remove file attachment markers from text.
+     * Returns the text with [%file%](url) patterns removed.
+     * @param input The text to process
+     * @return Text with file markers removed
+     */
+    Q_INVOKABLE QString removeFileAttachments(const QString& input) const;
 
     /**
      * @brief Format a timestamp for display.

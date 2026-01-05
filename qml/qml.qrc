@@ -28,6 +28,8 @@
     <file>components/CreateDMDialog.qml</file>
     <file>components/EmojiPicker.qml</file>
     <file>components/MarkdownText.qml</file>
+    <file>components/FilePreview.qml</file>
+    <file>components/MediaViewer.qml</file>
     <file>components/MessageActionSheet.qml</file>
     <file>components/ReactionPickerSheet.qml</file>
     <file>components/IconButton.qml</file>

@@ -175,6 +175,83 @@ bool MarkdownParser::isEmojiOnly(const QString& input) const
     return true;
 }
 
+bool MarkdownParser::hasFileAttachments(const QString& input) const
+{
+    if (input.isEmpty()) {
+        return false;
+    }
+    
+    // Match [%file%](url) pattern - url can be relative or absolute
+    static QRegularExpression fileRegex(QStringLiteral("\\[%file%\\]\\(([^)]+)\\)"));
+    bool hasMatch = fileRegex.match(input).hasMatch();
+    
+    // Debug logging
+    if (input.contains(QStringLiteral("%file%")) || input.contains(QStringLiteral("/download"))) {
+        qDebug() << "[MarkdownParser] hasFileAttachments check for:" << input;
+        qDebug() << "[MarkdownParser] Pattern match result:" << hasMatch;
+    }
+    
+    return hasMatch;
+}
+
+QVariantList MarkdownParser::extractFileAttachments(const QString& input) const
+{
+    QVariantList attachments;
+    
+    if (input.isEmpty()) {
+        return attachments;
+    }
+    
+    // Match [%file%](url) pattern - url can be absolute (https://...) or relative (/api/v1/...)
+    // Captures the full URL for download
+    static QRegularExpression fileRegex(QStringLiteral("\\[%file%\\]\\(((?:https?://[^/]+)?/api/v1/(?:files/)?download/[^)]+)\\)"));
+    QRegularExpressionMatchIterator it = fileRegex.globalMatch(input);
+    
+    qDebug() << "[MarkdownParser] extractFileAttachments input:" << input;
+    
+    while (it.hasNext()) {
+        QRegularExpressionMatch match = it.next();
+        QString downloadUrl = match.captured(1);
+        
+        // Extract filename from URL path
+        QString filename = downloadUrl;
+        int lastSlash = downloadUrl.lastIndexOf(QLatin1Char('/'));
+        if (lastSlash >= 0 && lastSlash < downloadUrl.length() - 1) {
+            filename = downloadUrl.mid(lastSlash + 1);
+        }
+        
+        qDebug() << "[MarkdownParser] Extracted file attachment:" << filename << "URL:" << downloadUrl;
+        
+        QVariantMap attachment;
+        attachment[QStringLiteral("filename")] = filename;
+        attachment[QStringLiteral("downloadUrl")] = downloadUrl;
+        attachments.append(attachment);
+    }
+    
+    qDebug() << "[MarkdownParser] Total attachments found:" << attachments.size();
+    
+    return attachments;
+}
+
+QString MarkdownParser::removeFileAttachments(const QString& input) const
+{
+    if (input.isEmpty()) {
+        return input;
+    }
+    
+    QString result = input;
+    
+    // Remove [%file%](/api/v1/download/{filename}) patterns
+    static QRegularExpression fileRegex(QStringLiteral("\\[%file%\\]\\([^)]+\\)"));
+    result.remove(fileRegex);
+    
+    // Clean up any resulting double newlines or trailing whitespace
+    static QRegularExpression multipleNewlines(QStringLiteral("\\n{3,}"));
+    result.replace(multipleNewlines, QStringLiteral("\n\n"));
+    
+    return result.trimmed();
+}
+
 QString MarkdownParser::formatTimestamp(const QString& timestamp) const
 {
     if (timestamp.isEmpty()) {
