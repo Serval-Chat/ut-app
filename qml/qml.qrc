@@ -32,7 +32,6 @@
     <file>components/MediaViewer.qml</file>
     <file>components/MessageActionSheet.qml</file>
     <file>components/ReactionPickerSheet.qml</file>
-    <file>components/IconButton.qml</file>
     <file>components/UserPanel.qml</file>
     <file>components/SectionHeader.qml</file>
     <file>components/SearchBox.qml</file>

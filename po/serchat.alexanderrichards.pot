@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-05 19:56+0000\n"
+"POT-Creation-Date: 2026-01-05 19:57+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -675,15 +675,15 @@ msgstr ""
 msgid "OFFLINE — %1"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:253
+#: ../qml/components/MembersListView.qml:247
 msgid "Search members"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:333
+#: ../qml/components/MembersListView.qml:327
 msgid "No members"
 msgstr ""
 
-#: ../qml/components/MembersListView.qml:333
+#: ../qml/components/MembersListView.qml:327
 msgid "No members found"
 msgstr ""
 
