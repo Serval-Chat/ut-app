@@ -56,6 +56,7 @@ Item {
         Label {
             id: channelNameLabel
             text: channelName
+            textFormat: Text.PlainText
             fontSize: "small"
             anchors.verticalCenter: parent.verticalCenter
             color: Theme.palette.normal.backgroundSecondaryText
