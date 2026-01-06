@@ -98,6 +98,8 @@ Item {
         color: Components.ColorUtils.statusColor(avatar.status)
         border.width: avatar.width * 0.04
         border.color: Theme.palette.normal.background
+
+        z: 10
     }
 
 }
