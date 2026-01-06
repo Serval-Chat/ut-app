@@ -177,6 +177,9 @@ int ApiClient::startPostRequest(RequestType type, const QString& endpoint,
     pending.context = context;
     m_pendingRequests[requestId] = pending;
     
+    // Track endpoint -> requestIds for completion
+    m_endpointToRequests[endpoint].append(requestId);
+    
     // Store requestId in reply for lookup in slot
     reply->setProperty("requestId", requestId);
     connect(reply, &QNetworkReply::finished, this, &ApiClient::onReplyFinished);
@@ -214,6 +217,9 @@ int ApiClient::startPatchRequest(RequestType type, const QString& endpoint,
     pending.context = context;
     m_pendingRequests[requestId] = pending;
     
+    // Track endpoint -> requestIds for completion
+    m_endpointToRequests[endpoint].append(requestId);
+    
     // Store requestId in reply for lookup in slot
     reply->setProperty("requestId", requestId);
     connect(reply, &QNetworkReply::finished, this, &ApiClient::onReplyFinished);
@@ -248,6 +254,9 @@ int ApiClient::startDeleteRequest(RequestType type, const QString& endpoint,
     pending.type = type;
     pending.context = context;
     m_pendingRequests[requestId] = pending;
+    
+    // Track endpoint -> requestIds for completion
+    m_endpointToRequests[endpoint].append(requestId);
     
     // Store requestId in reply for lookup in slot
     reply->setProperty("requestId", requestId);
@@ -309,6 +318,9 @@ int ApiClient::startMultipartPostRequest(RequestType type, const QString& endpoi
     pending.type = type;
     pending.context = context;
     m_pendingRequests[requestId] = pending;
+    
+    // Track endpoint -> requestIds for completion
+    m_endpointToRequests[endpoint].append(requestId);
     
     // Store requestId in reply for lookup in slot
     reply->setProperty("requestId", requestId);

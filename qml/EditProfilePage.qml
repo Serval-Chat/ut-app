@@ -1,6 +1,7 @@
 import QtQuick 2.7
 import Lomiri.Components 1.3
 import QtQuick.Layouts 1.3
+import Lomiri.Content 1.1
 
 import SerchatAPI 1.0
 import "components" as Components
@@ -13,6 +14,14 @@ Page {
     property var requests: []
     property int completedRequests: 0
     property var failedRequests: []
+    property var activeTransfer: null
+    property string imagePickerTarget: "" // "avatar" or "banner"
+    property var successConnection: null
+    property var failureConnection: null
+    
+    // Buffered changes
+    property string bufferedAvatarPath: ""
+    property string bufferedBannerPath: ""
     
     header: PageHeader {
         id: header
@@ -67,8 +76,9 @@ Page {
                     width: units.gu(12)
                     height: units.gu(12)
                     name: displayNameField.text || userProfile.username || ""
-                    source: userProfile.profilePicture ? 
-                            (SerchatAPI.apiBaseUrl + userProfile.profilePicture) : ""
+                    source: bufferedAvatarPath ? ("file://" + bufferedAvatarPath) :
+                            (userProfile.profilePicture ? 
+                            (SerchatAPI.apiBaseUrl + userProfile.profilePicture) : "")
                     
                     Rectangle {
                         anchors.fill: parent
@@ -114,8 +124,8 @@ Page {
                         anchors.fill: parent
                         hoverEnabled: true
                         onClicked: {
-                            // TODO: Open image picker for avatar
-                            errorLabel.text = "Image picker not yet implemented"
+                            imagePickerTarget = "avatar"
+                            activeTransfer = picturePicker.request()
                         }
                     }
                 }
@@ -206,8 +216,9 @@ Page {
                 
                 Image {
                     anchors.fill: parent
-                    source: userProfile.banner ? 
-                            (SerchatAPI.apiBaseUrl + "/api/v1/user/banner/" + userProfile.banner) : ""
+                    source: bufferedBannerPath ? ("file://" + bufferedBannerPath) :
+                            (userProfile.banner ? 
+                            (SerchatAPI.apiBaseUrl + "/api/v1/user/banner/" + userProfile.banner) : "")
                     fillMode: Image.PreserveAspectCrop
                     visible: status === Image.Ready
                     
@@ -246,8 +257,8 @@ Page {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        // TODO: Open image picker for banner
-                        errorLabel.text = "Image picker not yet implemented"
+                        imagePickerTarget = "banner"
+                        activeTransfer = picturePicker.request()
                     }
                 }
             }
@@ -270,6 +281,33 @@ Page {
         message: i18n.tr("Saving...")
     }
     
+    // ContentHub integration for image picking
+    ContentPeer {
+        id: picturePicker
+        contentType: ContentType.Pictures
+        handler: ContentHandler.Source
+        selectionType: ContentTransfer.Single
+    }
+    
+    ContentTransferHint {
+        id: transferHint
+        anchors.fill: parent
+        activeTransfer: editProfilePage.activeTransfer
+    }
+    
+    Connections {
+        target: editProfilePage.activeTransfer
+        onStateChanged: {
+            if (editProfilePage.activeTransfer.state === ContentTransfer.Charged) {
+                if (editProfilePage.activeTransfer.items.length > 0) {
+                    var item = editProfilePage.activeTransfer.items[0]
+                    var filePath = String(item.url).replace("file://", "")
+                    handleImageSelected(filePath)
+                }
+            }
+        }
+    }
+    
     function getBannerColor() {
         return Components.ColorUtils.colorFromString(userProfile.username)
     }
@@ -277,6 +315,14 @@ Page {
     function saveProfile() {
         saving = true
         errorLabel.text = ""
+        
+        // Connect to signals BEFORE making API calls
+        var successConnection = SerchatAPI.profileUpdateSuccess.connect(onProfileUpdateSuccess)
+        var failureConnection = SerchatAPI.profileUpdateFailed.connect(onProfileUpdateFailed)
+        
+        // Store connections for cleanup
+        editProfilePage.successConnection = successConnection
+        editProfilePage.failureConnection = failureConnection
         
         var requests = []
         var hasChanges = false
@@ -306,71 +352,94 @@ Page {
             hasChanges = true
         }
         
+        // Check for buffered image uploads
+        if (bufferedAvatarPath) {
+            requests.push({
+                type: "avatar",
+                requestId: SerchatAPI.uploadProfilePicture(bufferedAvatarPath)
+            })
+            hasChanges = true
+        }
+        
+        if (bufferedBannerPath) {
+            requests.push({
+                type: "banner",
+                requestId: SerchatAPI.uploadBanner(bufferedBannerPath)
+            })
+            hasChanges = true
+        }
+        
         if (!hasChanges) {
+            cleanupConnections()
             saving = false
             errorLabel.text = "No changes to save"
             return
         }
         
         // Store requests for tracking completion
-        page.requests = requests
-        page.completedRequests = 0
-        page.failedRequests = []
-        
-        // Connect to signals
-        var successConnection = SerchatAPI.profileUpdateSuccess.connect(onProfileUpdateSuccess)
-        var failureConnection = SerchatAPI.profileUpdateFailed.connect(onProfileUpdateFailed)
-        
-        // Store connections for cleanup
-        page.successConnection = successConnection
-        page.failureConnection = failureConnection
+        editProfilePage.requests = requests
+        editProfilePage.completedRequests = 0
+        editProfilePage.failedRequests = []
     }
     
     function onProfileUpdateSuccess(requestId) {
-        page.completedRequests++
+        editProfilePage.completedRequests++
         
         // Check if all requests completed
-        if (page.completedRequests >= page.requests.length) {
+        if (editProfilePage.completedRequests >= editProfilePage.requests.length) {
             cleanupConnections()
-            saving = false
             
-            if (page.failedRequests.length === 0) {
-                // All successful
+            if (editProfilePage.failedRequests.length === 0) {
+                // All successful - refresh profile before closing
+                SerchatAPI.getUserProfile()
+                saving = false
                 pageStack.pop()
             } else {
                 // Some failed
-                errorLabel.text = "Some updates failed: " + page.failedRequests.join(", ")
+                saving = false
+                errorLabel.text = "Some updates failed: " + editProfilePage.failedRequests.join(", ")
             }
         }
     }
     
     function onProfileUpdateFailed(requestId, error) {
-        page.failedRequests.push(error)
-        page.completedRequests++
+        editProfilePage.failedRequests.push(error)
+        editProfilePage.completedRequests++
         
         // Check if all requests completed
-        if (page.completedRequests >= page.requests.length) {
+        if (editProfilePage.completedRequests >= editProfilePage.requests.length) {
             cleanupConnections()
             saving = false
             
-            if (page.failedRequests.length === page.requests.length) {
+            if (editProfilePage.failedRequests.length === editProfilePage.requests.length) {
                 // All failed
-                errorLabel.text = "All updates failed: " + page.failedRequests.join(", ")
+                errorLabel.text = "All updates failed: " + editProfilePage.failedRequests.join(", ")
             } else {
                 // Some failed
-                errorLabel.text = "Some updates failed: " + page.failedRequests.join(", ")
+                errorLabel.text = "Some updates failed: " + editProfilePage.failedRequests.join(", ")
             }
         }
     }
     
     function cleanupConnections() {
-        if (page.successConnection) {
-            SerchatAPI.profileUpdateSuccess.disconnect(page.successConnection)
-            page.successConnection = null
+        if (editProfilePage.successConnection) {
+            SerchatAPI.profileUpdateSuccess.disconnect(editProfilePage.successConnection)
+            editProfilePage.successConnection = null
         }
-        if (page.failureConnection) {
-            SerchatAPI.profileUpdateFailed.disconnect(page.failureConnection)
-            page.failureConnection = null
+        if (editProfilePage.failureConnection) {
+            SerchatAPI.profileUpdateFailed.disconnect(editProfilePage.failureConnection)
+            editProfilePage.failureConnection = null
+        }
+    }
+    
+    function handleImageSelected(filePath) {
+        errorLabel.text = ""
+        
+        // Buffer the image path for later upload
+        if (imagePickerTarget === "avatar") {
+            bufferedAvatarPath = filePath
+        } else if (imagePickerTarget === "banner") {
+            bufferedBannerPath = filePath
         }
     }
 }
