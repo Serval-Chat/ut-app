@@ -33,7 +33,6 @@ Item {
     property int profileRequestId: -1
     
     onUserIdChanged: {
-        console.log("[UserProfileSheet] userId changed to", userId, "recalculating isFriend")
         isFriend = calculateIsFriend()
     }
     
@@ -80,9 +79,6 @@ Item {
             NumberAnimation {
                 duration: 250
                 easing.type: Easing.OutCubic
-                onRunningChanged: {
-                    console.log("[UserProfileSheet] Animation running:", running, "from:", from, "to:", to)
-                }
             }
         }
         

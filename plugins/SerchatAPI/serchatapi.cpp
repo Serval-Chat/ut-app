@@ -1408,7 +1408,6 @@ void SerchatAPI::clearDMUnread(const QString& recipientId) {
 void SerchatAPI::setChannelLastReadAt(const QString& serverId, const QString& channelId, const QString& lastReadAt) {
     QString key = serverId + ":" + channelId;
     m_channelLastReadAt[key] = lastReadAt;
-    qDebug() << "[SerchatAPI] Set lastReadAt for channel" << channelId << ":" << lastReadAt;
 }
 
 QString SerchatAPI::getChannelLastReadAt(const QString& serverId, const QString& channelId) const {
