@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-06 00:03+0000\n"
+"POT-Creation-Date: 2026-01-06 13:12+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -731,11 +731,11 @@ msgstr ""
 msgid "(edited)"
 msgstr ""
 
-#: ../qml/components/MessageComposer.qml:12
+#: ../qml/components/MessageComposer.qml:13
 msgid "Send a message..."
 msgstr ""
 
-#: ../qml/components/MessageComposer.qml:73
+#: ../qml/components/MessageComposer.qml:79
 msgid "Replying to %1"
 msgstr ""
 

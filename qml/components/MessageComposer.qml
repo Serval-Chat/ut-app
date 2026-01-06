@@ -1,5 +1,6 @@
 import QtQuick 2.7
 import Lomiri.Components 1.3
+import Lomiri.Content 1.1
 import SerchatAPI 1.0
 import "." as Components
 
@@ -26,6 +27,11 @@ Item {
     property string replyToMessageId: ""
     property string replyToSenderName: ""
     property string replyToText: ""
+    
+    // File upload state
+    property var activeTransfer: null
+    property bool uploading: false
+    property int uploadRequestId: -1
     
     signal sendMessage(string message, string replyToId)
     signal attachmentClicked()
@@ -130,18 +136,29 @@ Item {
                     width: units.gu(4)
                     height: units.gu(4)
                     visible: showAttachmentButton
-                    enabled: composer.enabled
+                    enabled: composer.enabled && !uploading
                     
                     Icon {
                         anchors.centerIn: parent
                         width: units.gu(2.5)
                         height: units.gu(2.5)
-                        name: "add"
+                        name: uploading ? "stock_clock" : "add"
                         color: enabled ? Theme.palette.normal.backgroundSecondaryText : 
                                Theme.palette.disabled.backgroundSecondaryText
+                        
+                        RotationAnimator {
+                            target: parent
+                            from: 0
+                            to: 360
+                            duration: 1000
+                            loops: Animation.Infinite
+                            running: uploading
+                        }
                     }
                     
-                    onClicked: attachmentClicked()
+                    onClicked: {
+                        activeTransfer = filePicker.request()
+                    }
                 }
                 
                 // Text input
@@ -296,5 +313,71 @@ Item {
         onClosed: {
             emojiPicker.visible = false
         }
+    }
+    
+    // ContentHub integration for file picking
+    ContentPeer {
+        id: filePicker
+        contentType: ContentType.Pictures
+        handler: ContentHandler.Source
+        selectionType: ContentTransfer.Single
+    }
+    
+    ContentTransferHint {
+        id: transferHint
+        anchors.fill: parent
+        activeTransfer: composer.activeTransfer
+    }
+    
+    Connections {
+        target: composer.activeTransfer
+        onStateChanged: {
+            if (composer.activeTransfer && composer.activeTransfer.state === ContentTransfer.Charged) {
+                if (composer.activeTransfer.items.length > 0) {
+                    var item = composer.activeTransfer.items[0]
+                    var filePath = String(item.url).replace("file://", "")
+                    handleFileSelected(filePath)
+                }
+            }
+        }
+    }
+    
+    Connections {
+        target: SerchatAPI
+        onFileUploadSuccess: {
+            if (requestId === uploadRequestId) {
+                // Insert file link at cursor position
+                var fileMarkdown = "[%file%](" + url + ")"
+                var cursorPos = inputField.cursorPosition
+                var currentText = inputField.text
+                
+                // Add space before if there's already text and no trailing space
+                var prefix = ""
+                if (cursorPos > 0 && currentText.charAt(cursorPos - 1) !== " ") {
+                    prefix = " "
+                }
+                
+                inputField.text = currentText.substring(0, cursorPos) + prefix + fileMarkdown + currentText.substring(cursorPos)
+                inputField.cursorPosition = cursorPos + prefix.length + fileMarkdown.length
+                
+                uploading = false
+                uploadRequestId = -1
+                inputField.forceActiveFocus()
+            }
+        }
+        
+        onFileUploadFailed: {
+            if (requestId === uploadRequestId) {
+                console.error("File upload failed:", error)
+                // TODO: Show error to user
+                uploading = false
+                uploadRequestId = -1
+            }
+        }
+    }
+    
+    function handleFileSelected(filePath) {
+        uploading = true
+        uploadRequestId = SerchatAPI.uploadFile(filePath)
     }
 }

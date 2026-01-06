@@ -100,6 +100,12 @@ SerchatAPI::SerchatAPI() {
     connect(m_apiClient, &ApiClient::profileUpdateFailed,
             this, &SerchatAPI::profileUpdateFailed);
     
+    // Connect file upload signals
+    connect(m_apiClient, &ApiClient::fileUploadSuccess,
+            this, &SerchatAPI::fileUploadSuccess);
+    connect(m_apiClient, &ApiClient::fileUploadFailed,
+            this, &SerchatAPI::fileUploadFailed);
+    
     // Connect convenience signals for current user's profile - also populate cache
     connect(m_apiClient, &ApiClient::myProfileFetched, 
             this, [this](const QVariantMap& profile) {
@@ -585,6 +591,14 @@ int SerchatAPI::uploadProfilePicture(const QString& filePath) {
 
 int SerchatAPI::uploadBanner(const QString& filePath) {
     return m_apiClient->uploadBanner(filePath);
+}
+
+// ============================================================================
+// API Methods - File Upload
+// ============================================================================
+
+int SerchatAPI::uploadFile(const QString& filePath) {
+    return m_apiClient->uploadFile(filePath);
 }
 
 // ============================================================================

@@ -400,6 +400,10 @@ void ApiClient::emitSuccess(int requestId, const PendingRequest& req, const QVar
             emit profileUpdateSuccess(requestId);
             break;
             
+        case RequestType::UploadFile:
+            emit fileUploadSuccess(requestId, data.value("url").toString());
+            break;
+            
         case RequestType::Servers:
             emit serversFetched(requestId, data.value("items").toList());
             break;
@@ -507,6 +511,10 @@ void ApiClient::emitFailure(int requestId, const PendingRequest& req, const QStr
         case RequestType::UploadProfilePicture:
         case RequestType::UploadBanner:
             emit profileUpdateFailed(requestId, error);
+            break;
+            
+        case RequestType::UploadFile:
+            emit fileUploadFailed(requestId, error);
             break;
             
         case RequestType::Servers:

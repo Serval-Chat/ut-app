@@ -45,3 +45,11 @@ int ApiClient::uploadProfilePicture(const QString& filePath) {
 int ApiClient::uploadBanner(const QString& filePath) {
     return startMultipartPostRequest(RequestType::UploadBanner, "/api/v1/profile/banner", filePath, "banner");
 }
+
+// ============================================================================
+// File API
+// ============================================================================
+
+int ApiClient::uploadFile(const QString& filePath) {
+    return startMultipartPostRequest(RequestType::UploadFile, "/api/v1/files/upload", filePath, "file");
+}

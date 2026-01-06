@@ -37,6 +37,7 @@ enum class RequestType {
     UpdateBio,
     UploadProfilePicture,
     UploadBanner,
+    UploadFile,
     Servers,
     ServerDetails,
     ServerMembers,
@@ -139,6 +140,17 @@ public:
      * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
      */
     int uploadBanner(const QString& filePath);
+    
+    // ========================================================================
+    // File API
+    // ========================================================================
+    
+    /**
+     * @brief Upload a file and get back a URL for sharing.
+     * @param filePath Path to the file to upload
+     * @return Request ID for matching with fileUploadSuccess/fileUploadFailed signals
+     */
+    int uploadFile(const QString& filePath);
     
     // ========================================================================
     // Servers API (implemented in servers.cpp)
@@ -369,6 +381,12 @@ signals:
     void myProfileFetchFailed(const QString& error);
     void profileUpdateSuccess(int requestId);
     void profileUpdateFailed(int requestId, const QString& error);
+    
+    // ========================================================================
+    // File Signals
+    // ========================================================================
+    void fileUploadSuccess(int requestId, const QString& url);
+    void fileUploadFailed(int requestId, const QString& error);
     
     // ========================================================================
     // Server Signals

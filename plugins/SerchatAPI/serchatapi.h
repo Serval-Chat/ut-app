@@ -155,6 +155,17 @@ public:
     Q_INVOKABLE int uploadBanner(const QString& filePath);
     
     // ========================================================================
+    // File API
+    // ========================================================================
+    
+    /**
+     * @brief Upload a file and get back a URL for sharing in messages.
+     * @param filePath Path to the file to upload
+     * @return Request ID for matching with fileUploadSuccess/fileUploadFailed signals
+     */
+    Q_INVOKABLE int uploadFile(const QString& filePath);
+    
+    // ========================================================================
     // Servers API
     // ========================================================================
     
@@ -653,6 +664,10 @@ signals:
     // Convenience signals for simple use (current user's profile only)
     void myProfileFetched(const QVariantMap& profile);
     void myProfileFetchFailed(const QString& error);
+    
+    // File upload signals
+    void fileUploadSuccess(int requestId, const QString& url);
+    void fileUploadFailed(int requestId, const QString& error);
     
     // Server signals
     void serversFetched(int requestId, const QVariantList& servers);

@@ -6,7 +6,8 @@
     "hooks": {
         "serchat": {
             "apparmor": "serchat.apparmor",
-            "desktop":  "serchat.desktop"
+            "desktop":  "serchat.desktop",
+            "content-hub": "contenthub.json"
         }
     },
     "version": "@BUILD_VERSION@",
