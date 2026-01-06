@@ -771,16 +771,11 @@ Rectangle {
         
         // When a message is added, prefetch the sender's profile if needed
         onMessageAdded: {
-            console.log("[MessageView] Message added:", messageId, "isNew:", isNewMessage)
             var message = SerchatAPI.messageModel.getMessage(messageId)
             if (message && message.senderId) {
                 // Cache will auto-fetch if not present
                 SerchatAPI.userProfileCache.fetchProfile(message.senderId)
             }
-        }
-        
-        onCountChanged: {
-            console.log("[MessageView] Model count changed to:", SerchatAPI.messageModel.count)
         }
     }
     
