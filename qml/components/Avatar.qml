@@ -93,16 +93,16 @@ Item {
     // Status indicator
     Rectangle {
         id: statusIndicator
-        width: units.gu(1.5)
-        height: units.gu(1.5)
+        width: avatar.width * 0.3
+        height: avatar.width * 0.3
         radius: width / 2
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.rightMargin: -units.gu(0.1)
-        anchors.bottomMargin: -units.gu(0.1)
+        anchors.rightMargin: -avatar.width * 0.02
+        anchors.bottomMargin: -avatar.width * 0.02
         visible: avatar.showStatus && avatar.status !== ""
         color: Components.ColorUtils.statusColor(avatar.status)
-        // border.width: units.gu(0.2)
+        border.width: avatar.width * 0.04
         border.color: Theme.palette.normal.background
     }
 
