@@ -28,7 +28,7 @@ Item {
     
     // Whether the sheet is currently visible
     property bool opened: false
-    
+
     // Request tracking
     property int profileRequestId: -1
     
@@ -71,10 +71,20 @@ Item {
         id: sheet
         width: parent.width
         height: Math.min(sheetContent.height + units.gu(2), parent.height * 0.7)
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: opened ? 0 : -height
         radius: units.gu(2)
         color: Theme.palette.normal.background
+        
+        y: parent.height - (opened ? height : 0)
+        
+        Behavior on y {
+            NumberAnimation {
+                duration: 250
+                easing.type: Easing.OutCubic
+                onRunningChanged: {
+                    console.log("[UserProfileSheet] Animation running:", running, "from:", from, "to:", to)
+                }
+            }
+        }
         
         // Top rounded corners only
         Rectangle {
@@ -82,10 +92,6 @@ Item {
             width: parent.width
             height: parent.radius
             color: parent.color
-        }
-        
-        Behavior on anchors.bottomMargin {
-            NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
         }
         
         // Handle bar

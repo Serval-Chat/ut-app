@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-06 13:12+0000\n"
+"POT-Creation-Date: 2026-01-06 13:26+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -204,7 +204,7 @@ msgid "API responses will appear here..."
 msgstr ""
 
 #: ../qml/EditProfilePage.qml:28 ../qml/ProfilePage.qml:39
-#: ../qml/components/UserProfileSheet.qml:316
+#: ../qml/components/UserProfileSheet.qml:335
 msgid "Edit Profile"
 msgstr ""
 
@@ -246,7 +246,7 @@ msgid "e.g., they/them, she/her, he/him"
 msgstr ""
 
 #: ../qml/EditProfilePage.qml:185 ../qml/ProfilePage.qml:259
-#: ../qml/components/UserProfileSheet.qml:270
+#: ../qml/components/UserProfileSheet.qml:289
 msgid "About Me"
 msgstr ""
 
@@ -399,7 +399,7 @@ msgid "Password must be at least 6 characters"
 msgstr ""
 
 #: ../qml/ProfilePage.qml:49 ../qml/ProfilePage.qml:409
-#: ../qml/components/UserProfileSheet.qml:351
+#: ../qml/components/UserProfileSheet.qml:370
 msgid "Remove Friend"
 msgstr ""
 
@@ -407,7 +407,7 @@ msgstr ""
 msgid "Message"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:158 ../qml/components/UserProfileSheet.qml:160
+#: ../qml/ProfilePage.qml:158 ../qml/components/UserProfileSheet.qml:179
 msgid "Unknown User"
 msgstr ""
 
@@ -833,23 +833,23 @@ msgstr ""
 msgid "Offline"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:304
+#: ../qml/components/UserProfileSheet.qml:323
 msgid "View Full Profile"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:328
+#: ../qml/components/UserProfileSheet.qml:347
 msgid "Send Message"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:339
+#: ../qml/components/UserProfileSheet.qml:358
 msgid "Add Friend"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:452
+#: ../qml/components/UserProfileSheet.qml:474
 msgid "Error"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:453
+#: ../qml/components/UserProfileSheet.qml:475
 msgid "Could not load profile"
 msgstr ""
 
