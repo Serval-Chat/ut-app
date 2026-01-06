@@ -1,4 +1,5 @@
 import QtQuick 2.7
+import QtGraphicalEffects 1.0
 import Lomiri.Components 1.3
 
 import SerchatAPI 1.0
@@ -72,20 +73,13 @@ Item {
             sourceSize.width: avatar.width * 2   // Cache at 2x for high-DPI displays
             sourceSize.height: avatar.height * 2
             layer.enabled: true
-            layer.effect: ShaderEffect {
-                property variant src: avatarImage
-                fragmentShader: "
-                    varying highp vec2 qt_TexCoord0;
-                    uniform sampler2D src;
-                    void main() {
-                        highp vec2 center = vec2(0.5, 0.5);
-                        highp float dist = distance(qt_TexCoord0, center);
-                        // Smooth anti-aliased edge with feathering
-                        // smoothstep creates a smooth transition in the 0.48-0.5 range
-                        highp float alpha = 1.0 - smoothstep(0.48, 0.5, dist);
-                        highp vec4 texColor = texture2D(src, qt_TexCoord0);
-                        gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
-                    }"
+            layer.effect: OpacityMask {
+                maskSource: Rectangle {
+                    width: avatarImage.width
+                    height: avatarImage.height
+                    radius: width / 2
+                    antialiasing: true
+                }
             }
         }
     }
