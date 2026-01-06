@@ -7,3 +7,6 @@
 venv
 # Generated Lucide icons QRC file (regenerated at build time)
 /assets/lucide-icons.qrc
+
+# POT files generated for translations
+/po/*.pot
