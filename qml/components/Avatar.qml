@@ -80,11 +80,11 @@ Item {
                     void main() {
                         highp vec2 center = vec2(0.5, 0.5);
                         highp float dist = distance(qt_TexCoord0, center);
-                        if (dist > 0.5) {
-                            gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
-                        } else {
-                            gl_FragColor = texture2D(src, qt_TexCoord0);
-                        }
+                        // Smooth anti-aliased edge with feathering
+                        // smoothstep creates a smooth transition in the 0.48-0.5 range
+                        highp float alpha = 1.0 - smoothstep(0.48, 0.5, dist);
+                        highp vec4 texColor = texture2D(src, qt_TexCoord0);
+                        gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
                     }"
             }
         }
