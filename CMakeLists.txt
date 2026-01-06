@@ -22,6 +22,22 @@ set(FULL_PROJECT_NAME "serchat.alexanderrichards")
 set(DATA_DIR /)
 set(DESKTOP_FILE_NAME ${PROJECT_NAME}.desktop)
 
+# Check if Lucide submodule is initialized
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/lucide/icons")
+    message(FATAL_ERROR 
+        "\n"
+        "==================================================================\n"
+        "ERROR: Lucide icons submodule not found!\n"
+        "\n"
+        "Please initialize and clone all git submodules by running:\n"
+        "    git submodule update --init --recursive\n"
+        "\n"
+        "Or if you're cloning this repository for the first time:\n"
+        "    git clone --recursive <repository-url>\n"
+        "==================================================================\n"
+    )
+endif()
+
 # This command figures out the minimum SDK framework for use in the manifest
 # file via the environment variable provided by Clickable or sets a default value otherwise.
 if(DEFINED ENV{SDK_FRAMEWORK})
@@ -68,9 +84,25 @@ install(FILES ${PROJECT_NAME}.apparmor DESTINATION ${DATA_DIR})
 install(FILES contenthub.json DESTINATION ${DATA_DIR})
 install(FILES assets/logo.svg DESTINATION assets)
 
+# Generate Lucide icons QRC file at build time
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/assets/lucide-icons.qrc
+    COMMAND ${CMAKE_COMMAND} -E env python3 ${CMAKE_CURRENT_SOURCE_DIR}/assets/generate-lucide-qrc.py
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/assets
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/generate-lucide-qrc.py
+    COMMENT "Generating Lucide icons QRC file..."
+)
+
+# Add custom target to ensure QRC generation happens before compilation
+add_custom_target(generate_lucide_qrc 
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/lucide-icons.qrc
+)
+
 qt5_add_resources(QT_RESOURCES qml/qml.qrc)
 qt5_add_resources(QT_RESOURCES assets/assets.qrc)
+qt5_add_resources(QT_RESOURCES assets/lucide-icons.qrc)
 add_executable(${PROJECT_NAME} main.cpp ${QT_RESOURCES})
+add_dependencies(${PROJECT_NAME} generate_lucide_qrc)
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS_RELEASE -s)
 target_link_libraries(${PROJECT_NAME} Qt5::Gui Qt5::Qml Qt5::Quick Qt5::QuickControls2 Qt5::Network)
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX})

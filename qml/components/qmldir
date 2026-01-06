@@ -2,3 +2,4 @@ module Components
 
 singleton EmojiData 1.0 EmojiData.qml
 singleton ColorUtils 1.0 ColorUtils.qml
+LucideIcon 1.0 LucideIcon.qml

@@ -44,5 +44,7 @@
     <file>components/MemberListItem.qml</file>
     <file>components/ListHeader.qml</file>
     <file>components/ConversationListItem.qml</file>
+    <file>components/BadgeLike.qml</file>
+    <file>components/LucideIcon.qml</file>
   </qresource>
 </RCC>

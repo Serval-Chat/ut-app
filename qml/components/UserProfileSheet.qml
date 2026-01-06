@@ -227,28 +227,13 @@ Item {
                     Repeater {
                         model: userProfile.badges || []
                         
-                        Rectangle {
-                            width: badgeRow.width + units.gu(1.5)
+                        BadgeLike {
                             height: units.gu(3)
                             radius: units.gu(0.5)
-                            color: modelData.color || Theme.palette.normal.base
-                            
-                            Row {
-                                id: badgeRow
-                                anchors.centerIn: parent
-                                spacing: units.gu(0.5)
-                                
-                                Label {
-                                    text: modelData.icon || ""
-                                    fontSize: "small"
-                                }
-                                
-                                Label {
-                                    text: modelData.name || ""
-                                    fontSize: "x-small"
-                                    color: "white"
-                                }
-                            }
+                            badgeColor: modelData.color || Theme.palette.normal.base
+
+                            icon: modelData.icon || ""
+                            name: modelData.name || ""
                         }
                     }
                 }

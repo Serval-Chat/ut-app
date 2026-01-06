@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: serchat.alexanderrichards\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-06 13:26+0000\n"
+"POT-Creation-Date: 2026-01-06 14:02+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -204,11 +204,11 @@ msgid "API responses will appear here..."
 msgstr ""
 
 #: ../qml/EditProfilePage.qml:28 ../qml/ProfilePage.qml:39
-#: ../qml/components/UserProfileSheet.qml:335
+#: ../qml/components/UserProfileSheet.qml:303
 msgid "Edit Profile"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:33 ../qml/ProfilePage.qml:413
+#: ../qml/EditProfilePage.qml:33 ../qml/ProfilePage.qml:398
 msgid "Cancel"
 msgstr ""
 
@@ -245,8 +245,8 @@ msgstr ""
 msgid "e.g., they/them, she/her, he/him"
 msgstr ""
 
-#: ../qml/EditProfilePage.qml:185 ../qml/ProfilePage.qml:259
-#: ../qml/components/UserProfileSheet.qml:289
+#: ../qml/EditProfilePage.qml:185 ../qml/ProfilePage.qml:244
+#: ../qml/components/UserProfileSheet.qml:257
 msgid "About Me"
 msgstr ""
 
@@ -398,8 +398,8 @@ msgstr ""
 msgid "Password must be at least 6 characters"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:49 ../qml/ProfilePage.qml:409
-#: ../qml/components/UserProfileSheet.qml:370
+#: ../qml/ProfilePage.qml:49 ../qml/ProfilePage.qml:394
+#: ../qml/components/UserProfileSheet.qml:338
 msgid "Remove Friend"
 msgstr ""
 
@@ -407,15 +407,15 @@ msgstr ""
 msgid "Message"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:158 ../qml/components/UserProfileSheet.qml:179
+#: ../qml/ProfilePage.qml:158 ../qml/components/UserProfileSheet.qml:162
 msgid "Unknown User"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:290
+#: ../qml/ProfilePage.qml:275
 msgid "Member Since"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:298 ../qml/components/CreateDMDialog.qml:222
+#: ../qml/ProfilePage.qml:283 ../qml/components/CreateDMDialog.qml:222
 #: ../qml/components/MemberListItem.qml:32
 #: ../qml/components/MessageView.qml:303 ../qml/components/MessageView.qml:596
 #: ../qml/components/MessageView.qml:600
@@ -423,23 +423,23 @@ msgstr ""
 msgid "Unknown"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:324
+#: ../qml/ProfilePage.qml:309
 msgid "Send Friend Request"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:334
+#: ../qml/ProfilePage.qml:319
 msgid "Block User"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:410
+#: ../qml/ProfilePage.qml:395
 msgid "Are you sure you want to remove %1 from your friends?"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:410
+#: ../qml/ProfilePage.qml:395
 msgid "this user"
 msgstr ""
 
-#: ../qml/ProfilePage.qml:418
+#: ../qml/ProfilePage.qml:403
 msgid "Remove"
 msgstr ""
 
@@ -833,23 +833,23 @@ msgstr ""
 msgid "Offline"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:323
+#: ../qml/components/UserProfileSheet.qml:291
 msgid "View Full Profile"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:347
+#: ../qml/components/UserProfileSheet.qml:315
 msgid "Send Message"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:358
+#: ../qml/components/UserProfileSheet.qml:326
 msgid "Add Friend"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:474
+#: ../qml/components/UserProfileSheet.qml:439
 msgid "Error"
 msgstr ""
 
-#: ../qml/components/UserProfileSheet.qml:475
+#: ../qml/components/UserProfileSheet.qml:440
 msgid "Could not load profile"
 msgstr ""
 

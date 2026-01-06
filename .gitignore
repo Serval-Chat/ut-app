@@ -5,3 +5,5 @@
 *.dev.md
 
 venv
+# Generated Lucide icons QRC file (regenerated at build time)
+/assets/lucide-icons.qrc
