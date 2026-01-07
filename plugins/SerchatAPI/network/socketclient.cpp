@@ -117,14 +117,38 @@ void SocketClient::disconnect()
     m_pingTimer->stop();
     m_pongTimeoutTimer->stop();
     m_reconnectTimer->stop();
-    
+
     if (m_socketIOConnected) {
         sendSocketPacket(SOCKET_DISCONNECT, "/");
     }
-    
+
     m_socket->close();
     m_connected = false;
     m_socketIOConnected = false;
+}
+
+void SocketClient::resetReconnectAttempts()
+{
+    m_reconnectAttempts = 0;
+    m_shouldReconnect = true;
+    m_reconnectTimer->stop();
+    qDebug() << "[SocketClient] Reconnect attempts reset";
+}
+
+void SocketClient::checkConnectionHealth()
+{
+    if (!m_connected) {
+        qDebug() << "[SocketClient] Not connected, skipping health check";
+        return;
+    }
+
+    qDebug() << "[SocketClient] Checking connection health";
+
+    // Start the pong timeout timer - if we don't get a response, connection is dead
+    m_pongTimeoutTimer->start(m_pingTimeout);
+
+    // Reset and restart the ping timer to ensure we're monitoring for activity
+    m_pingTimer->start(m_pingInterval);
 }
 
 void SocketClient::emitEvent(const QString& event, const QVariantMap& data)

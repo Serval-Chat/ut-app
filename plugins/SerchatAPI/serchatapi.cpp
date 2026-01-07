@@ -1,6 +1,7 @@
 #include <QDebug>
 #include <QDateTime>
 #include <QStandardPaths>
+#include <QGuiApplication>
 
 #include "serchatapi.h"
 #include "network/networkclient.h"
@@ -136,6 +137,16 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::handleChannelsFetched);
     connect(m_apiClient, &ApiClient::channelsFetchFailed,
             this, &SerchatAPI::channelsFetchFailed);
+
+    // Also connect to ChannelCache for its internal refresh mechanism
+    connect(m_apiClient, &ApiClient::channelsFetched,
+            m_channelCache, &ChannelCache::onChannelsFetched);
+    connect(m_apiClient, &ApiClient::channelsFetchFailed,
+            m_channelCache, &ChannelCache::onChannelsFetchFailed);
+    connect(m_apiClient, &ApiClient::categoriesFetched,
+            m_channelCache, &ChannelCache::onCategoriesFetched);
+    connect(m_apiClient, &ApiClient::categoriesFetchFailed,
+            m_channelCache, &ChannelCache::onCategoriesFetchFailed);
     connect(m_apiClient, &ApiClient::channelDetailsFetched,
             this, &SerchatAPI::channelDetailsFetched);
     connect(m_apiClient, &ApiClient::channelDetailsFetchFailed,
@@ -191,6 +202,12 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::handleMessagesFetched);
     connect(m_apiClient, &ApiClient::messagesFetchFailed,
             this, &SerchatAPI::messagesFetchFailed);
+
+    // Also connect to MessageCache for its internal refresh mechanism
+    connect(m_apiClient, &ApiClient::messagesFetched,
+            m_messageCache, &MessageCache::onMessagesFetched);
+    connect(m_apiClient, &ApiClient::messagesFetchFailed,
+            m_messageCache, &MessageCache::onMessagesFetchFailed);
     connect(m_apiClient, &ApiClient::messageSent,
             this, &SerchatAPI::messageSent);
     connect(m_apiClient, &ApiClient::messageSendFailed,
@@ -393,6 +410,10 @@ SerchatAPI::SerchatAPI() {
     connect(m_socketClient, &SocketClient::emojiUpdated,
             this, &SerchatAPI::emojiUpdated);
 
+    // Connect to app lifecycle events for Ubuntu Touch suspension handling
+    connect(qGuiApp, &QGuiApplication::applicationStateChanged,
+            this, &SerchatAPI::handleApplicationStateChanged);
+
     // Restore any existing auth state
     restoreAuthState();
 
@@ -506,6 +527,11 @@ void SerchatAPI::setViewingDMRecipientId(const QString& id) {
         m_viewingDMRecipientId = id;
         emit viewingDMRecipientIdChanged();
     }
+}
+
+void SerchatAPI::setActiveChannel(const QString& serverId, const QString& channelId) {
+    m_messageCache->setActiveChannel(serverId, channelId);
+    qDebug() << "[SerchatAPI] Active channel set to:" << serverId << "/" << channelId;
 }
 
 void SerchatAPI::setDebug(bool debug) {
@@ -797,6 +823,14 @@ void SerchatAPI::clearAuthState() {
 
     // Clear presence and typing state
     m_onlineUsers.clear();
+
+    // Delete all typing timers to prevent memory leak
+    for (auto& channelTypers : m_typingUsers) {
+        for (QTimer* timer : channelTypers) {
+            timer->stop();
+            timer->deleteLater();
+        }
+    }
     m_typingUsers.clear();
 
     // Clear unread state
@@ -1559,12 +1593,37 @@ void SerchatAPI::handleSocketConnected() {
 
 void SerchatAPI::handleSocketDisconnected() {
     qDebug() << "[SerchatAPI] Socket disconnected";
-    
+
     // Clear presence tracking since we'll get fresh state on reconnect
     m_onlineUsers.clear();
-    
+
+    // Clear typing indicators since they're no longer valid
+    for (auto& channelTypers : m_typingUsers) {
+        for (QTimer* timer : channelTypers) {
+            timer->stop();
+            timer->deleteLater();
+        }
+    }
+    m_typingUsers.clear();
+
     // Forward signal to QML
     emit socketDisconnected();
+}
+
+// ============================================================================
+// App Lifecycle Handling (for Ubuntu Touch suspension)
+// ============================================================================
+
+void SerchatAPI::handleApplicationStateChanged(Qt::ApplicationState state) {
+    if (state == Qt::ApplicationActive) {
+        // App resumed - check if socket needs reconnection
+        // Cache refresh is handled by handleSocketConnected() when socket reconnects
+        if (isLoggedIn() && hasValidAuthToken() && !isSocketConnected()) {
+            qDebug() << "[SerchatAPI] App activated - socket disconnected, reconnecting...";
+            m_socketClient->resetReconnectAttempts();
+            connectSocket();
+        }
+    }
 }
 
 // ============================================================================

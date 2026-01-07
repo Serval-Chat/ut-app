@@ -9,6 +9,7 @@
 #include <QSet>
 #include <QSettings>
 #include <QTimer>
+#include <QGuiApplication>
 
 class NetworkClient;
 class AuthClient;
@@ -630,6 +631,12 @@ public:
     QString viewingDMRecipientId() const;
     void setViewingDMRecipientId(const QString& id);
 
+    /**
+     * @brief Set the currently active channel for cache prioritization.
+     * Call this when navigating to a channel to ensure its messages are refreshed first.
+     */
+    Q_INVOKABLE void setActiveChannel(const QString& serverId, const QString& channelId);
+
     // Token accessors (mainly for debugging)
     QString authToken() const;
     bool hasValidAuthToken() const;
@@ -932,9 +939,12 @@ private slots:
     void onAuthRegisterSuccessful(const QVariantMap& userData);
     void onAuthRegisterFailed(const QString& error);
     void onAuthNetworkError(const QString& error);
-    
+
     // Network client handlers
     void onNetworkAuthTokenExpired();
+
+    // App lifecycle handler for suspension/resume
+    void handleApplicationStateChanged(Qt::ApplicationState state);
     
     // Socket connection handlers (for cache refresh)
     void handleSocketConnected();

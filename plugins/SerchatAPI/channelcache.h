@@ -163,7 +163,7 @@ signals:
     void categoriesLoaded(const QString& serverId);
     void categoryUpdated(const QString& serverId, const QString& categoryId);
 
-private slots:
+public slots:
     void onChannelsFetched(int requestId, const QString& serverId, const QVariantList& channels);
     void onChannelsFetchFailed(int requestId, const QString& serverId, const QString& error);
     void onCategoriesFetched(int requestId, const QString& serverId, const QVariantList& categories);

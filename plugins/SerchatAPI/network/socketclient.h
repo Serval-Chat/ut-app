@@ -51,10 +51,17 @@ public:
 public slots:
     /// Connect to a Socket.IO server
     void connect(const QString& url, const QString& authToken = QString());
-    
+
     /// Disconnect from the server
     void disconnect();
-    
+
+    /// Reset reconnection attempts counter (call before reconnecting after app resume)
+    void resetReconnectAttempts();
+
+    /// Check if the connection is truly alive by sending a ping
+    /// If no response within timeout, the connection will be closed and reconnected
+    void checkConnectionHealth();
+
     /// Emit an event to the server
     void emitEvent(const QString& event, const QVariantMap& data = {});
     void emitEvent(const QString& event, const QVariantList& args);

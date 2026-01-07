@@ -211,10 +211,10 @@ signals:
     void moreMessagesLoaded(const QString& channelId);
     void loadingMessages(const QString& channelId, bool isLoading);
 
-private slots:
-    void onMessagesFetched(int requestId, const QString& serverId, const QString& channelId, 
+public slots:
+    void onMessagesFetched(int requestId, const QString& serverId, const QString& channelId,
                            const QVariantList& messages);
-    void onMessagesFetchFailed(int requestId, const QString& serverId, const QString& channelId, 
+    void onMessagesFetchFailed(int requestId, const QString& serverId, const QString& channelId,
                                 const QString& error);
 
 private:
