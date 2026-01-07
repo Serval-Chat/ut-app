@@ -57,11 +57,17 @@ Item {
     // The rendered HTML content (using C++ parser)
     // Dependencies on cache versions ensure re-render when data changes
     property string renderedHtml: {
-        // Reference cache versions to ensure binding updates
-        var ev = emojiCacheVersion
-        var pv = profileCacheVersion
+        // Create explicit dependencies on all relevant properties
+        var _text = textWithoutFiles
+        var _emojiVersion = emojiCacheVersion
+        var _profileVersion = profileCacheVersion
+        var _emojiSize = currentEmojiSize
+        var _textColor = textColor
+        var _linkColor = linkColor
+        var _codeBackground = codeBackground
+        
         // Render text without file markers
-        return SerchatAPI.markdownParser.renderMarkdown(textWithoutFiles, textColor, linkColor, codeBackground, currentEmojiSize)
+        return SerchatAPI.markdownParser.renderMarkdown(_text, _textColor, _linkColor, _codeBackground, _emojiSize)
     }
 
     implicitWidth: contentColumn.implicitWidth

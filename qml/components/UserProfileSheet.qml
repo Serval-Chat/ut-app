@@ -260,7 +260,7 @@ Item {
                             color: Theme.palette.normal.backgroundSecondaryText
                         }
                         
-                        MarkdownText {
+                        Components.MarkdownText {
                             text: userProfile.bio ? 
                                   (userProfile.bio.length > 150 ? 
                                    userProfile.bio.substring(0, 150) + "..." : userProfile.bio) : ""

@@ -394,7 +394,7 @@ QString MarkdownParser::renderMarkdown(const QString& input,
     while (emojiIt.hasNext()) {
         QRegularExpressionMatch match = emojiIt.next();
         QString emojiId = match.captured(1);
-        QString placeholder = QStringLiteral("___EMOJI_%1___").arg(emojiPlaceholders.size());
+        QString placeholder = QStringLiteral("EMOJIPLACEHOLDER%1EMOJIPLACEHOLDER").arg(emojiPlaceholders.size());
 
         QString emojiUrl;
         if (m_emojiCache) {
@@ -575,7 +575,7 @@ QString MarkdownParser::renderMarkdown(const QString& input,
 
     // Restore emojis
     for (int i = 0; i < emojiPlaceholders.size(); ++i) {
-        html.replace(QStringLiteral("___EMOJI_%1___").arg(i), emojiPlaceholders[i]);
+        html.replace(QStringLiteral("EMOJIPLACEHOLDER%1EMOJIPLACEHOLDER").arg(i), emojiPlaceholders[i]);
     }
 
     // Restore user mentions
