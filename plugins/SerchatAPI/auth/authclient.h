@@ -34,6 +34,12 @@ public:
     /// Register a new user account
     void registerUser(const QString& login, const QString& username, 
                       const QString& password, const QString& inviteToken);
+    
+    /// Change the user's login/email (requires current password)
+    void changeLogin(const QString& newLogin, const QString& password);
+    
+    /// Change the user's password (requires current password)
+    void changePassword(const QString& currentPassword, const QString& newPassword);
 
     /// Cancel any pending authentication requests
     void cancelPendingRequests();
@@ -56,12 +62,22 @@ signals:
     void registerSuccessful(const QVariantMap& userData);
     /// Emitted when registration fails
     void registerFailed(const QString& error);
+    /// Emitted when login/email change is successful
+    void changeLoginSuccessful(const QVariantMap& response);
+    /// Emitted when login/email change fails
+    void changeLoginFailed(const QString& error);
+    /// Emitted when password change is successful
+    void changePasswordSuccessful(const QVariantMap& response);
+    /// Emitted when password change fails
+    void changePasswordFailed(const QString& error);
     /// Emitted on network-level error (no response from server)
     void networkError(const QString& error);
 
 private slots:
     void onLoginReplyFinished();
     void onRegisterReplyFinished();
+    void onChangeLoginReplyFinished();
+    void onChangePasswordReplyFinished();
 
 private:
     NetworkClient* m_networkClient;
@@ -71,6 +87,8 @@ private:
     // Using QPointer for safe reply tracking
     QPointer<QNetworkReply> m_loginReply;
     QPointer<QNetworkReply> m_registerReply;
+    QPointer<QNetworkReply> m_changeLoginReply;
+    QPointer<QNetworkReply> m_changePasswordReply;
 
     void abortReply(QPointer<QNetworkReply>& reply);
 };

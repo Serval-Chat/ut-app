@@ -1,5 +1,6 @@
 import QtQuick 2.7
 import Lomiri.Components 1.3
+import Lomiri.Components.Popups 1.3
 import QtQuick.Layouts 1.3
 
 import SerchatAPI 1.0
@@ -137,7 +138,9 @@ Page {
             ListItem {
                 height: layout1.height + divider.height
                 onClicked: {
-                    // TODO: Change username
+                    PopupUtils.open(changeUsernameDialogComponent, settingsPage, {
+                        currentUsername: userProfile.username || ""
+                    })
                 }
                 
                 ListItemLayout {
@@ -156,7 +159,9 @@ Page {
             ListItem {
                 height: layout2.height + divider.height
                 onClicked: {
-                    // TODO: Change email
+                    PopupUtils.open(changeEmailDialogComponent, settingsPage, {
+                        currentEmail: userProfile.login || ""
+                    })
                 }
                 
                 ListItemLayout {
@@ -175,7 +180,7 @@ Page {
             ListItem {
                 height: layout3.height + divider.height
                 onClicked: {
-                    // TODO: Change password
+                    PopupUtils.open(changePasswordDialogComponent, settingsPage)
                 }
                 
                 ListItemLayout {
@@ -381,5 +386,45 @@ Page {
     Component.onCompleted: {
         SerchatAPI.getMyProfile()
         SerchatAPI.getSystemInfo()
+    }
+    
+    // Dialog components
+    Component {
+        id: changeUsernameDialogComponent
+        Components.ChangeUsernameDialog {
+            onUsernameChanged: {
+                // Clear cache and refresh profile after username change
+                var userId = userProfile._id || userProfile.id
+                SerchatAPI.clearCacheFor("profile:me")
+                if (userId) {
+                    SerchatAPI.clearCacheFor("profile:" + userId)
+                }
+                SerchatAPI.getMyProfile()
+            }
+        }
+    }
+    
+    Component {
+        id: changeEmailDialogComponent
+        Components.ChangeEmailDialog {
+            onEmailChanged: {
+                // Clear cache and refresh profile after email change
+                var userId = userProfile._id || userProfile.id
+                SerchatAPI.clearCacheFor("profile:me")
+                if (userId) {
+                    SerchatAPI.clearCacheFor("profile:" + userId)
+                }
+                SerchatAPI.getMyProfile()
+            }
+        }
+    }
+    
+    Component {
+        id: changePasswordDialogComponent
+        Components.ChangePasswordDialog {
+            onPasswordChanged: {
+                // Show success message (password change doesn't affect displayed data)
+            }
+        }
     }
 }

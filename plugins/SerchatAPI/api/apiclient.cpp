@@ -397,6 +397,7 @@ void ApiClient::emitSuccess(int requestId, const PendingRequest& req, const QVar
         case RequestType::UpdateBio:
         case RequestType::UploadProfilePicture:
         case RequestType::UploadBanner:
+        case RequestType::ChangeUsername:
             emit profileUpdateSuccess(requestId);
             break;
             
@@ -510,6 +511,7 @@ void ApiClient::emitFailure(int requestId, const PendingRequest& req, const QStr
         case RequestType::UpdateBio:
         case RequestType::UploadProfilePicture:
         case RequestType::UploadBanner:
+        case RequestType::ChangeUsername:
             emit profileUpdateFailed(requestId, error);
             break;
             

@@ -31,6 +31,8 @@ void AuthClient::clearAuthToken() {
 void AuthClient::cancelPendingRequests() {
     abortReply(m_loginReply);
     abortReply(m_registerReply);
+    abortReply(m_changeLoginReply);
+    abortReply(m_changePasswordReply);
 }
 
 void AuthClient::abortReply(QPointer<QNetworkReply>& reply) {
@@ -161,4 +163,116 @@ void AuthClient::onRegisterReplyFinished() {
 
     m_authToken = result.data["token"].toString();
     emit registerSuccessful(result.data);
+}
+
+void AuthClient::changeLogin(const QString& newLogin, const QString& password) {
+    // Input validation
+    if (newLogin.isEmpty() || password.isEmpty()) {
+        emit changeLoginFailed("New login and password cannot be empty");
+        return;
+    }
+
+    if (m_baseUrl.isEmpty()) {
+        emit networkError("Base URL not set");
+        return;
+    }
+
+    // Cancel any existing changeLogin request
+    abortReply(m_changeLoginReply);
+
+    QVariantMap requestData;
+    requestData["newLogin"] = newLogin;
+    requestData["password"] = password;
+
+    QUrl url = buildUrl(m_baseUrl, "/api/v1/auth/login");
+    QByteArray jsonData = serializeToJson(requestData);
+
+    m_changeLoginReply = m_networkClient->patch(url, jsonData);
+    connect(m_changeLoginReply, &QNetworkReply::finished, this, &AuthClient::onChangeLoginReplyFinished);
+}
+
+void AuthClient::changePassword(const QString& currentPassword, const QString& newPassword) {
+    // Input validation
+    if (currentPassword.isEmpty() || newPassword.isEmpty()) {
+        emit changePasswordFailed("Current and new password cannot be empty");
+        return;
+    }
+
+    if (m_baseUrl.isEmpty()) {
+        emit networkError("Base URL not set");
+        return;
+    }
+
+    // Cancel any existing changePassword request
+    abortReply(m_changePasswordReply);
+
+    QVariantMap requestData;
+    requestData["currentPassword"] = currentPassword;
+    requestData["newPassword"] = newPassword;
+
+    QUrl url = buildUrl(m_baseUrl, "/api/v1/auth/password");
+    QByteArray jsonData = serializeToJson(requestData);
+
+    m_changePasswordReply = m_networkClient->patch(url, jsonData);
+    connect(m_changePasswordReply, &QNetworkReply::finished, this, &AuthClient::onChangePasswordReplyFinished);
+}
+
+void AuthClient::onChangeLoginReplyFinished() {
+    QNetworkReply* reply = m_changeLoginReply;
+    m_changeLoginReply = nullptr;
+
+    if (!reply) return;
+
+    ApiResult result = handleReply(reply);
+    reply->deleteLater();
+
+    if (!result.success) {
+        // Provide more specific error messages for change login
+        QString errorMsg = result.errorMessage;
+        if (result.statusCode == 400) {
+            errorMsg = "Invalid login format";
+        } else if (result.statusCode == 401) {
+            errorMsg = "Invalid password";
+        } else if (result.statusCode == 409) {
+            errorMsg = "Login already taken";
+        }
+        emit changeLoginFailed(errorMsg);
+        return;
+    }
+
+    // Update token if provided (server may issue new token)
+    if (result.data.contains("token")) {
+        setAuthToken(result.data["token"].toString());
+    }
+
+    emit changeLoginSuccessful(result.data);
+}
+
+void AuthClient::onChangePasswordReplyFinished() {
+    QNetworkReply* reply = m_changePasswordReply;
+    m_changePasswordReply = nullptr;
+
+    if (!reply) return;
+
+    ApiResult result = handleReply(reply);
+    reply->deleteLater();
+
+    if (!result.success) {
+        // Provide more specific error messages for change password
+        QString errorMsg = result.errorMessage;
+        if (result.statusCode == 400) {
+            errorMsg = "Invalid password format";
+        } else if (result.statusCode == 401) {
+            errorMsg = "Invalid current password";
+        }
+        emit changePasswordFailed(errorMsg);
+        return;
+    }
+
+    // Update token if provided (server may issue new token)
+    if (result.data.contains("token")) {
+        setAuthToken(result.data["token"].toString());
+    }
+
+    emit changePasswordSuccessful(result.data);
 }

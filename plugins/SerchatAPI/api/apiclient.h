@@ -37,6 +37,7 @@ enum class RequestType {
     UpdateBio,
     UploadProfilePicture,
     UploadBanner,
+    ChangeUsername,
     UploadFile,
     Servers,
     ServerDetails,
@@ -140,6 +141,13 @@ public:
      * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
      */
     int uploadBanner(const QString& filePath);
+    
+    /**
+     * @brief Change the current user's username.
+     * @param newUsername The new username
+     * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
+     */
+    int changeUsername(const QString& newUsername);
     
     // ========================================================================
     // File API

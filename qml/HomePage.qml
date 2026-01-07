@@ -1303,7 +1303,12 @@ Page {
         
         onUsernameChanged: {
             console.log("[HomePage] Username changed:", oldUsername, "->", newUsername)
-            // TODO: Update username in all relevant places
+            // Clear cache and refresh profile when username changes
+            SerchatAPI.clearCacheFor("profile:me")
+            if (userId) {
+                SerchatAPI.clearCacheFor("profile:" + userId)
+            }
+            SerchatAPI.getMyProfile()
         }
         
         // Admin events

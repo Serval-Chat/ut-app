@@ -3,3 +3,6 @@ module Components
 singleton EmojiData 1.0 EmojiData.qml
 singleton ColorUtils 1.0 ColorUtils.qml
 LucideIcon 1.0 LucideIcon.qml
+ChangeUsernameDialog 1.0 ChangeUsernameDialog.qml
+ChangeEmailDialog 1.0 ChangeEmailDialog.qml
+ChangePasswordDialog 1.0 ChangePasswordDialog.qml

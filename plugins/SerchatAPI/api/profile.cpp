@@ -46,6 +46,12 @@ int ApiClient::uploadBanner(const QString& filePath) {
     return startMultipartPostRequest(RequestType::UploadBanner, "/api/v1/profile/banner", filePath, "banner");
 }
 
+int ApiClient::changeUsername(const QString& newUsername) {
+    QJsonObject payload;
+    payload["newUsername"] = newUsername;
+    return startPatchRequest(RequestType::ChangeUsername, "/api/v1/profile/username", payload);
+}
+
 // ============================================================================
 // File API
 // ============================================================================

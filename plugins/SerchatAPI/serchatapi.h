@@ -155,6 +155,27 @@ public:
      */
     Q_INVOKABLE int uploadBanner(const QString& filePath);
     
+    /**
+     * @brief Change the current user's username.
+     * @param newUsername The new username
+     * @return Request ID for matching with profileUpdateSuccess/profileUpdateFailed signals
+     */
+    Q_INVOKABLE int changeUsername(const QString& newUsername);
+    
+    /**
+     * @brief Change the current user's login/email (requires password confirmation).
+     * @param newLogin The new login/email
+     * @param password The current password for confirmation
+     */
+    Q_INVOKABLE void changeLogin(const QString& newLogin, const QString& password);
+    
+    /**
+     * @brief Change the current user's password.
+     * @param currentPassword The current password
+     * @param newPassword The new password
+     */
+    Q_INVOKABLE void changePassword(const QString& currentPassword, const QString& newPassword);
+    
     // ========================================================================
     // File API
     // ========================================================================
@@ -649,6 +670,10 @@ signals:
     void registerFailed(const QString& reason);
     void authTokenInvalid();
     void loggedInChanged();
+    void changeLoginSuccessful();
+    void changeLoginFailed(const QString& reason);
+    void changePasswordSuccessful();
+    void changePasswordFailed(const QString& reason);
 
     // Configuration signals
     void apiBaseUrlChanged();
@@ -938,6 +963,10 @@ private slots:
     void onAuthLoginFailed(const QString& error);
     void onAuthRegisterSuccessful(const QVariantMap& userData);
     void onAuthRegisterFailed(const QString& error);
+    void onAuthChangeLoginSuccessful(const QVariantMap& response);
+    void onAuthChangeLoginFailed(const QString& error);
+    void onAuthChangePasswordSuccessful(const QVariantMap& response);
+    void onAuthChangePasswordFailed(const QString& error);
     void onAuthNetworkError(const QString& error);
 
     // Network client handlers

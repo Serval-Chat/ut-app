@@ -79,6 +79,14 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::onAuthRegisterSuccessful);
     connect(m_authClient, &AuthClient::registerFailed, 
             this, &SerchatAPI::onAuthRegisterFailed);
+    connect(m_authClient, &AuthClient::changeLoginSuccessful,
+            this, &SerchatAPI::onAuthChangeLoginSuccessful);
+    connect(m_authClient, &AuthClient::changeLoginFailed,
+            this, &SerchatAPI::onAuthChangeLoginFailed);
+    connect(m_authClient, &AuthClient::changePasswordSuccessful,
+            this, &SerchatAPI::onAuthChangePasswordSuccessful);
+    connect(m_authClient, &AuthClient::changePasswordFailed,
+            this, &SerchatAPI::onAuthChangePasswordFailed);
     connect(m_authClient, &AuthClient::networkError, 
             this, &SerchatAPI::onAuthNetworkError);
 
@@ -619,6 +627,18 @@ int SerchatAPI::uploadBanner(const QString& filePath) {
     return m_apiClient->uploadBanner(filePath);
 }
 
+int SerchatAPI::changeUsername(const QString& newUsername) {
+    return m_apiClient->changeUsername(newUsername);
+}
+
+void SerchatAPI::changeLogin(const QString& newLogin, const QString& password) {
+    m_authClient->changeLogin(newLogin, password);
+}
+
+void SerchatAPI::changePassword(const QString& currentPassword, const QString& newPassword) {
+    m_authClient->changePassword(currentPassword, newPassword);
+}
+
 // ============================================================================
 // API Methods - File Upload
 // ============================================================================
@@ -926,6 +946,34 @@ void SerchatAPI::onAuthNetworkError(const QString& error) {
         m_registerInProgress = false;
         emit registerFailed(QStringLiteral("Network error: %1").arg(error));
     }
+}
+
+void SerchatAPI::onAuthChangeLoginSuccessful(const QVariantMap& response) {
+    qDebug() << "[SerchatAPI] Change login successful";
+    // Update token if server provided a new one
+    if (response.contains("token")) {
+        m_settings->setValue("authToken", response["token"].toString());
+    }
+    emit changeLoginSuccessful();
+}
+
+void SerchatAPI::onAuthChangeLoginFailed(const QString& error) {
+    qDebug() << "[SerchatAPI] Change login failed:" << error;
+    emit changeLoginFailed(error);
+}
+
+void SerchatAPI::onAuthChangePasswordSuccessful(const QVariantMap& response) {
+    qDebug() << "[SerchatAPI] Change password successful";
+    // Update token if server provided a new one
+    if (response.contains("token")) {
+        m_settings->setValue("authToken", response["token"].toString());
+    }
+    emit changePasswordSuccessful();
+}
+
+void SerchatAPI::onAuthChangePasswordFailed(const QString& error) {
+    qDebug() << "[SerchatAPI] Change password failed:" << error;
+    emit changePasswordFailed(error);
 }
 
 void SerchatAPI::onNetworkAuthTokenExpired() {

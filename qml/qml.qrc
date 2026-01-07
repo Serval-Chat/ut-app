@@ -46,5 +46,8 @@
     <file>components/ConversationListItem.qml</file>
     <file>components/BadgeLike.qml</file>
     <file>components/LucideIcon.qml</file>
+    <file>components/ChangePasswordDialog.qml</file>
+    <file>components/ChangeUsernameDialog.qml</file>
+    <file>components/ChangeEmailDialog.qml</file>
   </qresource>
 </RCC>
