@@ -20,6 +20,7 @@ class GenericListModel;
 class ChannelListModel;
 class EmojiCache;
 class UserProfileCache;
+class ServerMemberCache;
 class ChannelCache;
 class MessageCache;
 class MarkdownParser;
@@ -73,6 +74,7 @@ class SerchatAPI : public QObject {
     // Global caches for emojis and user profiles - eliminates prop drilling in QML
     Q_PROPERTY(EmojiCache* emojiCache READ emojiCache CONSTANT)
     Q_PROPERTY(UserProfileCache* userProfileCache READ userProfileCache CONSTANT)
+    Q_PROPERTY(ServerMemberCache* serverMemberCache READ serverMemberCache CONSTANT)
     Q_PROPERTY(ChannelCache* channelCache READ channelCache CONSTANT)
     Q_PROPERTY(MessageCache* messageCache READ messageCache CONSTANT)
 
@@ -940,6 +942,12 @@ public:
     UserProfileCache* userProfileCache() const { return m_userProfileCache; }
     
     /**
+     * @brief Get the server member cache.
+     * Provides per-server member data including roles and permissions.
+     */
+    ServerMemberCache* serverMemberCache() const { return m_serverMemberCache; }
+    
+    /**
      * @brief Get the global channel cache.
      * Provides centralized channel storage with TTL and automatic refresh.
      */
@@ -990,6 +998,17 @@ private slots:
     void handleCategoryUpdated(const QString& serverId, const QVariantMap& category);
     void handleCategoryDeleted(const QString& serverId, const QString& categoryId);
     
+    // Role event handlers for cache updates
+    void handleRoleCreated(const QString& serverId, const QVariantMap& role);
+    void handleRoleUpdated(const QString& serverId, const QVariantMap& role);
+    void handleRoleDeleted(const QString& serverId, const QString& roleId);
+    void handleRolesReordered(const QString& serverId, const QVariantList& rolePositions);
+    
+    // Member event handlers for cache updates
+    void handleMemberAdded(const QString& serverId, const QString& userId);
+    void handleMemberRemoved(const QString& serverId, const QString& userId);
+    void handleMemberUpdated(const QString& serverId, const QString& userId, const QVariantMap& member);
+    
     // Friend handlers
     void handleFriendsFetched(int requestId, const QVariantList& friends);
     void handleFriendRemovedApi(int requestId, const QVariantMap& response);
@@ -1018,6 +1037,7 @@ private:
     // Global caches (owned by this class, exposed to QML)
     EmojiCache* m_emojiCache;
     UserProfileCache* m_userProfileCache;
+    ServerMemberCache* m_serverMemberCache;
     ChannelCache* m_channelCache;
     MessageCache* m_messageCache;
 

@@ -8,6 +8,7 @@ set(
     apibase.cpp
     emojicache.cpp
     userprofilecache.cpp
+    servermembercache.cpp
     channelcache.cpp
     messagecache.cpp
     markdownparser.cpp

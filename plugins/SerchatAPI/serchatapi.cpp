@@ -13,6 +13,7 @@
 #include "models/channellistmodel.h"
 #include "emojicache.h"
 #include "userprofilecache.h"
+#include "servermembercache.h"
 #include "channelcache.h"
 #include "messagecache.h"
 #include "markdownparser.h"
@@ -43,6 +44,7 @@ SerchatAPI::SerchatAPI() {
     // These provide centralized storage, eliminating prop drilling in QML
     m_emojiCache = new EmojiCache(this);
     m_userProfileCache = new UserProfileCache(this);
+    m_serverMemberCache = new ServerMemberCache(this);
     m_channelCache = new ChannelCache(this);
     m_messageCache = new MessageCache(this);
 
@@ -64,6 +66,7 @@ SerchatAPI::SerchatAPI() {
     m_emojiCache->setBaseUrl(baseUrl);
     m_userProfileCache->setApiClient(m_apiClient);
     m_userProfileCache->setBaseUrl(baseUrl);
+    m_serverMemberCache->setApiClient(m_apiClient);
     m_channelCache->setApiClient(m_apiClient);
     m_messageCache->setApiClient(m_apiClient);
 
@@ -382,23 +385,23 @@ SerchatAPI::SerchatAPI() {
     connect(m_socketClient, &SocketClient::serverOwnershipTransferred,
             this, &SerchatAPI::serverOwnershipTransferred);
     
-    // Real-time role events
+    // Real-time role events - route through internal handlers to update cache
     connect(m_socketClient, &SocketClient::roleCreated,
-            this, &SerchatAPI::roleCreated);
+            this, &SerchatAPI::handleRoleCreated);
     connect(m_socketClient, &SocketClient::roleUpdated,
-            this, &SerchatAPI::roleUpdated);
+            this, &SerchatAPI::handleRoleUpdated);
     connect(m_socketClient, &SocketClient::roleDeleted,
-            this, &SerchatAPI::roleDeleted);
+            this, &SerchatAPI::handleRoleDeleted);
     connect(m_socketClient, &SocketClient::rolesReordered,
-            this, &SerchatAPI::rolesReordered);
+            this, &SerchatAPI::handleRolesReordered);
     
-    // Real-time member update events
+    // Real-time member update events - route through internal handlers to update cache
     connect(m_socketClient, &SocketClient::memberAdded,
-            this, &SerchatAPI::memberAdded);
+            this, &SerchatAPI::handleMemberAdded);
     connect(m_socketClient, &SocketClient::memberRemoved,
-            this, &SerchatAPI::memberRemoved);
+            this, &SerchatAPI::handleMemberRemoved);
     connect(m_socketClient, &SocketClient::memberUpdated,
-            this, &SerchatAPI::memberUpdated);
+            this, &SerchatAPI::handleMemberUpdated);
     
     // Real-time user profile events
     connect(m_socketClient, &SocketClient::userUpdated,
@@ -826,6 +829,7 @@ void SerchatAPI::clearAuthState() {
     // Clear all cached data to prevent account data leakage
     m_emojiCache->clear();
     m_userProfileCache->clear();
+    m_serverMemberCache->clear();
     m_channelCache->clear();
     m_messageCache->clear();
 
@@ -1205,6 +1209,9 @@ void SerchatAPI::handleServerMembersFetched(int requestId, const QString& server
     // This helps resolve user mentions and avatars without per-user API calls
     m_userProfileCache->updateProfiles(members);
     
+    // Update the server member cache with member data (includes roles)
+    m_serverMemberCache->updateServerMembers(serverId, members);
+    
     // Forward the signal to QML for any additional handling
     emit serverMembersFetched(requestId, serverId, members);
 }
@@ -1213,6 +1220,9 @@ void SerchatAPI::handleServerRolesFetched(int requestId, const QString& serverId
     // Populate the roles model with the fetched data
     m_rolesModel->setItems(roles);
     qDebug() << "[SerchatAPI] Roles model populated with" << roles.size() << "roles for server:" << serverId;
+
+    // Update the server member cache with role data
+    m_serverMemberCache->updateServerRoles(serverId, roles);
 
     // Forward the signal to QML for any additional handling
     emit serverRolesFetched(requestId, serverId, roles);
@@ -1785,4 +1795,91 @@ void SerchatAPI::handleFriendRemoved(const QString& username, const QString& use
     // Remove from friends model
     m_friendsModel->removeItem(userId);
     emit friendRemoved(username, userId);
+}
+
+// ============================================================================
+// Role event handlers for server member cache
+// ============================================================================
+
+void SerchatAPI::handleRoleCreated(const QString& serverId, const QVariantMap& role) {
+    qDebug() << "[SerchatAPI] Role created in server:" << serverId;
+    
+    // Refresh server roles to get updated list
+    // The cache will be updated when the fetch completes
+    if (!serverId.isEmpty()) {
+        getServerRoles(serverId, false);  // Force refresh
+    }
+    
+    emit roleCreated(serverId, role);
+}
+
+void SerchatAPI::handleRoleUpdated(const QString& serverId, const QVariantMap& role) {
+    qDebug() << "[SerchatAPI] Role updated in server:" << serverId;
+    
+    // Refresh server roles to get updated role data
+    if (!serverId.isEmpty()) {
+        getServerRoles(serverId, false);  // Force refresh
+    }
+    
+    emit roleUpdated(serverId, role);
+}
+
+void SerchatAPI::handleRoleDeleted(const QString& serverId, const QString& roleId) {
+    qDebug() << "[SerchatAPI] Role deleted in server:" << serverId << "roleId:" << roleId;
+    
+    // Refresh server roles to get updated list
+    if (!serverId.isEmpty()) {
+        getServerRoles(serverId, false);  // Force refresh
+    }
+    
+    emit roleDeleted(serverId, roleId);
+}
+
+void SerchatAPI::handleRolesReordered(const QString& serverId, const QVariantList& rolePositions) {
+    qDebug() << "[SerchatAPI] Roles reordered in server:" << serverId;
+    
+    // Refresh server roles to get new positions
+    if (!serverId.isEmpty()) {
+        getServerRoles(serverId, false);  // Force refresh
+    }
+    
+    emit rolesReordered(serverId, rolePositions);
+}
+
+// ============================================================================
+// Member event handlers for server member cache
+// ============================================================================
+
+void SerchatAPI::handleMemberAdded(const QString& serverId, const QString& userId) {
+    qDebug() << "[SerchatAPI] Member added to server:" << serverId << "userId:" << userId;
+    
+    // Refresh server members to get the new member data
+    // This ensures we have the full member object with roles
+    if (!serverId.isEmpty()) {
+        getServerMembers(serverId, false);  // Force refresh
+    }
+    
+    emit memberAdded(serverId, userId);
+}
+
+void SerchatAPI::handleMemberRemoved(const QString& serverId, const QString& userId) {
+    qDebug() << "[SerchatAPI] Member removed from server:" << serverId << "userId:" << userId;
+    
+    // Remove member from cache
+    if (!serverId.isEmpty() && !userId.isEmpty()) {
+        m_serverMemberCache->removeMember(serverId, userId);
+    }
+    
+    emit memberRemoved(serverId, userId);
+}
+
+void SerchatAPI::handleMemberUpdated(const QString& serverId, const QString& userId, const QVariantMap& member) {
+    qDebug() << "[SerchatAPI] Member updated in server:" << serverId << "userId:" << userId;
+    
+    // Update member in cache (includes updated roles)
+    if (!serverId.isEmpty() && !member.isEmpty()) {
+        m_serverMemberCache->updateMember(serverId, member);
+    }
+    
+    emit memberUpdated(serverId, userId, member);
 }
