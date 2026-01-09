@@ -55,23 +55,13 @@ Rectangle {
             width: parent.width - units.gu(6)
             spacing: units.gu(0.2)
             
-            Row {
-                spacing: units.gu(0.5)
-                
-                Label {
-                    text: memberItem.displayName
-                    fontSize: "small"
-                    font.bold: true
-                    elide: Text.ElideRight
-                    color: isOffline ? Theme.palette.normal.backgroundSecondaryText : Theme.palette.normal.baseText
-                }
-                
-                Label {
-                    text: i18n.tr("(you)")
-                    fontSize: "x-small"
-                    color: Theme.palette.normal.backgroundSecondaryText
-                    visible: memberItem.isCurrentUser
-                }
+            Label {
+                text: memberItem.displayName
+                fontSize: "small"
+                font.bold: true
+                elide: Text.ElideRight
+                width: parent.width
+                color: isOffline ? Theme.palette.normal.backgroundSecondaryText : Theme.palette.normal.baseText
             }
             
             Label {
