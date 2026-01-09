@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QString>
 #include <QColor>
+#include <QHash>
 
 class EmojiCache;
 class UserProfileCache;
@@ -140,6 +141,31 @@ private:
     EmojiCache* m_emojiCache = nullptr;
     UserProfileCache* m_userProfileCache = nullptr;
     QString m_baseUrl;
+
+    // Placeholder management for special content that must survive HTML escaping
+    struct PlaceholderMap {
+        QHash<QString, QString> map;
+        int counter = 0;
+        static qint64 instanceId() {
+            static qint64 nextId = 1;
+            return nextId++;
+        }
+
+        QString addPlaceholder(const QString& content) {
+            // Use instance ID + counter to create globally unique tokens
+            // Format: \x01PH_<instanceId>_<counter>\x02
+            QString key = QStringLiteral("\x01PH_%1_%2\x02").arg(instanceId()).arg(counter++);
+            map[key] = content;
+            return key;
+        }
+
+        QString restore(QString html) const {
+            for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
+                html.replace(it.key(), it.value());
+            }
+            return html;
+        }
+    };
 
     /**
      * @brief Process custom emoji tags and return HTML.

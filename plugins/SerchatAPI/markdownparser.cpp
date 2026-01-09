@@ -383,100 +383,123 @@ QString MarkdownParser::renderMarkdown(const QString& input,
     // Phase 1: Extract special content before HTML escaping
     // ========================================================================
 
-    // Store placeholders for content that shouldn't be escaped
-    QStringList emojiPlaceholders;
-    QStringList userMentionPlaceholders;
-    QStringList urlPlaceholders;
+    PlaceholderMap placeholders;
 
-    // Extract custom emojis
+    // Process custom emojis - iterate backwards to preserve offsets
     static QRegularExpression emojiRegex(QStringLiteral("<emoji:([a-zA-Z0-9]+)>"));
-    QRegularExpressionMatchIterator emojiIt = emojiRegex.globalMatch(html);
-    while (emojiIt.hasNext()) {
-        QRegularExpressionMatch match = emojiIt.next();
-        QString emojiId = match.captured(1);
-        QString placeholder = QStringLiteral("EMOJIPLACEHOLDER%1EMOJIPLACEHOLDER").arg(emojiPlaceholders.size());
+    {
+        QVector<QPair<int, int>> positions; // start, length
+        QVector<QString> replacements;
+        QRegularExpressionMatchIterator it = emojiRegex.globalMatch(html);
+        while (it.hasNext()) {
+            QRegularExpressionMatch match = it.next();
+            positions.append(qMakePair(match.capturedStart(), match.capturedLength()));
+            
+            QString emojiId = match.captured(1);
+            QString emojiUrl;
+            if (m_emojiCache) {
+                emojiUrl = m_emojiCache->getEmojiUrl(emojiId);
+            }
 
-        QString emojiUrl;
-        if (m_emojiCache) {
-            emojiUrl = m_emojiCache->getEmojiUrl(emojiId);
+            QString replacement;
+            if (!emojiUrl.isEmpty()) {
+                replacement = QStringLiteral("<img src=\"%1\" width=\"%2\" height=\"%2\" style=\"vertical-align: -0.5em;\" />")
+                    .arg(emojiUrl).arg(emojiSize);
+            } else {
+                replacement = QStringLiteral("<img src=\"\" width=\"%1\" height=\"%1\" style=\"vertical-align: -0.5em; background-color: #e0e0e0; border-radius: 3px;\" alt=\":%2:\" />")
+                    .arg(emojiSize).arg(emojiId);
+            }
+            replacements.append(placeholders.addPlaceholder(replacement));
         }
-
-        QString replacement;
-        if (!emojiUrl.isEmpty()) {
-            replacement = QStringLiteral("<img src=\"%1\" width=\"%2\" height=\"%2\" style=\"vertical-align: -0.5em;\" />")
-                .arg(emojiUrl)
-                .arg(emojiSize);
-        } else {
-            replacement = QStringLiteral("<img src=\"\" width=\"%1\" height=\"%1\" style=\"vertical-align: -0.5em; background-color: #e0e0e0; border-radius: 3px;\" alt=\":%2:\" />")
-                .arg(emojiSize)
-                .arg(emojiId);
+        // Apply placeholders in reverse order to preserve positions
+        for (int i = positions.size() - 1; i >= 0; --i) {
+            html.replace(positions[i].first, positions[i].second, replacements[i]);
         }
-
-        emojiPlaceholders.append(replacement);
-        html.replace(match.captured(0), placeholder);
     }
 
-    // Extract user mentions (<userid:'id'>)
+    // Process user mentions (<userid:'id'>) - iterate backwards
     static QRegularExpression userIdRegex(QStringLiteral("<userid:'([a-zA-Z0-9]+)'>"));
-    QRegularExpressionMatchIterator userIt = userIdRegex.globalMatch(html);
-    while (userIt.hasNext()) {
-        QRegularExpressionMatch match = userIt.next();
-        QString userId = match.captured(1);
-        QString placeholder = QStringLiteral("USERMENTIONPLACEHOLDER%1USERMENTIONPLACEHOLDER").arg(userMentionPlaceholders.size());
-
-        QString displayName = QStringLiteral("@");
-        if (m_userProfileCache) {
-            displayName += m_userProfileCache->getDisplayName(userId);
-        } else {
-            displayName += userId;
+    {
+        QVector<QPair<int, int>> positions;
+        QVector<QString> replacements;
+        QRegularExpressionMatchIterator it = userIdRegex.globalMatch(html);
+        while (it.hasNext()) {
+            QRegularExpressionMatch match = it.next();
+            positions.append(qMakePair(match.capturedStart(), match.capturedLength()));
+            
+            QString userId = match.captured(1);
+            QString displayName = QStringLiteral("@");
+            if (m_userProfileCache) {
+                displayName += m_userProfileCache->getDisplayName(userId);
+            } else {
+                displayName += userId;
+            }
+            QString replacement = QStringLiteral("<a href=\"user:%1\" style=\"color: %2; font-weight: bold; background-color: rgba(88, 101, 242, 0.2); padding: 0 2px; border-radius: 3px;\">%3</a>")
+                .arg(userId, linkColorStr, displayName);
+            replacements.append(placeholders.addPlaceholder(replacement));
         }
-
-        QString replacement = QStringLiteral("<a href=\"user:%1\" style=\"color: %2; font-weight: bold; background-color: rgba(88, 101, 242, 0.2); padding: 0 2px; border-radius: 3px;\">%3</a>")
-            .arg(userId, linkColorStr, displayName);
-
-        userMentionPlaceholders.append(replacement);
-        html.replace(match.captured(0), placeholder);
+        for (int i = positions.size() - 1; i >= 0; --i) {
+            html.replace(positions[i].first, positions[i].second, replacements[i]);
+        }
     }
 
-    // Extract <everyone>
+    // Process <everyone>
     static QRegularExpression everyoneRegex(QStringLiteral("<everyone>"));
-    html.replace(everyoneRegex, [&]() -> QString {
-        QString placeholder = QStringLiteral("USERMENTIONPLACEHOLDER%1USERMENTIONPLACEHOLDER").arg(userMentionPlaceholders.size());
-        QString replacement = QStringLiteral("<span style=\"color: %1; font-weight: bold; background-color: rgba(88, 101, 242, 0.2); padding: 0 2px; border-radius: 3px;\">@everyone</span>")
-            .arg(linkColorStr);
-        userMentionPlaceholders.append(replacement);
-        return placeholder;
-    }());
-
-    // Extract markdown links [text](url)
-    static QRegularExpression mdLinkRegex(QStringLiteral("\\[([^\\]]+)\\]\\(([^)]+)\\)"));
-    QRegularExpressionMatchIterator linkIt = mdLinkRegex.globalMatch(html);
-    while (linkIt.hasNext()) {
-        QRegularExpressionMatch match = linkIt.next();
-        QString text = match.captured(1);
-        QString url = match.captured(2);
-        QString placeholder = QStringLiteral("URLPLACEHOLDER%1URLPLACEHOLDER").arg(urlPlaceholders.size());
-
-        QString replacement = QStringLiteral("<a href=\"%1\">%2</a>").arg(url, text);
-        urlPlaceholders.append(replacement);
-        html.replace(match.captured(0), placeholder);
+    {
+        QVector<QPair<int, int>> positions;
+        QVector<QString> replacements;
+        QRegularExpressionMatchIterator it = everyoneRegex.globalMatch(html);
+        while (it.hasNext()) {
+            QRegularExpressionMatch match = it.next();
+            positions.append(qMakePair(match.capturedStart(), match.capturedLength()));
+            QString replacement = QStringLiteral("<span style=\"color: %1; font-weight: bold; background-color: rgba(88, 101, 242, 0.2); padding: 0 2px; border-radius: 3px;\">@everyone</span>")
+                .arg(linkColorStr);
+            replacements.append(placeholders.addPlaceholder(replacement));
+        }
+        for (int i = positions.size() - 1; i >= 0; --i) {
+            html.replace(positions[i].first, positions[i].second, replacements[i]);
+        }
     }
 
-    // Extract plain URLs
-    static QRegularExpression urlRegex(QStringLiteral("(https?://[^\\s<>\"]+)"));
-    QRegularExpressionMatchIterator plainUrlIt = urlRegex.globalMatch(html);
-    while (plainUrlIt.hasNext()) {
-        QRegularExpressionMatch match = plainUrlIt.next();
-        QString url = match.captured(1);
-        QString placeholder = QStringLiteral("URLPLACEHOLDER%1URLPLACEHOLDER").arg(urlPlaceholders.size());
+    // Process markdown links [text](url)
+    static QRegularExpression mdLinkRegex(QStringLiteral("\\[([^\\]]+)\\]\\(([^)]+)\\)"));
+    {
+        QVector<QPair<int, int>> positions;
+        QVector<QString> replacements;
+        QRegularExpressionMatchIterator it = mdLinkRegex.globalMatch(html);
+        while (it.hasNext()) {
+            QRegularExpressionMatch match = it.next();
+            positions.append(qMakePair(match.capturedStart(), match.capturedLength()));
+            QString text = match.captured(1);
+            QString url = match.captured(2);
+            QString replacement = QStringLiteral("<a href=\"%1\">%2</a>").arg(url, text);
+            replacements.append(placeholders.addPlaceholder(replacement));
+        }
+        for (int i = positions.size() - 1; i >= 0; --i) {
+            html.replace(positions[i].first, positions[i].second, replacements[i]);
+        }
+    }
 
-        QString replacement = QStringLiteral("<a href=\"%1\">%1</a>").arg(url);
-        urlPlaceholders.append(replacement);
-        html.replace(match.captured(0), placeholder);
+    // Process plain URLs
+    static QRegularExpression urlRegex(QStringLiteral("(https?://[^\\s<>\"]+)"));
+    {
+        QVector<QPair<int, int>> positions;
+        QVector<QString> replacements;
+        QRegularExpressionMatchIterator it = urlRegex.globalMatch(html);
+        while (it.hasNext()) {
+            QRegularExpressionMatch match = it.next();
+            positions.append(qMakePair(match.capturedStart(), match.capturedLength()));
+            QString url = match.captured(1);
+            QString replacement = QStringLiteral("<a href=\"%1\">%1</a>").arg(url);
+            replacements.append(placeholders.addPlaceholder(replacement));
+        }
+        for (int i = positions.size() - 1; i >= 0; --i) {
+            html.replace(positions[i].first, positions[i].second, replacements[i]);
+        }
     }
 
     // ========================================================================
-    // Phase 2: Escape HTML
+    // Phase 2: Escape HTML (doesn't affect special content we just inserted)
     // ========================================================================
     html = escapeHtml(html);
 
@@ -567,21 +590,7 @@ QString MarkdownParser::renderMarkdown(const QString& input,
     // ========================================================================
     // Phase 4: Restore placeholders
     // ========================================================================
-
-    // Restore URLs
-    for (int i = 0; i < urlPlaceholders.size(); ++i) {
-        html.replace(QStringLiteral("URLPLACEHOLDER%1URLPLACEHOLDER").arg(i), urlPlaceholders[i]);
-    }
-
-    // Restore emojis
-    for (int i = 0; i < emojiPlaceholders.size(); ++i) {
-        html.replace(QStringLiteral("EMOJIPLACEHOLDER%1EMOJIPLACEHOLDER").arg(i), emojiPlaceholders[i]);
-    }
-
-    // Restore user mentions
-    for (int i = 0; i < userMentionPlaceholders.size(); ++i) {
-        html.replace(QStringLiteral("USERMENTIONPLACEHOLDER%1USERMENTIONPLACEHOLDER").arg(i), userMentionPlaceholders[i]);
-    }
+    html = placeholders.restore(html);
 
     // Convert remaining newlines to <br>
     if (!html.contains(QStringLiteral("<br>"))) {
