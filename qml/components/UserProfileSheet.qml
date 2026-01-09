@@ -95,7 +95,7 @@ Item {
     Rectangle {
         id: sheet
         width: parent.width
-        height: Math.min(sheetContent.height + units.gu(2), parent.height * 0.7)
+        height: Math.min(contentFlickable.contentHeight + units.gu(2.5), parent.height * 0.8)
         radius: units.gu(2)
         color: Theme.palette.normal.background
         
@@ -127,295 +127,305 @@ Item {
             color: Theme.palette.normal.base
         }
         
-        // Sheet content
-        Column {
-            id: sheetContent
-            width: parent.width
+        // Scrollable content area
+        Flickable {
+            id: contentFlickable
             anchors.top: parent.top
             anchors.topMargin: units.gu(2.5)
-            spacing: units.gu(2)
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            contentHeight: sheetContent.height
+            clip: true
             
-            // Loading state
-            Item {
-                width: parent.width
-                height: units.gu(20)
-                visible: loading
-                
-                ActivityIndicator {
-                    anchors.centerIn: parent
-                    running: loading
-                }
-            }
-            
-            // Profile content
+            // Sheet content
             Column {
+                id: sheetContent
                 width: parent.width
-                spacing: units.gu(1.5)
-                visible: !loading
+                spacing: units.gu(2)
                 
-                // Avatar and basic info
-                Row {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: units.gu(2)
+                // Loading state
+                Item {
+                    width: parent.width
+                    height: units.gu(20)
+                    visible: loading
                     
-                    // Large avatar
-                    Components.Avatar {
-                        id: avatar
-                        width: units.gu(10)
-                        height: units.gu(10)
-                        name: userProfile.displayName || userProfile.username || ""
-                        source: userProfile.profilePicture ? 
-                                (SerchatAPI.apiBaseUrl + userProfile.profilePicture) : ""
-                        showStatus: true
-                        status: {
-                            var username = userProfile.username || ""
-                            if (!SerchatAPI.isUserOnline(username)) {
-                                return "offline"
-                            }
-                            return userProfile.customStatus ? 
-                                   (userProfile.customStatus.status || "online") : "online"
-                        }
-                    }
-                    
-                    // Name and info
-                    Column {
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: units.gu(0.5)
-                        width: userProfileSheet.width - avatar.width - units.gu(8)
-                        
-                        // Display name
-                        Label {
-                            text: userProfile.displayName || userProfile.username || i18n.tr("Unknown User")
-                            fontSize: "large"
-                            font.bold: true
-                            elide: Text.ElideRight
-                            width: parent.width
-                        }
-                        
-                        // Username
-                        Label {
-                            text: "@" + (userProfile.username || "")
-                            fontSize: "small"
-                            color: Theme.palette.normal.backgroundSecondaryText
-                            visible: userProfile.username !== undefined
-                            elide: Text.ElideRight
-                            width: parent.width
-                        }
-                        
-                        // Pronouns
-                        Label {
-                            text: userProfile.pronouns || ""
-                            fontSize: "small"
-                            color: Theme.palette.normal.backgroundSecondaryText
-                            visible: userProfile.pronouns !== undefined && userProfile.pronouns !== ""
-                        }
+                    ActivityIndicator {
+                        anchors.centerIn: parent
+                        running: loading
                     }
                 }
                 
-                // Custom status
-                Rectangle {
-                    width: parent.width - units.gu(4)
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    height: statusRow.height + units.gu(2)
-                    radius: units.gu(1)
-                    color: Theme.palette.normal.base
-                    visible: userProfile.customStatus !== undefined && userProfile.customStatus !== null && 
-                             userProfile.customStatus.text !== undefined && userProfile.customStatus.text !== ""
+                // Profile content
+                Column {
+                    width: parent.width
+                    spacing: units.gu(1.5)
+                    visible: !loading
                     
+                    // Avatar and basic info
                     Row {
-                        id: statusRow
-                        anchors.centerIn: parent
-                        spacing: units.gu(1)
-                        width: parent.width - units.gu(2)
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: units.gu(2)
                         
-                        Label {
-                            text: userProfile.customStatus ? (userProfile.customStatus.emoji || "💬") : ""
-                            fontSize: "medium"
+                        // Large avatar
+                        Components.Avatar {
+                            id: avatar
+                            width: units.gu(10)
+                            height: units.gu(10)
+                            name: userProfile.displayName || userProfile.username || ""
+                            source: userProfile.profilePicture ? 
+                                    (SerchatAPI.apiBaseUrl + userProfile.profilePicture) : ""
+                            showStatus: true
+                            status: {
+                                var username = userProfile.username || ""
+                                if (!SerchatAPI.isUserOnline(username)) {
+                                    return "offline"
+                                }
+                                return userProfile.customStatus ? 
+                                    (userProfile.customStatus.status || "online") : "online"
+                            }
                         }
                         
-                        Label {
-                            text: userProfile.customStatus ? (userProfile.customStatus.text || "") : ""
-                            fontSize: "small"
-                            color: Theme.palette.normal.baseText
-                            wrapMode: Text.Wrap
-                            width: parent.width - units.gu(5)
+                        // Name and info
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: units.gu(0.5)
+                            width: userProfileSheet.width - avatar.width - units.gu(8)
+                            
+                            // Display name
+                            Label {
+                                text: userProfile.displayName || userProfile.username || i18n.tr("Unknown User")
+                                fontSize: "large"
+                                font.bold: true
+                                elide: Text.ElideRight
+                                width: parent.width
+                            }
+                            
+                            // Username
+                            Label {
+                                text: "@" + (userProfile.username || "")
+                                fontSize: "small"
+                                color: Theme.palette.normal.backgroundSecondaryText
+                                visible: userProfile.username !== undefined
+                                elide: Text.ElideRight
+                                width: parent.width
+                            }
+                            
+                            // Pronouns
+                            Label {
+                                text: userProfile.pronouns || ""
+                                fontSize: "small"
+                                color: Theme.palette.normal.backgroundSecondaryText
+                                visible: userProfile.pronouns !== undefined && userProfile.pronouns !== ""
+                            }
                         }
                     }
-                }
-                
-                // Badges
-                Flow {
-                    width: parent.width - units.gu(4)
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: units.gu(0.5)
-                    visible: userProfile.badges !== undefined && userProfile.badges !== null && userProfile.badges.length > 0
                     
-                    Repeater {
-                        model: userProfile.badges || []
+                    // Custom status
+                    Rectangle {
+                        width: parent.width - units.gu(4)
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        height: statusRow.height + units.gu(2)
+                        radius: units.gu(1)
+                        color: Theme.palette.normal.base
+                        visible: userProfile.customStatus !== undefined && userProfile.customStatus !== null && 
+                                userProfile.customStatus.text !== undefined && userProfile.customStatus.text !== ""
                         
-                        BadgeLike {
-                            height: units.gu(3)
-                            radius: units.gu(0.5)
-                            badgeColor: modelData.color || Theme.palette.normal.base
-
-                            icon: modelData.icon || ""
-                            name: modelData.name || ""
+                        Row {
+                            id: statusRow
+                            anchors.centerIn: parent
+                            spacing: units.gu(1)
+                            width: parent.width - units.gu(2)
+                            
+                            Label {
+                                text: userProfile.customStatus ? (userProfile.customStatus.emoji || "💬") : ""
+                                fontSize: "medium"
+                            }
+                            
+                            Label {
+                                text: userProfile.customStatus ? (userProfile.customStatus.text || "") : ""
+                                fontSize: "small"
+                                color: Theme.palette.normal.baseText
+                                wrapMode: Text.Wrap
+                                width: parent.width - units.gu(5)
+                            }
                         }
                     }
-                }
-                
-                // Server Roles (only shown when in server context and user is a member)
-                Rectangle {
-                    id: rolesSection
-                    width: parent.width - units.gu(4)
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    height: rolesColumn.height + units.gu(2)
-                    radius: units.gu(1)
-                    color: Theme.palette.normal.base
-                    visible: serverId !== "" && memberRoles.length > 0
                     
-                    Column {
-                        id: rolesColumn
-                        width: parent.width - units.gu(2)
-                        anchors.centerIn: parent
+                    // Badges
+                    Flow {
+                        width: parent.width - units.gu(4)
+                        anchors.horizontalCenter: parent.horizontalCenter
                         spacing: units.gu(0.5)
+                        visible: userProfile.badges !== undefined && userProfile.badges !== null && userProfile.badges.length > 0
                         
-                        Label {
-                            text: i18n.tr("Roles")
-                            fontSize: "x-small"
-                            font.bold: true
-                            color: Theme.palette.normal.backgroundSecondaryText
+                        Repeater {
+                            model: userProfile.badges || []
+                            
+                            BadgeLike {
+                                height: units.gu(3)
+                                radius: units.gu(0.5)
+                                badgeColor: modelData.color || Theme.palette.normal.base
+
+                                icon: modelData.icon || ""
+                                name: modelData.name || ""
+                            }
                         }
+                    }
+                    
+                    // Server Roles (only shown when in server context and user is a member)
+                    Rectangle {
+                        id: rolesSection
+                        width: parent.width - units.gu(4)
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        height: rolesColumn.height + units.gu(2)
+                        radius: units.gu(1)
+                        color: Theme.palette.normal.base
+                        visible: serverId !== "" && memberRoles.length > 0
                         
-                        Flow {
-                            width: parent.width
+                        Column {
+                            id: rolesColumn
+                            width: parent.width - units.gu(2)
+                            anchors.centerIn: parent
                             spacing: units.gu(0.5)
                             
-                            Repeater {
-                                model: memberRoles
+                            Label {
+                                text: i18n.tr("Roles")
+                                fontSize: "x-small"
+                                font.bold: true
+                                color: Theme.palette.normal.backgroundSecondaryText
+                            }
+                            
+                            Flow {
+                                width: parent.width
+                                spacing: units.gu(0.5)
                                 
-                                Components.BadgeLike {
-                                    height: units.gu(3)
-                                    radius: units.gu(0.5)
-                                    badgeColor: modelData.color || modelData.startColor || Theme.palette.normal.base
-                                    name: modelData.name || i18n.tr("Unknown Role")
+                                Repeater {
+                                    model: memberRoles
+                                    
+                                    Components.BadgeLike {
+                                        height: units.gu(3)
+                                        radius: units.gu(0.5)
+                                        badgeColor: modelData.color || modelData.startColor || Theme.palette.normal.base
+                                        name: modelData.name || i18n.tr("Unknown Role")
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                
-                // Bio preview
-                Rectangle {
-                    width: parent.width - units.gu(4)
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    height: bioColumn.height + units.gu(2)
-                    radius: units.gu(1)
-                    color: Theme.palette.normal.base
-                    visible: userProfile.bio !== undefined && userProfile.bio !== null && userProfile.bio !== ""
                     
+                    // Bio preview
+                    Rectangle {
+                        width: parent.width - units.gu(4)
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        height: bioColumn.height + units.gu(2)
+                        radius: units.gu(1)
+                        color: Theme.palette.normal.base
+                        visible: userProfile.bio !== undefined && userProfile.bio !== null && userProfile.bio !== ""
+                        
+                        Column {
+                            id: bioColumn
+                            width: parent.width - units.gu(2)
+                            anchors.centerIn: parent
+                            spacing: units.gu(0.5)
+                            
+                            Label {
+                                text: i18n.tr("About Me")
+                                fontSize: "x-small"
+                                font.bold: true
+                                color: Theme.palette.normal.backgroundSecondaryText
+                            }
+                            
+                            Components.MarkdownText {
+                                text: userProfile.bio ? 
+                                    (userProfile.bio.length > 150 ? 
+                                    userProfile.bio.substring(0, 150) + "..." : userProfile.bio) : ""
+                                fontSize: "small"
+                                wrapMode: Text.Wrap
+                                width: parent.width
+                            }
+                        }
+                    }
+                    
+                    // Divider
+                    Rectangle {
+                        width: parent.width - units.gu(4)
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        height: units.dp(1)
+                        color: Theme.palette.normal.base
+                    }
+                    
+                    // Action buttons
                     Column {
-                        id: bioColumn
-                        width: parent.width - units.gu(2)
-                        anchors.centerIn: parent
-                        spacing: units.gu(0.5)
+                        width: parent.width - units.gu(4)
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: units.gu(1)
                         
-                        Label {
-                            text: i18n.tr("About Me")
-                            fontSize: "x-small"
-                            font.bold: true
-                            color: Theme.palette.normal.backgroundSecondaryText
-                        }
-                        
-                        Components.MarkdownText {
-                            text: userProfile.bio ? 
-                                  (userProfile.bio.length > 150 ? 
-                                   userProfile.bio.substring(0, 150) + "..." : userProfile.bio) : ""
-                            fontSize: "small"
-                            wrapMode: Text.Wrap
+                        // View Full Profile button (not for own profile)
+                        Button {
                             width: parent.width
+                            text: i18n.tr("View Full Profile")
+                            color: LomiriColors.blue
+                            visible: !isOwnProfile
+                            onClicked: {
+                                close()
+                                viewFullProfileClicked(userId, serverId)
+                            }
                         }
-                    }
-                }
-                
-                // Divider
-                Rectangle {
-                    width: parent.width - units.gu(4)
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    height: units.dp(1)
-                    color: Theme.palette.normal.base
-                }
-                
-                // Action buttons
-                Column {
-                    width: parent.width - units.gu(4)
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: units.gu(1)
-                    
-                    // View Full Profile button (not for own profile)
-                    Button {
-                        width: parent.width
-                        text: i18n.tr("View Full Profile")
-                        color: LomiriColors.blue
-                        visible: !isOwnProfile
-                        onClicked: {
-                            close()
-                            viewFullProfileClicked(userId, serverId)
+                        
+                        // Edit Profile button (only for own profile)
+                        Button {
+                            width: parent.width
+                            text: i18n.tr("Edit Profile")
+                            color: LomiriColors.blue
+                            visible: isOwnProfile
+                            onClicked: {
+                                close()
+                                editProfileClicked()
+                            }
                         }
-                    }
-                    
-                    // Edit Profile button (only for own profile)
-                    Button {
-                        width: parent.width
-                        text: i18n.tr("Edit Profile")
-                        color: LomiriColors.blue
-                        visible: isOwnProfile
-                        onClicked: {
-                            close()
-                            editProfileClicked()
+                        
+                        // Send Message button (not for own profile)
+                        Button {
+                            width: parent.width
+                            text: i18n.tr("Send Message")
+                            visible: !isOwnProfile
+                            onClicked: {
+                                close()
+                                sendMessageClicked(userId)
+                            }
                         }
-                    }
-                    
-                    // Send Message button (not for own profile)
-                    Button {
-                        width: parent.width
-                        text: i18n.tr("Send Message")
-                        visible: !isOwnProfile
-                        onClicked: {
-                            close()
-                            sendMessageClicked(userId)
+                        
+                        // Add Friend button (not for own profile, only when not friends)
+                        Button {
+                            width: parent.width
+                            text: i18n.tr("Add Friend")
+                            visible: !isOwnProfile && !isFriend
+                            color: Theme.palette.normal.positive
+                            onClicked: {
+                                close()
+                                addFriendClicked(userId)
+                            }
                         }
-                    }
-                    
-                    // Add Friend button (not for own profile, only when not friends)
-                    Button {
-                        width: parent.width
-                        text: i18n.tr("Add Friend")
-                        visible: !isOwnProfile && !isFriend
-                        color: Theme.palette.normal.positive
-                        onClicked: {
-                            close()
-                            addFriendClicked(userId)
+                        
+                        // Remove Friend button (not for own profile, only when friends)
+                        Button {
+                            width: parent.width
+                            text: i18n.tr("Remove Friend")
+                            visible: !isOwnProfile && isFriend
+                            color: LomiriColors.red
+                            onClicked: {
+                                close()
+                                removeFriendClicked(userId)
+                            }
                         }
                     }
                     
-                    // Remove Friend button (not for own profile, only when friends)
-                    Button {
+                    // Bottom padding
+                    Item {
                         width: parent.width
-                        text: i18n.tr("Remove Friend")
-                        visible: !isOwnProfile && isFriend
-                        color: LomiriColors.red
-                        onClicked: {
-                            close()
-                            removeFriendClicked(userId)
-                        }
+                        height: units.gu(2)
                     }
-                }
-                
-                // Bottom padding
-                Item {
-                    width: parent.width
-                    height: units.gu(2)
                 }
             }
         }
