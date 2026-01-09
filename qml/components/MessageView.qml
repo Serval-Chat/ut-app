@@ -794,6 +794,31 @@ Rectangle {
         }
     }
     
+    // Semi-transparent overlay for dimming content when members panel is open
+    Rectangle {
+        id: membersPanelOverlay
+        anchors.top: channelHeader.bottom
+        anchors.bottom: composer.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        color: "#000000"
+        opacity: showMembersPanel && !isDMMode ? 0.5 : 0
+        visible: opacity > 0
+        z: 10
+        
+        Behavior on opacity {
+            NumberAnimation { duration: 200; easing.type: Easing.OutQuad }
+        }
+        
+        MouseArea {
+            anchors.fill: parent
+            enabled: parent.visible
+            onClicked: {
+                showMembersPanel = false
+            }
+        }
+    }
+    
     // Members list panel (slides in from right)
     Rectangle {
         id: membersPanel
@@ -804,6 +829,7 @@ Rectangle {
         color: Qt.darker(messageView.color, 1.04)
         clip: true
         visible: width > 0
+        z: 11
         
         Behavior on width {
             NumberAnimation { duration: 200; easing.type: Easing.OutQuad }

@@ -160,6 +160,7 @@ Page {
             
             onBackClicked: {
                 mobileViewMode = "channels"
+                messageView.showMembersPanel = false
             }
             
             onSendMessage: {
@@ -354,6 +355,7 @@ Page {
             enabled: parent.visible && (currentChannelId !== "" || currentDMRecipientId !== "")
             onClicked: {
                 mobileViewMode = "messages"
+                messageView.showMembersPanel = false
             }
         }
     }
