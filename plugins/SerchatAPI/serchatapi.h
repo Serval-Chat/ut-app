@@ -660,6 +660,24 @@ public:
      */
     Q_INVOKABLE void setActiveChannel(const QString& serverId, const QString& channelId);
 
+    /**
+     * @brief Set the current server and preload all necessary data.
+     *
+     * This centralizes server selection logic and ensures that when a user selects
+     * a server, all data needed for UI display is preloaded to avoid lag:
+     * - Channels (via ChannelCache)
+     * - Categories (via API)
+     * - Members (via ServerMemberCache) - for member list, username colors
+     * - Roles (via ServerMemberCache) - for role colors, permissions
+     * - Emojis (via EmojiCache) - for custom emoji rendering
+     *
+     * Call this from QML when a server is selected, instead of manually calling
+     * multiple fetch methods.
+     *
+     * @param serverId The server ID to set as current
+     */
+    Q_INVOKABLE void setCurrentServer(const QString& serverId);
+
     // Token accessors (mainly for debugging)
     QString authToken() const;
     bool hasValidAuthToken() const;
@@ -1114,8 +1132,11 @@ private:
     // Channel data handler - extracts lastReadAt before forwarding
     void handleChannelsFetched(int requestId, const QString& serverId, const QVariantList& channels);
 
-    // Messages data handler - calculates first unread message
+    // Messages data handler - calculates first unread message and reverses order
     void handleMessagesFetched(int requestId, const QString& serverId, const QString& channelId, const QVariantList& messages);
+
+    // DM messages data handler - reverses order for UI
+    void handleDMMessagesFetched(int requestId, const QString& recipientId, const QVariantList& messages);
 };
 
 #endif

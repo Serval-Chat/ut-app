@@ -784,25 +784,13 @@ Page {
             console.log("[HomePage] Messages fetched for channel:", channelId, "current:", currentChannelId, "count:", fetchedMessages.length)
             if (channelId === currentChannelId) {
                 loadingMessages = false
-                
-                // API returns oldest first, but we need newest first (index 0 = bottom with BottomToTop)
-                var reversedMessages = fetchedMessages.slice().reverse()
-                
-                // Check if this is a pagination request (loading older messages)
-                if (SerchatAPI.messageModel.count > 0 && reversedMessages.length > 0) {
-                    // This is pagination - append older messages at the end using proper model signals
-                    SerchatAPI.messageModel.appendMessages(reversedMessages)
-                } else {
-                    // Initial load - use appendMessages for correct ordering
-                    // With BottomToTop ListView: index 0 = bottom, so we need newest at index 0
-                    // reversedMessages is [newest, ..., oldest], appendMessages preserves this order
-                    SerchatAPI.messageModel.appendMessages(reversedMessages)
-                    
-                    // Note: We don't set lastReadMessageId here because when viewing a channel,
-                    // all messages are considered read. The C++ clearChannelUnread() handles this.
-                }
+
+                // Messages are already reversed in C++ (newest-first, ready for BottomToTop ListView)
+                // Just append them to the model
+                SerchatAPI.messageModel.appendMessages(fetchedMessages)
+
                 console.log("[HomePage] Messages updated, total:", SerchatAPI.messageModel.count)
-                
+
                 // Check if there are more messages
                 SerchatAPI.messageModel.hasMoreMessages = (fetchedMessages.length >= 50)
             } else {
@@ -889,25 +877,13 @@ Page {
             console.log("[HomePage] DM Messages fetched for:", recipientId, "current:", currentDMRecipientId, "count:", fetchedMessages.length)
             if (recipientId === currentDMRecipientId) {
                 loadingMessages = false
-                
-                // API returns oldest first, but we need newest first (index 0 = bottom with BottomToTop)
-                var reversedMessages = fetchedMessages.slice().reverse()
-                
-                // Check if this is a pagination request
-                if (SerchatAPI.messageModel.count > 0 && reversedMessages.length > 0) {
-                    // This is pagination - append older messages at the end using proper model signals
-                    SerchatAPI.messageModel.appendMessages(reversedMessages)
-                } else {
-                    // Initial load - use appendMessages for correct ordering
-                    // With BottomToTop ListView: index 0 = bottom, so we need newest at index 0
-                    // reversedMessages is [newest, ..., oldest], appendMessages preserves this order
-                    SerchatAPI.messageModel.appendMessages(reversedMessages)
-                    
-                    // Note: We don't set lastReadMessageId here because when viewing a DM,
-                    // all messages are considered read. The C++ clearDMUnread() handles this.
-                }
+
+                // Messages are already reversed in C++ (newest-first, ready for BottomToTop ListView)
+                // Just append them to the model
+                SerchatAPI.messageModel.appendMessages(fetchedMessages)
+
                 console.log("[HomePage] DM Messages updated, total:", SerchatAPI.messageModel.count)
-                
+
                 // Check if there are more messages
                 SerchatAPI.messageModel.hasMoreMessages = (fetchedMessages.length >= 50)
             } else {
@@ -1362,17 +1338,13 @@ Page {
         SerchatAPI.viewingDMRecipientId = ""
 
         loadingChannels = true
-        SerchatAPI.messageModel.clear()  // Clear messages when loading new server
-        SerchatAPI.channelListModel.clear()  // Clear channel list model
         currentChannelId = ""
         currentChannelName = ""
 
-        // Fetch both channels and categories for the server
-        SerchatAPI.getChannels(serverId)
-        SerchatAPI.getCategories(serverId)
-
-        // Also fetch server emojis for custom emoji rendering
-        SerchatAPI.getServerEmojis(serverId)
+        // Use centralized server selection which preloads all needed data:
+        // channels, categories, members, roles, and emojis
+        // This ensures data needed for the UI is fetched in parallel to minimize lag
+        SerchatAPI.setCurrentServer(serverId)
     }
     
     function loadMessages(serverId, channelId) {

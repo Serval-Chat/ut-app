@@ -224,9 +224,9 @@ SerchatAPI::SerchatAPI() {
     connect(m_apiClient, &ApiClient::messageSendFailed,
             this, &SerchatAPI::messageSendFailed);
     
-    // Connect DM message signals
+    // Connect DM message signals - intercept to reverse order
     connect(m_apiClient, &ApiClient::dmMessagesFetched,
-            this, &SerchatAPI::dmMessagesFetched);
+            this, &SerchatAPI::handleDMMessagesFetched);
     connect(m_apiClient, &ApiClient::dmMessagesFetchFailed,
             this, &SerchatAPI::dmMessagesFetchFailed);
     connect(m_apiClient, &ApiClient::dmMessageSent,
@@ -543,6 +543,44 @@ void SerchatAPI::setViewingDMRecipientId(const QString& id) {
 void SerchatAPI::setActiveChannel(const QString& serverId, const QString& channelId) {
     m_messageCache->setActiveChannel(serverId, channelId);
     qDebug() << "[SerchatAPI] Active channel set to:" << serverId << "/" << channelId;
+}
+
+void SerchatAPI::setCurrentServer(const QString& serverId) {
+    if (serverId.isEmpty()) {
+        qWarning() << "[SerchatAPI] setCurrentServer called with empty serverId";
+        return;
+    }
+
+    qDebug() << "[SerchatAPI] Setting current server and preloading data for:" << serverId;
+
+    // Clear any previous server's UI-specific data
+    m_channelListModel->clear();
+    m_membersModel->clear();
+    m_rolesModel->clear();
+    m_messageModel->clear();
+
+    // Preload all data needed for the server UI in parallel:
+    // Each cache handles its own TTL, deduplication, and stale-while-revalidate
+
+    // 1. Channels - via ChannelCache (triggers fetch if stale/missing)
+    m_channelCache->refreshChannels(serverId);
+
+    // 2. Categories - via ChannelCache (triggers fetch if stale/missing, returns stale data immediately)
+    //    The getCategories call triggers an async fetch and the result is handled by onCategoriesFetched
+    m_channelCache->getCategories(serverId);
+
+    // 3. Members - via ServerMemberCache (for member list, username colors)
+    m_serverMemberCache->fetchServerMembers(serverId);
+
+    // 4. Roles - via ServerMemberCache (for role colors, permissions)
+    //    Always fetch to ensure we have latest roles for color display
+    m_serverMemberCache->fetchServerRoles(serverId);
+
+    // 5. Emojis - via API with cache (for custom emoji rendering in messages)
+    //    EmojiCache is populated via the signal handler when emojis are fetched
+    m_apiClient->getServerEmojis(serverId, true);
+
+    qDebug() << "[SerchatAPI] Initiated preload for server:" << serverId;
 }
 
 void SerchatAPI::setDebug(bool debug) {
@@ -1276,14 +1314,36 @@ void SerchatAPI::handleChannelsFetched(int requestId, const QString& serverId, c
 }
 
 void SerchatAPI::handleMessagesFetched(int requestId, const QString& serverId, const QString& channelId, const QVariantList& messages) {
+    // API returns messages oldest-first, but UI needs newest-first (for BottomToTop ListView)
+    // Reverse here to centralize this logic and avoid doing it in QML
+    QVariantList reversedMessages;
+    reversedMessages.reserve(messages.size());
+    for (int i = messages.size() - 1; i >= 0; --i) {
+        reversedMessages.append(messages.at(i));
+    }
+
     // Calculate the first unread message based on timestamps
-    calculateFirstUnreadMessage(serverId, channelId, messages);
+    // Note: This function handles messages in any order (compares all timestamps)
+    calculateFirstUnreadMessage(serverId, channelId, reversedMessages);
 
-    // Update message cache with serverId for future refresh
-    m_messageCache->loadMessages(serverId, channelId, messages);
+    // Update message cache with reversed messages (newest-first order)
+    m_messageCache->loadMessages(serverId, channelId, reversedMessages);
 
-    // Forward the signal to QML
-    emit messagesFetched(requestId, serverId, channelId, messages);
+    // Forward reversed messages to QML (ready for display without further processing)
+    emit messagesFetched(requestId, serverId, channelId, reversedMessages);
+}
+
+void SerchatAPI::handleDMMessagesFetched(int requestId, const QString& recipientId, const QVariantList& messages) {
+    // API returns messages oldest-first, but UI needs newest-first (for BottomToTop ListView)
+    // Reverse here to centralize this logic and avoid doing it in QML
+    QVariantList reversedMessages;
+    reversedMessages.reserve(messages.size());
+    for (int i = messages.size() - 1; i >= 0; --i) {
+        reversedMessages.append(messages.at(i));
+    }
+
+    // Forward reversed messages to QML (ready for display without further processing)
+    emit dmMessagesFetched(requestId, recipientId, reversedMessages);
 }
 
 // ============================================================================
