@@ -63,11 +63,18 @@ QVariantList ServerMemberCache::getMemberRoleObjects(const QString& serverId, co
     QVariantList roleIds = getMemberRoleIds(serverId, userId);
     QVariantList roleObjects;
     
+    if (roleIds.isEmpty()) {
+        qDebug() << "[ServerMemberCache] getMemberRoleObjects: No role IDs found for" << userId << "in server" << serverId;
+        qDebug() << "[ServerMemberCache] hasMember:" << hasMember(serverId, userId) << "hasServerRoles:" << hasServerRoles(serverId);
+    }
+    
     for (const QVariant& roleIdVar : roleIds) {
         QString roleId = roleIdVar.toString();
         QVariantMap role = getRole(serverId, roleId);
         if (!role.isEmpty()) {
             roleObjects.append(role);
+        } else {
+            qDebug() << "[ServerMemberCache] getMemberRoleObjects: Role not found:" << roleId << "for server" << serverId;
         }
     }
     
@@ -77,6 +84,10 @@ QVariantList ServerMemberCache::getMemberRoleObjects(const QString& serverId, co
         int posB = b.toMap().value("position", 0).toInt();
         return posA > posB;
     });
+    
+    if (!roleIds.isEmpty()) {
+        qDebug() << "[ServerMemberCache] getMemberRoleObjects: Found" << roleObjects.size() << "of" << roleIds.size() << "roles for user" << userId;
+    }
     
     return roleObjects;
 }
@@ -171,6 +182,11 @@ void ServerMemberCache::fetchMember(const QString& serverId, const QString& user
     
     if (!hasAnyMembers && !m_fetchingMembers.contains(serverId)) {
         fetchServerMembers(serverId);
+    }
+    
+    // Also ensure roles are fetched - they're needed to display role objects
+    if (!hasServerRoles(serverId) && !m_fetchingServerRoles.contains(serverId)) {
+        fetchServerRoles(serverId);
     }
 }
 

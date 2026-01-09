@@ -47,7 +47,7 @@ Rectangle {
     signal loadMoreMessages()
     signal userProfileClicked(string userId)
     signal backClicked()
-    signal viewFullProfile(string userId)
+    signal viewFullProfile(string userId, string serverId)
     signal openDMWithUser(string recipientId, string recipientName, string recipientAvatar)
     signal sendFriendRequest(string userId, string username)
     signal removeFriend(string userId)
@@ -694,8 +694,9 @@ Rectangle {
     }
     
     // Open profile sheet for a user
+    // Passes serverId when in server context for role display
     function openProfileSheet(userId) {
-        userProfileSheet.open(userId)
+        userProfileSheet.open(userId, serverId)
     }
     
     // User profile sheet (bottom sheet popup)
@@ -704,7 +705,7 @@ Rectangle {
         anchors.fill: parent
         
         onViewFullProfileClicked: {
-            viewFullProfile(userId)
+            viewFullProfile(userId, serverId)
         }
         
         onSendMessageClicked: {

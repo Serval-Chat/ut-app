@@ -23,6 +23,7 @@ Rectangle {
         
         // Render Lucide icon
         Components.LucideIcon {
+            visible: icon !== ""
             name: icon
             width: units.gu(2)
             height: units.gu(2)

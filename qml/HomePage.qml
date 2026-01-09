@@ -181,13 +181,15 @@ Page {
             
             onUserProfileClicked: {
                 pageStack.push(Qt.resolvedUrl("ProfilePage.qml"), {
-                    userId: userId
+                    userId: userId,
+                    serverId: currentServerId
                 })
             }
             
             onViewFullProfile: {
                 pageStack.push(Qt.resolvedUrl("ProfilePage.qml"), {
-                    userId: userId
+                    userId: userId,
+                    serverId: serverId
                 })
             }
             

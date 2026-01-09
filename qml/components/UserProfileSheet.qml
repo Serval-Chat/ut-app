@@ -11,6 +11,10 @@ import "." as Components
  * 
  * Shows a condensed profile view that slides up from the bottom
  * with quick actions and option to view full profile.
+ * 
+ * When opened from a server context (serverId is set), also displays
+ * the user's roles in that server. Handles gracefully when user is
+ * not a member (e.g., old mentions from users who left).
  */
 Item {
     id: userProfileSheet
@@ -19,6 +23,28 @@ Item {
     property string userId: ""
     property var userProfile: ({})
     property bool loading: false
+    
+    // Server context (optional) - when set, shows server-specific info like roles
+    property string serverId: ""
+    
+    // Server member cache version for reactive updates
+    property int serverMemberCacheVersion: SerchatAPI.serverMemberCache ? SerchatAPI.serverMemberCache.version : 0
+    
+    // Get member roles when in server context
+    property var memberRoles: {
+        // Depend on cache version for reactivity
+        var v = serverMemberCacheVersion
+        if (!serverId || !userId) return []
+        return SerchatAPI.serverMemberCache.getMemberRoleObjects(serverId, userId) || []
+    }
+    
+    // Check if user is a member of the server (has member data cached or being fetched)
+    property bool isServerMember: {
+        var v = serverMemberCacheVersion
+        if (!serverId || !userId) return false
+        // hasMember returns true only if cached, not if fetch is pending
+        return SerchatAPI.serverMemberCache.hasMember(serverId, userId)
+    }
     
     // Whether this is the current user's own profile
     readonly property bool isOwnProfile: userId === SerchatAPI.currentUserId
@@ -36,7 +62,7 @@ Item {
         isFriend = calculateIsFriend()
     }
     
-    signal viewFullProfileClicked(string userId)
+    signal viewFullProfileClicked(string userId, string serverId)
     signal sendMessageClicked(string userId)
     signal addFriendClicked(string userId)
     signal removeFriendClicked(string userId)
@@ -238,6 +264,47 @@ Item {
                     }
                 }
                 
+                // Server Roles (only shown when in server context and user is a member)
+                Rectangle {
+                    id: rolesSection
+                    width: parent.width - units.gu(4)
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    height: rolesColumn.height + units.gu(2)
+                    radius: units.gu(1)
+                    color: Theme.palette.normal.base
+                    visible: serverId !== "" && memberRoles.length > 0
+                    
+                    Column {
+                        id: rolesColumn
+                        width: parent.width - units.gu(2)
+                        anchors.centerIn: parent
+                        spacing: units.gu(0.5)
+                        
+                        Label {
+                            text: i18n.tr("Roles")
+                            fontSize: "x-small"
+                            font.bold: true
+                            color: Theme.palette.normal.backgroundSecondaryText
+                        }
+                        
+                        Flow {
+                            width: parent.width
+                            spacing: units.gu(0.5)
+                            
+                            Repeater {
+                                model: memberRoles
+                                
+                                Components.BadgeLike {
+                                    height: units.gu(3)
+                                    radius: units.gu(0.5)
+                                    badgeColor: modelData.color || modelData.startColor || Theme.palette.normal.base
+                                    name: modelData.name || i18n.tr("Unknown Role")
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 // Bio preview
                 Rectangle {
                     width: parent.width - units.gu(4)
@@ -293,7 +360,7 @@ Item {
                         visible: !isOwnProfile
                         onClicked: {
                             close()
-                            viewFullProfileClicked(userId)
+                            viewFullProfileClicked(userId, serverId)
                         }
                     }
                     
@@ -386,20 +453,29 @@ Item {
         }
     }
     
-    // Open the sheet for a user
-    function open(targetUserId) {
+    // Open the sheet for a user, optionally in server context
+    // When targetServerId is provided, server-specific info like roles will be shown
+    function open(targetUserId, targetServerId) {
         userId = targetUserId
+        serverId = targetServerId || ""
         userProfile = {}
         loading = true
         opened = true
         
         // Fetch the profile
         profileRequestId = SerchatAPI.getProfile(userId)
+        
+        // If in server context, ensure we have member data cached for role display
+        // This will auto-fetch if not cached; if user is not a member, roles will be empty
+        if (serverId && userId) {
+            SerchatAPI.serverMemberCache.fetchMember(serverId, userId)
+        }
     }
     
     // Close the sheet
     function close() {
         opened = false
+        serverId = ""  // Clear server context on close
         closed()
     }
     

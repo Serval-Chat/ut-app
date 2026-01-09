@@ -15,6 +15,31 @@ Page {
     property bool isOwnProfile: false
     property bool isFriend: false
     
+    // Server context (optional) - when set, shows server-specific info like roles
+    property string serverId: ""
+    
+    // Server member cache version for reactive updates
+    property int serverMemberCacheVersion: SerchatAPI.serverMemberCache ? SerchatAPI.serverMemberCache.version : 0
+    
+    // Get member roles when in server context
+    property var memberRoles: {
+        var v = serverMemberCacheVersion
+        if (!serverId || !userId) return []
+        return SerchatAPI.serverMemberCache.getMemberRoleObjects(serverId, userId) || []
+    }
+
+    // Fetch member data when serverId or userId changes (ensures roles are loaded when opened via sheet)
+    onServerIdChanged: {
+        if (serverId && userId) {
+            SerchatAPI.serverMemberCache.fetchMember(serverId, userId)
+        }
+    }
+    onUserIdChanged: {
+        if (serverId && userId) {
+            SerchatAPI.serverMemberCache.fetchMember(serverId, userId)
+        }
+    }
+    
     // Generate banner color from user identity
     function getBannerColor() {
         var identifier = userProfile.displayName || userProfile.username || userId || ""
@@ -210,6 +235,36 @@ Page {
 
                                 icon: modelData.icon || ""
                                 name: modelData.name || ""
+                            }
+                        }
+                    }
+                    
+                    // Server Roles (only shown when in server context and user has roles)
+                    Column {
+                        width: parent.width
+                        spacing: units.gu(0.5)
+                        visible: serverId !== "" && memberRoles.length > 0
+                        
+                        Label {
+                            text: i18n.tr("Roles")
+                            fontSize: "small"
+                            font.bold: true
+                            color: Theme.palette.normal.backgroundSecondaryText
+                        }
+                        
+                        Flow {
+                            width: parent.width
+                            spacing: units.gu(0.5)
+                            
+                            Repeater {
+                                model: memberRoles
+                                
+                                Components.BadgeLike {
+                                    height: units.gu(3)
+                                    radius: units.gu(0.5)
+                                    badgeColor: modelData.color || modelData.startColor || Theme.palette.normal.base
+                                    name: modelData.name || i18n.tr("Unknown Role")
+                                }
                             }
                         }
                     }
@@ -445,6 +500,11 @@ Page {
             profileRequestId = SerchatAPI.getProfile(userId)
             // Fetch friends to check friendship status
             SerchatAPI.getFriends()
+            
+            // If in server context, ensure we have member data cached for role display
+            if (serverId && userId) {
+                SerchatAPI.serverMemberCache.fetchMember(serverId, userId)
+            }
         }
     }
 }
