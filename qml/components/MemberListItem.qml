@@ -14,6 +14,7 @@ Rectangle {
     id: memberItem
     
     property var member: ({})
+    property string serverOwnerId: ""
     property string currentUserId: ""
     property bool isOffline: false
     property color panelColor: Theme.palette.normal.background
@@ -29,6 +30,7 @@ Rectangle {
     readonly property var userInfo: member.user || {}
     readonly property string memberId: userInfo._id || member.userId || member._id || ""
     readonly property bool isCurrentUser: memberId === currentUserId
+    readonly property bool isServerOwner: memberId === serverOwnerId && serverOwnerId !== ""
     readonly property string displayName: userInfo.displayName || userInfo.username || i18n.tr("Unknown")
     readonly property string avatarSource: userInfo.profilePicture ? SerchatAPI.apiBaseUrl + userInfo.profilePicture : ""
     readonly property string memberStatus: isOffline ? "offline" : (userInfo.customStatus ? (userInfo.customStatus.status || "online") : "online")
@@ -55,13 +57,18 @@ Rectangle {
             width: parent.width - units.gu(6)
             spacing: units.gu(0.2)
             
-            Label {
-                text: memberItem.displayName
-                fontSize: "small"
-                font.bold: true
-                elide: Text.ElideRight
+            Row {
                 width: parent.width
-                color: isOffline ? Theme.palette.normal.backgroundSecondaryText : Theme.palette.normal.baseText
+                spacing: units.gu(0.5)
+                
+                Label {
+                    text: memberItem.isServerOwner ? "👑 " + memberItem.displayName : memberItem.displayName
+                    fontSize: "small"
+                    font.bold: true
+                    elide: Text.ElideRight
+                    width: parent.width
+                    color: isOffline ? Theme.palette.normal.backgroundSecondaryText : Theme.palette.normal.baseText
+                }
             }
             
             Label {

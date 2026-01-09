@@ -13,6 +13,7 @@ Rectangle {
     
     // Server channel properties
     property string serverId: ""
+    property string serverOwnerId: ""
     property string channelId: ""
     property string channelName: ""
     property string channelType: "text"
@@ -821,6 +822,7 @@ Rectangle {
             anchors.fill: parent
             anchors.leftMargin: units.dp(1)
             serverId: messageView.serverId
+            serverOwnerId: messageView.serverOwnerId
             currentUserId: messageView.currentUserId
             
             onMemberClicked: {

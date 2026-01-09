@@ -20,6 +20,7 @@ Rectangle {
     id: membersPanel
     
     property string serverId: ""
+    property string serverOwnerId: ""
     property bool loading: false
     property string searchQuery: ""
     property string currentUserId: ""
@@ -306,6 +307,7 @@ Rectangle {
                             Components.MemberListItem {
                                 width: membersColumn.width
                                 member: modelData
+                                serverOwnerId: membersPanel.serverOwnerId
                                 currentUserId: membersPanel.currentUserId
                                 isOffline: !isMemberOnline(modelData)
                                 panelColor: membersPanel.color

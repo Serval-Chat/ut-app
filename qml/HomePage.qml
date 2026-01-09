@@ -142,6 +142,7 @@ Page {
             
             // Server channel properties
             serverId: currentServerId
+            serverOwnerId: currentServerOwnerId
             channelId: currentChannelId
             channelName: currentChannelName
             channelType: currentChannelType
