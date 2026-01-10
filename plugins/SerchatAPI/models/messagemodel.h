@@ -149,6 +149,12 @@ public:
     Q_INVOKABLE bool deleteMessage(const QString& messageId);
     
     /**
+     * @brief Delete a message by ID, deferred to next event loop.
+     * Safer when called from within a delegate.
+     */
+    Q_INVOKABLE void deleteMessageDeferred(const QString& messageId);
+    
+    /**
      * @brief Check if a message with given ID exists.
      * O(1) lookup using internal hash table.
      */

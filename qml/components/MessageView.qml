@@ -666,8 +666,11 @@ Rectangle {
     
     // Delete a message
     function deleteMessage(messageId) {
-        // TODO: Implement message deletion via API
-        console.log("[MessageView] Delete message:", messageId)
+        // Use C++ level deferred deletion to avoid delegate context crashes
+        // Optimistically removes from UI before server confirms
+        SerchatAPI.messageModel.deleteMessageDeferred(messageId)
+        
+        // Send deletion request to server
         if (isDMMode) {
             SerchatAPI.deleteDirectMessage(messageId)
         } else {

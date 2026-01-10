@@ -1057,6 +1057,14 @@ Page {
             }
         }
         
+        onDirectMessageDeleted: {
+            console.log("[HomePage] Direct message deleted:", messageId)
+            
+            // Delete message using C++ model - uses proper remove signals to preserve scroll
+            // This handles the socket event confirmation (message may already be optimistically deleted)
+            SerchatAPI.messageModel.deleteMessage(String(messageId))
+        }
+        
         // User presence
         onUserOnline: {
             console.log("[HomePage] User online:", username)

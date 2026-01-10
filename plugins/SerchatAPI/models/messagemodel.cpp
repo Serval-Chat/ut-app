@@ -1,6 +1,7 @@
 #include "messagemodel.h"
 #include "../userprofilecache.h"
 #include <QDebug>
+#include <QTimer>
 
 MessageModel::MessageModel(QObject *parent)
     : QAbstractListModel(parent)
@@ -294,17 +295,27 @@ bool MessageModel::deleteMessage(const QString& messageId)
     
     int index = m_idToIndex[messageId];
     
-    // Use proper model signals
-    beginRemoveRows(QModelIndex(), index, index);
+    // For BottomToTop ListView with delegates, use full model reset
+    // to avoid crashes during delegate cleanup
+    beginResetModel();
     
     m_messages.removeAt(index);
     rebuildIndexMap();
     
-    endRemoveRows();
+    endResetModel();
     
     emit countChanged();
     emit messageDeleted(messageId);
     return true;
+}
+
+void MessageModel::deleteMessageDeferred(const QString& messageId)
+{
+    // Use QTimer::singleShot to defer to next event loop iteration
+    // This ensures we're completely out of any delegate context
+    QTimer::singleShot(0, this, [this, messageId]() {
+        deleteMessage(messageId);
+    });
 }
 
 bool MessageModel::hasMessage(const QString& messageId) const
