@@ -556,8 +556,8 @@ void SocketClient::handleEvent(const QString& eventType, const QJsonObject& payl
     }
     else if (eventType == "typing_server") {
         emit userTyping(payload["channelId"].toString(),
-                       payload["userId"].toString(),
-                       payload["username"].toString());
+                       payload["senderId"].toString(),
+                       payload["senderUsername"].toString());
     }
     
     // ========================================================================
