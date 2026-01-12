@@ -1009,6 +1009,7 @@ private slots:
     void handleServerMessageReceived(const QVariantMap& message);
     void handleServerMessageEdited(const QVariantMap& message);
     void handleServerMessageDeleted(const QString& messageId, const QString& channelId);
+    void handleDirectMessageReceived(const QVariantMap& message);
     void handleChannelUpdated(const QString& serverId, const QVariantMap& channel);
     void handleChannelCreated(const QString& serverId, const QVariantMap& channel);
     void handleChannelDeleted(const QString& serverId, const QString& channelId);
@@ -1026,6 +1027,10 @@ private slots:
     void handleMemberAdded(const QString& serverId, const QString& userId);
     void handleMemberRemoved(const QString& serverId, const QString& userId);
     void handleMemberUpdated(const QString& serverId, const QString& userId, const QVariantMap& member);
+    
+    // Reaction event handlers
+    void handleReactionAdded(const QVariantMap& reaction);
+    void handleReactionRemoved(const QVariantMap& reaction);
     
     // Friend handlers
     void handleFriendsFetched(int requestId, const QVariantList& friends);
@@ -1110,17 +1115,17 @@ private:
     void restoreAuthState();
     
     // Presence event handlers
-    void handlePresenceState(const QVariantMap& presence);
-    void handleUserOnline(const QString& username);
-    void handleUserOffline(const QString& username);
+    void handlePresenceSync(const QVariantList& onlineUsers);
+    void handleUserOnline(const QString& userId, const QString& username, const QString& status);
+    void handleUserOffline(const QString& userId, const QString& username);
     
     // Typing event handlers
-    void handleUserTyping(const QString& serverId, const QString& channelId, const QString& username);
-    void handleDMTyping(const QString& username);
+    void handleUserTyping(const QString& channelId, const QString& userId, const QString& username);
+    void handleDMTyping(const QString& senderId, const QString& senderUsername);
     void removeTypingUser(const QString& key, const QString& username);
     
     // Unread event handlers
-    void handleChannelUnread(const QString& serverId, const QString& channelId,
+    void handleChannelUnread(const QString& channelId,
                              const QString& lastMessageAt, const QString& senderId);
     void handleDMUnread(const QString& peer, int count);
     

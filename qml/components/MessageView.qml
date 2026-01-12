@@ -312,6 +312,7 @@ Rectangle {
                         replyToText: model.repliedMessage ? model.repliedMessage.text : ""
                         replyToSender: model.repliedMessage ? getSenderName(model.repliedMessage.senderId) : ""
                         reactions: model.reactions || []
+                        isPending: model.isTempMessage || false  // Grey out pending messages
                         
                         // Bind swipe state to list scroll lock
                         onIsSwipeActiveChanged: {

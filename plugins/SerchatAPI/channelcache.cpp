@@ -80,6 +80,28 @@ QVariantMap ChannelCache::getChannel(const QString& serverId, const QString& cha
     return QVariantMap();
 }
 
+QString ChannelCache::getServerIdForChannel(const QString& channelId) const {
+    if (channelId.isEmpty()) {
+        return QString();
+    }
+    
+    // Search through all cached servers
+    for (auto it = m_channels.constBegin(); it != m_channels.constEnd(); ++it) {
+        const QString& serverId = it.key();
+        const CacheEntry& entry = it.value();
+        
+        // Search channels in this server
+        for (const QVariant& v : entry.data) {
+            QVariantMap channel = v.toMap();
+            if (extractId(channel) == channelId) {
+                return serverId;
+            }
+        }
+    }
+    
+    return QString();
+}
+
 bool ChannelCache::hasChannels(const QString& serverId) const {
     return m_channels.contains(serverId) && !m_channels[serverId].data.isEmpty();
 }

@@ -24,6 +24,7 @@ Item {
     property string replyToText: ""
     property string replyToSender: ""
     property var reactions: []
+    property bool isPending: false  // True for messages awaiting server confirmation
     
     // Expose swipe state to parent for scroll locking
     property bool isSwipeActive: swipeArea.horizontalSwipeDetected
@@ -131,6 +132,11 @@ Item {
                 id: contentColumn
                 width: parent.width - units.gu(6)
                 spacing: units.gu(0.3)
+                opacity: isPending ? 0.5 : 1.0  // Grey out pending messages
+                
+                Behavior on opacity {
+                    NumberAnimation { duration: 150 }
+                }
                 
                 // Header (sender name + timestamp)
                 Row {

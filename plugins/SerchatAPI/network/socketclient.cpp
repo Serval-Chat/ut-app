@@ -4,39 +4,21 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QUrlQuery>
-
-// Engine.IO packet types
-const int ENGINE_OPEN = 0;
-const int ENGINE_CLOSE = 1;
-const int ENGINE_PING = 2;
-const int ENGINE_PONG = 3;
-const int ENGINE_MESSAGE = 4;
-const int ENGINE_UPGRADE = 5;
-const int ENGINE_NOOP = 6;
-
-// Socket.IO packet types
-const int SOCKET_CONNECT = 0;
-const int SOCKET_DISCONNECT = 1;
-const int SOCKET_EVENT = 2;
-const int SOCKET_ACK = 3;
-const int SOCKET_CONNECT_ERROR = 4;
-const int SOCKET_BINARY_EVENT = 5;
-const int SOCKET_BINARY_ACK = 6;
+#include <QDateTime>
 
 SocketClient::SocketClient(QObject *parent)
     : QObject(parent)
     , m_socket(new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this))
     , m_connected(false)
-    , m_socketIOConnected(false)
+    , m_authenticated(false)
     , m_pingTimer(new QTimer(this))
     , m_pongTimeoutTimer(new QTimer(this))
-    , m_pingInterval(25000)
-    , m_pingTimeout(20000)
+    , m_pingInterval(25000)   // Send ping every 25 seconds
+    , m_pingTimeout(10000)    // Wait 10 seconds for pong
     , m_reconnectTimer(new QTimer(this))
     , m_reconnectAttempts(0)
     , m_maxReconnectAttempts(10)
     , m_shouldReconnect(true)
-    , m_ackId(0)
 {
     QObject::connect(m_socket, &QWebSocket::connected, 
                      this, &SocketClient::onWebSocketConnected);
@@ -47,10 +29,10 @@ SocketClient::SocketClient(QObject *parent)
     QObject::connect(m_socket, &QWebSocket::textMessageReceived,
                      this, &SocketClient::onTextMessageReceived);
     
-    // Ping timer - used to send ping probes when server doesn't ping us
+    // Ping timer - send heartbeat to keep connection alive
     QObject::connect(m_pingTimer, &QTimer::timeout, 
                      this, &SocketClient::onPingTimeout);
-    // Pong timeout timer - if we don't get pong/ping from server, connection is dead
+    // Pong timeout timer - if we don't get pong from server, connection is dead
     QObject::connect(m_pongTimeoutTimer, &QTimer::timeout,
                      this, &SocketClient::onPongTimeout);
     QObject::connect(m_reconnectTimer, &QTimer::timeout,
@@ -67,6 +49,11 @@ SocketClient::~SocketClient()
     disconnect();
 }
 
+QString SocketClient::generateMessageId()
+{
+    return QUuid::createUuid().toString(QUuid::WithoutBraces);
+}
+
 void SocketClient::connect(const QString& url, const QString& authToken)
 {
     if (m_connected) {
@@ -77,8 +64,9 @@ void SocketClient::connect(const QString& url, const QString& authToken)
     m_authToken = authToken;
     m_reconnectAttempts = 0;
     m_shouldReconnect = true;
+    m_authenticated = false;
     
-    // Build WebSocket URL for Engine.IO
+    // Build WebSocket URL
     QUrl wsUrl(url);
     if (wsUrl.scheme() == "https") {
         wsUrl.setScheme("wss");
@@ -86,29 +74,22 @@ void SocketClient::connect(const QString& url, const QString& authToken)
         wsUrl.setScheme("ws");
     }
     
-    // Add Engine.IO path and query params
+    // Use /ws endpoint for pure WebSocket
     QString path = wsUrl.path();
     if (path.isEmpty() || path == "/") {
-        path = "/socket.io/";
-    } else if (!path.endsWith("/socket.io/")) {
-        path = path + "/socket.io/";
+        path = "/ws";
+    } else if (!path.endsWith("/ws")) {
+        if (path.endsWith("/")) {
+            path = path + "ws";
+        } else {
+            path = path + "/ws";
+        }
     }
     wsUrl.setPath(path);
     
-    QUrlQuery query;
-    query.addQueryItem("EIO", "4");  // Engine.IO version 4
-    query.addQueryItem("transport", "websocket");
-    wsUrl.setQuery(query);
-    
     qDebug() << "[SocketClient] Connecting to:" << wsUrl.toString();
     
-    // Set up request with auth token
-    QNetworkRequest request(wsUrl);
-    if (!authToken.isEmpty()) {
-        request.setRawHeader("Authorization", ("Bearer " + authToken).toUtf8());
-    }
-    
-    m_socket->open(request);
+    m_socket->open(wsUrl);
 }
 
 void SocketClient::disconnect()
@@ -117,14 +98,11 @@ void SocketClient::disconnect()
     m_pingTimer->stop();
     m_pongTimeoutTimer->stop();
     m_reconnectTimer->stop();
-
-    if (m_socketIOConnected) {
-        sendSocketPacket(SOCKET_DISCONNECT, "/");
-    }
+    m_pendingReplies.clear();
 
     m_socket->close();
     m_connected = false;
-    m_socketIOConnected = false;
+    m_authenticated = false;
 }
 
 void SocketClient::resetReconnectAttempts()
@@ -137,192 +115,221 @@ void SocketClient::resetReconnectAttempts()
 
 void SocketClient::checkConnectionHealth()
 {
-    if (!m_connected) {
-        qDebug() << "[SocketClient] Not connected, skipping health check";
+    if (!m_connected || !m_authenticated) {
+        qDebug() << "[SocketClient] Not connected/authenticated, skipping health check";
         return;
     }
 
     qDebug() << "[SocketClient] Checking connection health";
-
-    // Start the pong timeout timer - if we don't get a response, connection is dead
-    m_pongTimeoutTimer->start(m_pingTimeout);
-
-    // Reset and restart the ping timer to ensure we're monitoring for activity
-    m_pingTimer->start(m_pingInterval);
+    sendPing();
 }
 
-void SocketClient::emitEvent(const QString& event, const QVariantMap& data)
-{
-    QJsonArray args;
-    args.append(event);
-    args.append(QJsonObject::fromVariantMap(data));
-    sendSocketPacket(SOCKET_EVENT, "/", args);
-}
+// ============================================================================
+// Event emission
+// ============================================================================
 
-void SocketClient::emitEvent(const QString& event, const QVariantList& args)
+void SocketClient::sendEnvelope(const QString& eventType, const QVariantMap& payload,
+                                 const QString& replyTo)
 {
-    QJsonArray jsonArgs;
-    jsonArgs.append(event);
-    for (const QVariant& arg : args) {
-        jsonArgs.append(QJsonValue::fromVariant(arg));
+    if (!m_connected) {
+        qWarning() << "[SocketClient] Cannot send event, not connected:" << eventType;
+        return;
     }
-    sendSocketPacket(SOCKET_EVENT, "/", jsonArgs);
+    
+    QJsonObject envelope;
+    envelope["id"] = generateMessageId();
+    
+    QJsonObject event;
+    event["type"] = eventType;
+    event["payload"] = QJsonObject::fromVariantMap(payload);
+    envelope["event"] = event;
+    
+    QJsonObject meta;
+    if (!replyTo.isEmpty()) {
+        meta["replyTo"] = replyTo;
+    }
+    meta["ts"] = QDateTime::currentMSecsSinceEpoch();
+    envelope["meta"] = meta;
+    
+    QJsonDocument doc(envelope);
+    QString message = QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+    
+    qDebug() << "[SocketClient] Sending:" << eventType;
+    m_socket->sendTextMessage(message);
 }
+
+void SocketClient::emitEvent(const QString& eventType, const QVariantMap& payload)
+{
+    sendEnvelope(eventType, payload);
+}
+
+void SocketClient::sendAuthentication()
+{
+    QVariantMap payload;
+    payload["token"] = m_authToken;
+    sendEnvelope("authenticate", payload);
+}
+
+void SocketClient::sendPing()
+{
+    sendEnvelope("ping", {});
+    m_pongTimeoutTimer->start(m_pingTimeout);
+}
+
+// ============================================================================
+// High-level API methods
+// ============================================================================
 
 void SocketClient::joinServer(const QString& serverId)
 {
-    QVariantMap data;
-    data["serverId"] = serverId;
-    emitEvent("join_server", data);
+    QVariantMap payload;
+    payload["serverId"] = serverId;
+    emitEvent("join_server", payload);
 }
 
 void SocketClient::joinChannel(const QString& serverId, const QString& channelId)
 {
-    QVariantMap data;
-    data["serverId"] = serverId;
-    data["channelId"] = channelId;
-    emitEvent("join_channel", data);
+    QVariantMap payload;
+    payload["serverId"] = serverId;
+    payload["channelId"] = channelId;
+    emitEvent("join_channel", payload);
 }
 
 void SocketClient::leaveServer(const QString& serverId)
 {
-    QVariantMap data;
-    data["serverId"] = serverId;
-    emitEvent("leave_server", data);
+    QVariantMap payload;
+    payload["serverId"] = serverId;
+    emitEvent("leave_server", payload);
 }
 
-void SocketClient::leaveChannel(const QString& serverId, const QString& channelId)
+void SocketClient::leaveChannel(const QString& channelId)
 {
-    QVariantMap data;
-    data["serverId"] = serverId;
-    data["channelId"] = channelId;
-    emitEvent("leave_channel", data);
+    QVariantMap payload;
+    payload["channelId"] = channelId;
+    emitEvent("leave_channel", payload);
 }
 
 void SocketClient::markChannelRead(const QString& serverId, const QString& channelId)
 {
-    QVariantMap data;
-    data["serverId"] = serverId;
-    data["channelId"] = channelId;
-    emitEvent("mark_channel_read", data);
+    QVariantMap payload;
+    payload["serverId"] = serverId;
+    payload["channelId"] = channelId;
+    emitEvent("mark_channel_read", payload);
 }
 
 void SocketClient::markDMRead(const QString& peerId)
 {
-    QVariantMap data;
-    data["peerId"] = peerId;
-    emitEvent("mark_read", data);
+    QVariantMap payload;
+    payload["peerId"] = peerId;
+    emitEvent("mark_dm_read", payload);
 }
 
 void SocketClient::sendTyping(const QString& serverId, const QString& channelId)
 {
-    QVariantMap data;
-    data["serverId"] = serverId;
-    data["channelId"] = channelId;
-    emitEvent("server_typing", data);
+    QVariantMap payload;
+    payload["serverId"] = serverId;
+    payload["channelId"] = channelId;
+    emitEvent("typing_server", payload);
 }
 
-void SocketClient::sendDMTyping(const QString& receiver)
+void SocketClient::sendDMTyping(const QString& receiverId)
 {
-    QVariantMap data;
-    data["to"] = receiver;
-    emitEvent("typing", data);
+    QVariantMap payload;
+    payload["receiverId"] = receiverId;
+    emitEvent("typing_dm", payload);
 }
 
 void SocketClient::sendServerMessage(const QString& serverId, const QString& channelId, 
                                       const QString& text, const QString& replyToId)
 {
-    QVariantMap data;
-    data["serverId"] = serverId;
-    data["channelId"] = channelId;
-    data["text"] = text;
+    QVariantMap payload;
+    payload["serverId"] = serverId;
+    payload["channelId"] = channelId;
+    payload["text"] = text;
     if (!replyToId.isEmpty()) {
-        data["replyToId"] = replyToId;
+        payload["replyToId"] = replyToId;
     }
-    emitEvent("server_message", data);
+    emitEvent("send_message_server", payload);
 }
 
-void SocketClient::sendDirectMessage(const QString& receiver, const QString& text, 
+void SocketClient::sendDirectMessage(const QString& receiverId, const QString& text, 
                                       const QString& replyToId)
 {
-    QVariantMap data;
-    data["receiver"] = receiver;
-    data["text"] = text;
+    QVariantMap payload;
+    payload["receiverId"] = receiverId;
+    payload["text"] = text;
     if (!replyToId.isEmpty()) {
-        data["replyToId"] = replyToId;
+        payload["replyToId"] = replyToId;
     }
-    emitEvent("message", data);
+    emitEvent("send_message_dm", payload);
 }
 
-void SocketClient::editServerMessage(const QString& serverId, const QString& channelId,
-                                      const QString& messageId, const QString& text)
+void SocketClient::editServerMessage(const QString& messageId, const QString& text)
 {
-    QVariantMap data;
-    data["serverId"] = serverId;
-    data["channelId"] = channelId;
-    data["messageId"] = messageId;
-    data["text"] = text;
-    emitEvent("edit_server_message", data);
+    QVariantMap payload;
+    payload["messageId"] = messageId;
+    payload["text"] = text;
+    emitEvent("edit_message_server", payload);
 }
 
-void SocketClient::deleteServerMessage(const QString& serverId, const QString& channelId,
-                                        const QString& messageId)
+void SocketClient::deleteServerMessage(const QString& serverId, const QString& messageId)
 {
-    QVariantMap data;
-    data["serverId"] = serverId;
-    data["channelId"] = channelId;
-    data["messageId"] = messageId;
-    emitEvent("delete_server_message", data);
+    QVariantMap payload;
+    payload["serverId"] = serverId;
+    payload["messageId"] = messageId;
+    emitEvent("delete_message_server", payload);
 }
 
 void SocketClient::editDirectMessage(const QString& messageId, const QString& text)
 {
-    QVariantMap data;
-    data["messageId"] = messageId;
-    data["text"] = text;
-    emitEvent("edit_message", data);
+    QVariantMap payload;
+    payload["messageId"] = messageId;
+    payload["text"] = text;
+    emitEvent("edit_message_dm", payload);
 }
 
 void SocketClient::deleteDirectMessage(const QString& messageId)
 {
-    QVariantMap data;
-    data["messageId"] = messageId;
-    emitEvent("delete_message", data);
+    QVariantMap payload;
+    payload["messageId"] = messageId;
+    emitEvent("delete_message_dm", payload);
 }
 
 void SocketClient::addReaction(const QString& messageId, const QString& messageType,
-                               const QString& emoji, const QString& serverId,
-                               const QString& channelId)
+                               const QString& emoji, const QString& emojiType,
+                               const QString& emojiId)
 {
-    QVariantMap data;
-    data["messageId"] = messageId;
-    data["messageType"] = messageType;
-    data["emoji"] = emoji;
-    data["emojiType"] = "unicode";
-    if (!serverId.isEmpty()) {
-        data["serverId"] = serverId;
+    QVariantMap payload;
+    payload["messageId"] = messageId;
+    payload["emoji"] = emoji;
+    payload["emojiType"] = emojiType;
+    payload["messageType"] = messageType;
+    if (!emojiId.isEmpty()) {
+        payload["emojiId"] = emojiId;
     }
-    if (!channelId.isEmpty()) {
-        data["channelId"] = channelId;
-    }
-    emitEvent("add_reaction", data);
+    emitEvent("add_reaction", payload);
 }
 
 void SocketClient::removeReaction(const QString& messageId, const QString& messageType,
-                                   const QString& emoji, const QString& serverId,
-                                   const QString& channelId)
+                                   const QString& emoji, const QString& emojiType,
+                                   const QString& emojiId)
 {
-    QVariantMap data;
-    data["messageId"] = messageId;
-    data["messageType"] = messageType;
-    data["emoji"] = emoji;
-    if (!serverId.isEmpty()) {
-        data["serverId"] = serverId;
+    QVariantMap payload;
+    payload["messageId"] = messageId;
+    payload["emoji"] = emoji;
+    payload["emojiType"] = emojiType;
+    payload["messageType"] = messageType;
+    if (!emojiId.isEmpty()) {
+        payload["emojiId"] = emojiId;
     }
-    if (!channelId.isEmpty()) {
-        data["channelId"] = channelId;
-    }
-    emitEvent("remove_reaction", data);
+    emitEvent("remove_reaction", payload);
+}
+
+void SocketClient::setStatus(const QString& status)
+{
+    QVariantMap payload;
+    payload["status"] = status;
+    emitEvent("set_status", payload);
 }
 
 // ============================================================================
@@ -334,17 +341,24 @@ void SocketClient::onWebSocketConnected()
     qDebug() << "[SocketClient] WebSocket connected";
     m_connected = true;
     m_reconnectAttempts = 0;
+    
+    // Send authentication immediately (within 30s grace period)
+    if (!m_authToken.isEmpty()) {
+        sendAuthentication();
+    }
+    
     emit connectedChanged();
 }
 
 void SocketClient::onWebSocketDisconnected()
 {
     qDebug() << "[SocketClient] WebSocket disconnected";
-    bool wasConnected = m_connected;
+    bool wasConnected = m_connected && m_authenticated;
     m_connected = false;
-    m_socketIOConnected = false;
+    m_authenticated = false;
     m_pingTimer->stop();
     m_pongTimeoutTimer->stop();
+    m_pendingReplies.clear();
     
     emit connectedChanged();
     if (wasConnected) {
@@ -366,22 +380,32 @@ void SocketClient::onTextMessageReceived(const QString& message)
 {
     if (message.isEmpty()) return;
     
-    // Parse Engine.IO packet - first char is packet type
-    int type = message.at(0).digitValue();
-    QString data = message.mid(1);
+    // Reset ping timer on any message received
+    if (m_pingTimer->isActive()) {
+        m_pingTimer->start(m_pingInterval);
+    }
+    m_pongTimeoutTimer->stop();
     
-    handleEnginePacket(type, data);
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8(), &parseError);
+    
+    if (parseError.error != QJsonParseError::NoError) {
+        qWarning() << "[SocketClient] JSON parse error:" << parseError.errorString();
+        return;
+    }
+    
+    if (!doc.isObject()) {
+        qWarning() << "[SocketClient] Expected JSON object envelope";
+        return;
+    }
+    
+    handleEnvelope(doc.object());
 }
 
 void SocketClient::onPingTimeout()
 {
-    // In Engine.IO v4, the SERVER sends pings, not the client.
-    // This timer is used to detect if the server has gone silent.
-    // If we reach here, it means we haven't received any data from the server
-    // within the pingInterval. Start the pong timeout to wait a bit more.
-    if (m_connected) {
-        qDebug() << "[SocketClient] No data received from server, starting timeout";
-        m_pongTimeoutTimer->start(m_pingTimeout);
+    if (m_connected && m_authenticated) {
+        sendPing();
     }
 }
 
@@ -397,413 +421,368 @@ void SocketClient::onReconnectTimeout()
 }
 
 // ============================================================================
-// Engine.IO protocol
+// Envelope handling
 // ============================================================================
 
-void SocketClient::sendEnginePacket(int type, const QString& data)
+void SocketClient::handleEnvelope(const QJsonObject& envelope)
 {
-    if (!m_connected && type != ENGINE_OPEN) return;
+    QString messageId = envelope["id"].toString();
+    QJsonObject event = envelope["event"].toObject();
+    QJsonObject meta = envelope["meta"].toObject();
     
-    QString packet = QString::number(type) + data;
-    m_socket->sendTextMessage(packet);
+    QString eventType = event["type"].toString();
+    QJsonObject payload = event["payload"].toObject();
+    QString replyTo = meta["replyTo"].toString();
+    
+    if (eventType.isEmpty()) {
+        qWarning() << "[SocketClient] Received envelope without event type";
+        return;
+    }
+    
+    qDebug() << "[SocketClient] Event:" << eventType;
+    
+    // Check if this is a reply to a pending request
+    if (!replyTo.isEmpty() && m_pendingReplies.contains(replyTo)) {
+        auto callback = m_pendingReplies.take(replyTo);
+        callback(payload);
+        return;
+    }
+    
+    handleEvent(eventType, payload, messageId);
 }
 
-void SocketClient::handleEnginePacket(int type, const QString& data)
+QVariantMap SocketClient::normalizeMessageData(const QVariantMap& data)
 {
-    // Reset inactivity timer on any packet received (server is alive)
-    // This replaces the ping-based heartbeat - we rely on server's pings
-    if (m_pingTimer->isActive()) {
-        m_pingTimer->start(m_pingInterval);  // Reset the interval
-    }
-    // Cancel timeout if we got any response
-    m_pongTimeoutTimer->stop();
+    QVariantMap normalized = data;
     
-    switch (type) {
-    case ENGINE_OPEN:
-        {
-            QJsonDocument doc = QJsonDocument::fromJson(data.toUtf8());
-            if (!doc.isNull() && doc.isObject()) {
-                handleOpen(doc.object());
-            }
-        }
-        break;
-        
-    case ENGINE_CLOSE:
-        qDebug() << "[SocketClient] Engine close received";
-        m_socket->close();
-        break;
-        
-    case ENGINE_PING:
-        // Server pinged us - respond with pong immediately
-        qDebug() << "[SocketClient] Received ping from server, sending pong";
-        sendEnginePacket(ENGINE_PONG);
-        break;
-        
-    case ENGINE_PONG:
-        // This shouldn't happen in Engine.IO v4 (client doesn't send ping)
-        // but handle it gracefully in case of protocol variations
-        qDebug() << "[SocketClient] Received unexpected pong from server";
-        break;
-        
-    case ENGINE_MESSAGE:
-        // Socket.IO message - parse Socket.IO packet
-        if (!data.isEmpty()) {
-            int sioType = data.at(0).digitValue();
-            QString sioData = data.mid(1);
-            
-            // Parse namespace if present
-            QString nsp = "/";
-            if (sioData.startsWith("/")) {
-                int commaIdx = sioData.indexOf(',');
-                if (commaIdx != -1) {
-                    nsp = sioData.left(commaIdx);
-                    sioData = sioData.mid(commaIdx + 1);
-                } else {
-                    nsp = sioData;
-                    sioData = "";
-                }
-            }
-            
-            // Parse JSON data if present
-            QJsonValue jsonData;
-            if (!sioData.isEmpty()) {
-                QJsonDocument doc = QJsonDocument::fromJson(sioData.toUtf8());
-                if (doc.isArray()) {
-                    jsonData = doc.array();
-                } else if (doc.isObject()) {
-                    jsonData = doc.object();
-                }
-            }
-            
-            handleSocketPacket(sioType, nsp, jsonData);
-        }
-        break;
-        
-    case ENGINE_UPGRADE:
-    case ENGINE_NOOP:
-        break;
-        
-    default:
-        qWarning() << "[SocketClient] Unknown Engine.IO packet type:" << type;
+    // WebSocket API uses 'messageId', but our internal code expects '_id'
+    // Convert for consistency with REST API responses
+    if (normalized.contains("messageId") && !normalized.contains("_id")) {
+        normalized["_id"] = normalized["messageId"];
     }
+    
+    return normalized;
 }
 
-void SocketClient::handleOpen(const QJsonObject& config)
+void SocketClient::handleEvent(const QString& eventType, const QJsonObject& payload,
+                                const QString& messageId)
 {
-    m_sessionId = config["sid"].toString();
-    m_pingInterval = config["pingInterval"].toInt(25000);
-    m_pingTimeout = config["pingTimeout"].toInt(20000);
+    Q_UNUSED(messageId)
     
-    qDebug() << "[SocketClient] Engine.IO open, sid:" << m_sessionId 
-             << "pingInterval:" << m_pingInterval
-             << "pingTimeout:" << m_pingTimeout;
+    QVariantMap data = payload.toVariantMap();
     
-    // Start inactivity timer - in Engine.IO v4, the server sends pings.
-    // We use this timer to detect if we haven't received anything from the server.
-    // Set to pingInterval + pingTimeout to give server time to ping us.
-    m_pingTimer->setInterval(m_pingInterval + m_pingTimeout);
-    m_pingTimer->start();
+    // ========================================================================
+    // Connection & Authentication
+    // ========================================================================
     
-    // Send Socket.IO connect packet
-    sendConnect();
-}
-
-// ============================================================================
-// Socket.IO protocol
-// ============================================================================
-
-void SocketClient::sendSocketPacket(int type, const QString& nsp, const QJsonValue& data)
-{
-    QString packet = QString::number(type);
-    
-    // Add namespace if not default
-    if (nsp != "/") {
-        packet += nsp;
-        if (!data.isNull() && !data.isUndefined()) {
-            packet += ",";
-        }
-    }
-    
-    // Add data
-    if (!data.isNull() && !data.isUndefined()) {
-        QJsonDocument doc;
-        if (data.isArray()) {
-            doc = QJsonDocument(data.toArray());
-        } else if (data.isObject()) {
-            doc = QJsonDocument(data.toObject());
-        }
-        packet += QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
-    }
-    
-    sendEnginePacket(ENGINE_MESSAGE, packet);
-}
-
-void SocketClient::handleSocketPacket(int type, const QString& nsp, const QJsonValue& data)
-{
-    switch (type) {
-    case SOCKET_CONNECT:
-        {
-            m_socketIOConnected = true;
-            if (data.isObject()) {
-                m_socketId = data.toObject()["sid"].toString();
-                emit socketIdChanged();
-            }
-            qDebug() << "[SocketClient] Socket.IO connected, sid:" << m_socketId;
-            emit connected();
-        }
-        break;
+    if (eventType == "authenticated") {
+        m_authenticated = true;
+        QJsonObject user = payload["user"].toObject();
+        m_socketId = user["id"].toString();
         
-    case SOCKET_DISCONNECT:
-        m_socketIOConnected = false;
-        emit disconnected();
-        break;
+        qDebug() << "[SocketClient] Authenticated as:" << user["username"].toString();
         
-    case SOCKET_EVENT:
-        if (data.isArray()) {
-            handleEvent(nsp, data.toArray());
+        // Start heartbeat
+        m_pingTimer->start(m_pingInterval);
+        
+        emit socketIdChanged();
+        emit connectedChanged();
+        emit connected();
+    }
+    else if (eventType == "pong") {
+        // Heartbeat response received
+        qDebug() << "[SocketClient] Pong received";
+    }
+    else if (eventType == "error") {
+        QString code = payload["code"].toString();
+        QString message = payload["message"].toString();
+        qWarning() << "[SocketClient] Error:" << code << message;
+        
+        if (code == "AUTHENTICATION_FAILED" || code == "UNAUTHORIZED") {
+            m_authenticated = false;
+            emit connectedChanged();
         }
-        break;
         
-    case SOCKET_ACK:
-        // Handle acknowledgement
-        break;
-        
-    case SOCKET_CONNECT_ERROR:
-        {
-            QString errMsg = "Connection error";
-            if (data.isObject()) {
-                errMsg = data.toObject()["message"].toString(errMsg);
-            }
-            qWarning() << "[SocketClient] Socket.IO connect error:" << errMsg;
-            emit error(errMsg);
+        emit error(message);
+    }
+    
+    // ========================================================================
+    // Direct Messages
+    // ========================================================================
+    
+    else if (eventType == "message_dm") {
+        emit directMessageReceived(normalizeMessageData(data));
+    }
+    else if (eventType == "message_dm_sent") {
+        // Only emit sent signal - serchatapi.cpp will handle adding to cache
+        emit directMessageSent(normalizeMessageData(data));
+    }
+    else if (eventType == "message_dm_edited") {
+        emit directMessageEdited(normalizeMessageData(data));
+    }
+    else if (eventType == "message_dm_deleted") {
+        emit directMessageDeleted(payload["messageId"].toString());
+    }
+    else if (eventType == "dm_unread_updated") {
+        emit dmUnread(payload["peerId"].toString(), payload["count"].toInt());
+    }
+    else if (eventType == "typing_dm") {
+        emit dmTyping(payload["senderId"].toString(), 
+                      payload["senderUsername"].toString());
+    }
+    
+    // ========================================================================
+    // Server Messages
+    // ========================================================================
+    
+    else if (eventType == "message_server") {
+        emit serverMessageReceived(normalizeMessageData(data));
+    }
+    else if (eventType == "message_server_sent") {
+        // Only emit sent signal - serchatapi.cpp will handle adding to cache
+        emit serverMessageSent(normalizeMessageData(data));
+    }
+    else if (eventType == "message_server_edited") {
+        emit serverMessageEdited(normalizeMessageData(data));
+    }
+    else if (eventType == "message_server_deleted") {
+        emit serverMessageDeleted(payload["messageId"].toString(),
+                                  payload["channelId"].toString());
+    }
+    else if (eventType == "channel_unread_updated") {
+        emit channelUnread(payload["channelId"].toString(),
+                          payload["lastMessageAt"].toString(),
+                          payload["senderId"].toString());
+    }
+    else if (eventType == "typing_server") {
+        emit userTyping(payload["channelId"].toString(),
+                       payload["userId"].toString(),
+                       payload["username"].toString());
+    }
+    
+    // ========================================================================
+    // Server & Channel Management
+    // ========================================================================
+    
+    else if (eventType == "server_joined") {
+        emit serverJoined(payload["serverId"].toString());
+    }
+    else if (eventType == "channel_joined") {
+        emit channelJoined(payload["serverId"].toString(),
+                          payload["channelId"].toString());
+    }
+    else if (eventType == "server_updated") {
+        emit serverUpdated(payload["serverId"].toString(),
+                          payload["server"].toObject().toVariantMap());
+    }
+    else if (eventType == "server_deleted") {
+        emit serverDeleted(payload["serverId"].toString());
+    }
+    else if (eventType == "server_icon_updated") {
+        emit serverIconUpdated(payload["serverId"].toString(),
+                               payload["icon"].toString());
+    }
+    else if (eventType == "server_banner_updated") {
+        emit serverBannerUpdated(payload["serverId"].toString(),
+                                 payload["banner"].toObject().toVariantMap());
+    }
+    else if (eventType == "ownership_transferred") {
+        emit serverOwnershipTransferred(payload["serverId"].toString(),
+                                        payload["oldOwnerId"].toString(),
+                                        payload["newOwnerId"].toString());
+    }
+    else if (eventType == "channel_created") {
+        emit channelCreated(payload["serverId"].toString(),
+                           payload["channel"].toObject().toVariantMap());
+    }
+    else if (eventType == "channel_updated") {
+        emit channelUpdated(payload["serverId"].toString(),
+                           payload["channel"].toObject().toVariantMap());
+    }
+    else if (eventType == "channel_deleted") {
+        emit channelDeleted(payload["serverId"].toString(),
+                           payload["channelId"].toString());
+    }
+    else if (eventType == "channels_reordered") {
+        QVariantList positions;
+        for (const auto& pos : payload["channelPositions"].toArray()) {
+            positions.append(pos.toObject().toVariantMap());
         }
-        break;
-        
-    default:
-        qDebug() << "[SocketClient] Unhandled Socket.IO packet type:" << type;
+        emit channelsReordered(payload["serverId"].toString(), positions);
     }
-}
-
-void SocketClient::handleEvent(const QString& nsp, const QJsonArray& args)
-{
-    Q_UNUSED(nsp)
-    
-    if (args.isEmpty()) return;
-    
-    QString event = args[0].toString();
-    QVariantMap data;
-    if (args.size() > 1 && args[1].isObject()) {
-        data = args[1].toObject().toVariantMap();
+    else if (eventType == "channel_permissions_updated") {
+        emit channelPermissionsUpdated(payload["serverId"].toString(),
+                                       payload["channelId"].toString(),
+                                       payload["permissions"].toObject().toVariantMap());
     }
     
-    qDebug() << "[SocketClient] Event:" << event;
+    // ========================================================================
+    // Categories
+    // ========================================================================
     
-    // Route events to appropriate signals
-    if (event == "server_message") {
-        emit serverMessageReceived(data);
+    else if (eventType == "category_created") {
+        emit categoryCreated(payload["serverId"].toString(),
+                            payload["category"].toObject().toVariantMap());
     }
-    else if (event == "server_message_edited" || event == "server_message_updated") {
-        emit serverMessageEdited(data);
+    else if (eventType == "category_updated") {
+        emit categoryUpdated(payload["serverId"].toString(),
+                            payload["category"].toObject().toVariantMap());
     }
-    else if (event == "server_message_deleted") {
-        emit serverMessageDeleted(data["messageId"].toString(), 
-                                  data["channelId"].toString());
+    else if (eventType == "category_deleted") {
+        emit categoryDeleted(payload["serverId"].toString(),
+                            payload["categoryId"].toString());
     }
-    else if (event == "message") {
-        emit directMessageReceived(data);
+    else if (eventType == "categories_reordered") {
+        QVariantList positions;
+        for (const auto& pos : payload["categoryPositions"].toArray()) {
+            positions.append(pos.toObject().toVariantMap());
+        }
+        emit categoriesReordered(payload["serverId"].toString(), positions);
     }
-    else if (event == "message_edited") {
-        emit directMessageEdited(data);
+    else if (eventType == "category_permissions_updated") {
+        emit categoryPermissionsUpdated(payload["serverId"].toString(),
+                                        payload["categoryId"].toString(),
+                                        payload["permissions"].toObject().toVariantMap());
     }
-    else if (event == "message_deleted") {
-        emit directMessageDeleted(data["messageId"].toString());
+    
+    // ========================================================================
+    // Roles
+    // ========================================================================
+    
+    else if (eventType == "role_created") {
+        emit roleCreated(payload["serverId"].toString(),
+                        payload["role"].toObject().toVariantMap());
     }
-    else if (event == "channel_updated") {
-        emit channelUpdated(data["serverId"].toString(), 
-                           data["channel"].toMap());
+    else if (eventType == "role_updated") {
+        emit roleUpdated(payload["serverId"].toString(),
+                        payload["role"].toObject().toVariantMap());
     }
-    else if (event == "channel_created") {
-        emit channelCreated(data["serverId"].toString(),
-                           data["channel"].toMap());
+    else if (eventType == "role_deleted") {
+        emit roleDeleted(payload["serverId"].toString(),
+                        payload["roleId"].toString());
     }
-    else if (event == "channel_deleted") {
-        emit channelDeleted(data["serverId"].toString(),
-                           data["channelId"].toString());
+    else if (eventType == "roles_reordered") {
+        QVariantList positions;
+        for (const auto& pos : payload["rolePositions"].toArray()) {
+            positions.append(pos.toObject().toVariantMap());
+        }
+        emit rolesReordered(payload["serverId"].toString(), positions);
     }
-    else if (event == "category_created") {
-        emit categoryCreated(data["serverId"].toString(),
-                            data["category"].toMap());
+    
+    // ========================================================================
+    // Members
+    // ========================================================================
+    
+    else if (eventType == "member_added") {
+        emit memberAdded(payload["serverId"].toString(),
+                        payload["userId"].toString());
     }
-    else if (event == "category_updated") {
-        emit categoryUpdated(data["serverId"].toString(),
-                            data["category"].toMap());
+    else if (eventType == "member_removed") {
+        emit memberRemoved(payload["serverId"].toString(),
+                          payload["userId"].toString());
     }
-    else if (event == "category_deleted") {
-        emit categoryDeleted(data["serverId"].toString(),
-                            data["categoryId"].toString());
+    else if (eventType == "member_updated") {
+        emit memberUpdated(payload["serverId"].toString(),
+                          payload["userId"].toString(),
+                          payload["member"].toObject().toVariantMap());
     }
-    else if (event == "channel_unread") {
-        emit channelUnread(data["serverId"].toString(),
-                          data["channelId"].toString(),
-                          data["lastMessageAt"].toString(),
-                          data["senderId"].toString());
+    else if (eventType == "member_banned") {
+        emit memberBanned(payload["serverId"].toString(),
+                         payload["userId"].toString());
     }
-    else if (event == "dm_unread") {
-        emit dmUnread(data["peer"].toString(), data["count"].toInt());
+    else if (eventType == "member_unbanned") {
+        emit memberUnbanned(payload["serverId"].toString(),
+                           payload["userId"].toString());
     }
-    else if (event == "user_online") {
-        emit userOnline(data["username"].toString());
+    
+    // ========================================================================
+    // Presence & Profile
+    // ========================================================================
+    
+    else if (eventType == "presence_sync") {
+        QVariantList onlineUsers;
+        for (const auto& user : payload["online"].toArray()) {
+            onlineUsers.append(user.toObject().toVariantMap());
+        }
+        emit presenceSync(onlineUsers);
     }
-    else if (event == "user_offline") {
-        emit userOffline(data["username"].toString());
+    else if (eventType == "user_online") {
+        emit userOnline(payload["userId"].toString(),
+                       payload["username"].toString(),
+                       payload["status"].toString());
     }
-    else if (event == "status_update") {
-        emit userStatusUpdate(data["username"].toString(),
-                             data["status"].toMap());
+    else if (eventType == "user_offline") {
+        emit userOffline(payload["userId"].toString(),
+                        payload["username"].toString());
     }
-    else if (event == "reaction_added") {
-        emit reactionAdded(data["messageId"].toString(),
-                          data["messageType"].toString(),
-                          data["reactions"].toList());
+    else if (eventType == "status_updated") {
+        emit userStatusUpdate(payload["userId"].toString(),
+                             payload["username"].toString(),
+                             payload["status"].toString());
     }
-    else if (event == "reaction_removed") {
-        emit reactionRemoved(data["messageId"].toString(),
-                            data["messageType"].toString(),
-                            data["reactions"].toList());
+    else if (eventType == "user_updated") {
+        emit userUpdated(data);
     }
-    else if (event == "typing") {
-        emit dmTyping(data["from"].toString());
+    else if (eventType == "user_banner_updated") {
+        emit userBannerUpdated(payload["username"].toString(),
+                               payload["userId"].toString(),
+                               payload["banner"].toString());
     }
-    else if (event == "server_typing") {
-        emit userTyping(data["serverId"].toString(),
-                       data["channelId"].toString(),
-                       data["from"].toString());
+    else if (eventType == "display_name_updated") {
+        emit displayNameUpdated(payload["username"].toString(),
+                                payload["userId"].toString(),
+                                payload["displayName"].toString());
     }
-    else if (event == "server_member_joined") {
-        emit serverMemberJoined(data["serverId"].toString(),
-                               data["userId"].toString());
+    
+    // ========================================================================
+    // Reactions
+    // ========================================================================
+    
+    else if (eventType == "reaction_added") {
+        emit reactionAdded(data);
     }
-    else if (event == "server_member_left") {
-        emit serverMemberLeft(data["serverId"].toString(),
-                             data["userId"].toString());
+    else if (eventType == "reaction_removed") {
+        emit reactionRemoved(data);
     }
-    else if (event == "friend_added") {
-        emit friendAdded(data["friend"].toMap());
-    }
-    else if (event == "friend_removed") {
-        emit friendRemoved(data["username"].toString(),
-                          data["userId"].toString());
-    }
-    else if (event == "incoming_request_added") {
+    
+    // ========================================================================
+    // Friends
+    // ========================================================================
+    
+    else if (eventType == "incoming_request_added") {
         emit incomingRequestAdded(data);
     }
-    else if (event == "incoming_request_removed") {
-        emit incomingRequestRemoved(data["from"].toString(),
-                                   data["fromId"].toString());
+    else if (eventType == "friend_added") {
+        emit friendAdded(payload["friend"].toObject().toVariantMap());
     }
-    else if (event == "ping") {
-        emit pingReceived(data);
-    }
-    else if (event == "presence_state") {
-        emit presenceState(data);
-    }
-    else if (event == "ban") {
-        qWarning() << "[SocketClient] User banned:" << data;
-        emit error("Account banned: " + data["reason"].toString());
-    }
-    // Channel/Category permission events
-    else if (event == "channel_permissions_updated") {
-        emit channelPermissionsUpdated(data["serverId"].toString(),
-                                       data["channelId"].toString(),
-                                       data["permissions"].toMap());
-    }
-    else if (event == "category_permissions_updated") {
-        emit categoryPermissionsUpdated(data["serverId"].toString(),
-                                        data["categoryId"].toString(),
-                                        data["permissions"].toMap());
-    }
-    // Server events
-    else if (event == "server_updated") {
-        emit serverUpdated(data["serverId"].toString(),
-                          data["server"].toMap());
-    }
-    else if (event == "server_deleted") {
-        emit serverDeleted(data["serverId"].toString());
-    }
-    else if (event == "server_ownership_transferred") {
-        emit serverOwnershipTransferred(data["serverId"].toString(),
-                                        data["previousOwnerId"].toString(),
-                                        data["newOwnerId"].toString(),
-                                        data["newOwnerUsername"].toString());
-    }
-    // Role events
-    else if (event == "role_created") {
-        emit roleCreated(data["serverId"].toString(),
-                        data["role"].toMap());
-    }
-    else if (event == "role_updated") {
-        emit roleUpdated(data["serverId"].toString(),
-                        data["role"].toMap());
-    }
-    else if (event == "role_deleted") {
-        emit roleDeleted(data["serverId"].toString(),
-                        data["roleId"].toString());
-    }
-    else if (event == "roles_reordered") {
-        emit rolesReordered(data["serverId"].toString(),
-                           data["rolePositions"].toList());
-    }
-    // Member events (REST-triggered)
-    else if (event == "member_added") {
-        emit memberAdded(data["serverId"].toString(),
-                        data["userId"].toString());
-    }
-    else if (event == "member_removed") {
-        emit memberRemoved(data["serverId"].toString(),
-                          data["userId"].toString());
-    }
-    else if (event == "member_updated") {
-        emit memberUpdated(data["serverId"].toString(),
-                          data["userId"].toString(),
-                          data["member"].toMap());
-    }
-    // User profile events
-    else if (event == "user_updated") {
-        emit userUpdated(data["userId"].toString(), data);
-    }
-    else if (event == "user_banner_updated") {
-        emit userBannerUpdated(data["username"].toString(), data);
-    }
-    else if (event == "username_changed") {
-        emit usernameChanged(data["oldUsername"].toString(),
-                            data["newUsername"].toString(),
-                            data["userId"].toString());
-    }
-    // Admin events
-    else if (event == "warning") {
-        emit warningReceived(data);
-    }
-    else if (event == "account_deleted") {
-        emit accountDeleted(data["reason"].toString());
-    }
-    // Emoji events
-    else if (event == "emoji_updated") {
-        emit emojiUpdated(data["serverId"].toString());
-    }
-    else {
-        qDebug() << "[SocketClient] Unknown event:" << event << data;
-    }
-}
-
-void SocketClient::sendConnect()
-{
-    // Send Socket.IO CONNECT packet with auth
-    QJsonObject auth;
-    if (!m_authToken.isEmpty()) {
-        auth["token"] = m_authToken;
+    else if (eventType == "friend_removed") {
+        emit friendRemoved(payload["username"].toString(),
+                          payload["userId"].toString());
     }
     
-    sendSocketPacket(SOCKET_CONNECT, "/", auth);
+    // ========================================================================
+    // Notifications
+    // ========================================================================
+    
+    else if (eventType == "mention") {
+        emit mentionReceived(data);
+    }
+    
+    // ========================================================================
+    // Emoji
+    // ========================================================================
+    
+    else if (eventType == "emoji_updated") {
+        emit emojiUpdated(payload["serverId"].toString());
+    }
+    
+    // ========================================================================
+    // Unknown event
+    // ========================================================================
+    
+    else {
+        qDebug() << "[SocketClient] Unknown event:" << eventType << data;
+    }
 }
 
 // ============================================================================

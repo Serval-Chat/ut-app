@@ -401,10 +401,13 @@ void MessageModel::rebuildIndexMap()
 
 QString MessageModel::extractId(const QVariantMap& message)
 {
-    // Support both "_id" (MongoDB) and "id" formats
+    // Support "_id" (MongoDB), "id", and "messageId" (WebSocket) formats
     QString id = message.value("_id").toString();
     if (id.isEmpty()) {
         id = message.value("id").toString();
+    }
+    if (id.isEmpty()) {
+        id = message.value("messageId").toString();
     }
     return id;
 }

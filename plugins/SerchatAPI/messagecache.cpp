@@ -26,12 +26,17 @@ void MessageCache::bumpVersion() {
 }
 
 QString MessageCache::extractId(const QVariantMap& item) const {
-    // Handle both "id" and "_id" patterns
+    // Handle different ID field patterns:
+    // - "id" / "_id" from REST API / MongoDB
+    // - "messageId" from WebSocket API
+    if (item.contains("_id")) {
+        return item["_id"].toString();
+    }
     if (item.contains("id")) {
         return item["id"].toString();
     }
-    if (item.contains("_id")) {
-        return item["_id"].toString();
+    if (item.contains("messageId")) {
+        return item["messageId"].toString();
     }
     return QString();
 }

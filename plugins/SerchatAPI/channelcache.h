@@ -65,6 +65,14 @@ public:
     Q_INVOKABLE QVariantMap getChannel(const QString& serverId, const QString& channelId);
     
     /**
+     * @brief Get the server ID for a channel.
+     * Searches all cached servers to find which one contains this channel.
+     * @param channelId The channel ID
+     * @return Server ID or empty string if not found
+     */
+    Q_INVOKABLE QString getServerIdForChannel(const QString& channelId) const;
+    
+    /**
      * @brief Check if channels for a server are in the cache.
      */
     Q_INVOKABLE bool hasChannels(const QString& serverId) const;

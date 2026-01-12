@@ -285,6 +285,15 @@ SerchatAPI::SerchatAPI() {
     // Real-time server message events - route through internal handlers to update caches
     connect(m_socketClient, &SocketClient::serverMessageReceived,
             this, &SerchatAPI::handleServerMessageReceived);
+    connect(m_socketClient, &SocketClient::serverMessageSent,
+            this, [this](const QVariantMap& message) {
+                // WebSocket message sent confirmation
+                // 1. Add to cache via the standard handler
+                handleServerMessageReceived(message);
+                // 2. Emit messageSent for QML handlers that track HTTP-style confirmations
+                //    Note: serverMessageReceived is already emitted by handleServerMessageReceived
+                emit messageSent(0, message);  // requestId 0 for WebSocket
+            });
     connect(m_socketClient, &SocketClient::serverMessageEdited,
             this, &SerchatAPI::handleServerMessageEdited);
     connect(m_socketClient, &SocketClient::serverMessageDeleted,
@@ -292,7 +301,15 @@ SerchatAPI::SerchatAPI() {
     
     // Real-time DM events
     connect(m_socketClient, &SocketClient::directMessageReceived,
-            this, &SerchatAPI::directMessageReceived);
+            this, &SerchatAPI::handleDirectMessageReceived);
+    connect(m_socketClient, &SocketClient::directMessageSent,
+            this, [this](const QVariantMap& message) {
+                // WebSocket DM sent confirmation
+                // 1. Route through handler like a received message (for cache updates)
+                handleDirectMessageReceived(message);
+                // 2. Emit dmMessageSent for QML handlers that track HTTP-style confirmations
+                emit dmMessageSent(0, message);  // requestId 0 for WebSocket
+            });
     connect(m_socketClient, &SocketClient::directMessageEdited,
             this, &SerchatAPI::directMessageEdited);
     connect(m_socketClient, &SocketClient::directMessageDeleted,
@@ -321,39 +338,45 @@ SerchatAPI::SerchatAPI() {
     connect(m_socketClient, &SocketClient::dmUnread,
             this, &SerchatAPI::handleDMUnread);
     
-    // Real-time presence events
+    // Real-time presence events - new signature with userId
     connect(m_socketClient, &SocketClient::userOnline,
-            this, &SerchatAPI::userOnline);
+            this, [this](const QString& userId, const QString& username, const QString& status) {
+                Q_UNUSED(userId);
+                Q_UNUSED(status);
+                emit userOnline(username);
+            });
     connect(m_socketClient, &SocketClient::userOffline,
-            this, &SerchatAPI::userOffline);
+            this, [this](const QString& userId, const QString& username) {
+                Q_UNUSED(userId);
+                emit userOffline(username);
+            });
     connect(m_socketClient, &SocketClient::userStatusUpdate,
-            this, &SerchatAPI::userStatusUpdate);
+            this, [this](const QString& userId, const QString& username, const QString& status) {
+                Q_UNUSED(userId);
+                QVariantMap statusMap;
+                statusMap["status"] = status;
+                emit userStatusUpdate(username, statusMap);
+            });
     
     // Internal presence tracking handlers (update m_onlineUsers set)
     connect(m_socketClient, &SocketClient::userOnline,
             this, &SerchatAPI::handleUserOnline);
     connect(m_socketClient, &SocketClient::userOffline,
             this, &SerchatAPI::handleUserOffline);
-    connect(m_socketClient, &SocketClient::presenceState,
-            this, &SerchatAPI::handlePresenceState);
+    connect(m_socketClient, &SocketClient::presenceSync,
+            this, &SerchatAPI::handlePresenceSync);
     
-    // Real-time reaction events
+    // Real-time reaction events - new signature with full QVariantMap
     connect(m_socketClient, &SocketClient::reactionAdded,
-            this, &SerchatAPI::reactionAdded);
+            this, &SerchatAPI::handleReactionAdded);
     connect(m_socketClient, &SocketClient::reactionRemoved,
-            this, &SerchatAPI::reactionRemoved);
+            this, &SerchatAPI::handleReactionRemoved);
     
     // Real-time typing events - route through internal handlers for tracking
     connect(m_socketClient, &SocketClient::userTyping,
             this, &SerchatAPI::handleUserTyping);
     connect(m_socketClient, &SocketClient::dmTyping,
             this, &SerchatAPI::handleDMTyping);
-    
-    // Real-time server membership events
-    connect(m_socketClient, &SocketClient::serverMemberJoined,
-            this, &SerchatAPI::serverMemberJoined);
-    connect(m_socketClient, &SocketClient::serverMemberLeft,
-            this, &SerchatAPI::serverMemberLeft);
     
     // Real-time friend events
     connect(m_socketClient, &SocketClient::friendAdded,
@@ -362,14 +385,6 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::handleFriendRemoved);
     connect(m_socketClient, &SocketClient::incomingRequestAdded,
             this, &SerchatAPI::incomingRequestAdded);
-    connect(m_socketClient, &SocketClient::incomingRequestRemoved,
-            this, &SerchatAPI::incomingRequestRemoved);
-    
-    // Real-time notifications
-    connect(m_socketClient, &SocketClient::pingReceived,
-            this, &SerchatAPI::pingReceived);
-    connect(m_socketClient, &SocketClient::presenceState,
-            this, &SerchatAPI::presenceState);
     
     // Real-time permission events
     connect(m_socketClient, &SocketClient::channelPermissionsUpdated,
@@ -383,7 +398,9 @@ SerchatAPI::SerchatAPI() {
     connect(m_socketClient, &SocketClient::serverDeleted,
             this, &SerchatAPI::serverDeleted);
     connect(m_socketClient, &SocketClient::serverOwnershipTransferred,
-            this, &SerchatAPI::serverOwnershipTransferred);
+            this, [this](const QString& serverId, const QString& oldOwnerId, const QString& newOwnerId) {
+                emit serverOwnershipTransferred(serverId, oldOwnerId, newOwnerId, QString());
+            });
     
     // Real-time role events - route through internal handlers to update cache
     connect(m_socketClient, &SocketClient::roleCreated,
@@ -405,17 +422,17 @@ SerchatAPI::SerchatAPI() {
     
     // Real-time user profile events
     connect(m_socketClient, &SocketClient::userUpdated,
-            this, &SerchatAPI::userUpdated);
+            this, [this](const QVariantMap& updates) {
+                QString userId = updates.value("userId").toString();
+                emit userUpdated(userId, updates);
+            });
     connect(m_socketClient, &SocketClient::userBannerUpdated,
-            this, &SerchatAPI::userBannerUpdated);
-    connect(m_socketClient, &SocketClient::usernameChanged,
-            this, &SerchatAPI::usernameChanged);
-    
-    // Real-time admin events
-    connect(m_socketClient, &SocketClient::warningReceived,
-            this, &SerchatAPI::warningReceived);
-    connect(m_socketClient, &SocketClient::accountDeleted,
-            this, &SerchatAPI::accountDeleted);
+            this, [this](const QString& username, const QString& userId, const QString& banner) {
+                Q_UNUSED(userId);
+                QVariantMap updates;
+                updates["banner"] = banner;
+                emit userBannerUpdated(username, updates);
+            });
     
     // Real-time emoji events
     connect(m_socketClient, &SocketClient::emojiUpdated,
@@ -783,6 +800,12 @@ int SerchatAPI::getMessages(const QString& serverId, const QString& channelId,
 
 int SerchatAPI::sendMessage(const QString& serverId, const QString& channelId,
                             const QString& text, const QString& replyToId) {
+    // Prefer WebSocket for real-time delivery when connected
+    if (isSocketConnected()) {
+        m_socketClient->sendServerMessage(serverId, channelId, text, replyToId);
+        return 0;  // No request ID for WebSocket (confirmation comes via serverMessageSent signal)
+    }
+    // Fallback to REST API
     return m_apiClient->sendMessage(serverId, channelId, text, replyToId);
 }
 
@@ -795,6 +818,12 @@ int SerchatAPI::getDMMessages(const QString& userId, int limit, const QString& b
 }
 
 int SerchatAPI::sendDMMessage(const QString& userId, const QString& text, const QString& replyToId) {
+    // Prefer WebSocket for real-time delivery when connected
+    if (isSocketConnected()) {
+        m_socketClient->sendDirectMessage(userId, text, replyToId);
+        return 0;  // No request ID for WebSocket (confirmation comes via directMessageSent signal)
+    }
+    // Fallback to REST API
     return m_apiClient->sendDMMessage(userId, text, replyToId);
 }
 
@@ -1072,7 +1101,8 @@ void SerchatAPI::joinChannel(const QString& serverId, const QString& channelId) 
 }
 
 void SerchatAPI::leaveChannel(const QString& serverId, const QString& channelId) {
-    m_socketClient->leaveChannel(serverId, channelId);
+    Q_UNUSED(serverId);  // New WebSocket API only requires channelId
+    m_socketClient->leaveChannel(channelId);
 }
 
 void SerchatAPI::markChannelRead(const QString& serverId, const QString& channelId) {
@@ -1111,20 +1141,22 @@ void SerchatAPI::sendDirectMessageRT(const QString& receiver, const QString& tex
 
 void SerchatAPI::editServerMessage(const QString& serverId, const QString& channelId,
                                     const QString& messageId, const QString& text) {
+    Q_UNUSED(channelId);  // New WebSocket API only requires messageId
     if (!isSocketConnected()) {
         qWarning() << "[SerchatAPI] Cannot edit message: socket not connected";
         return;
     }
-    m_socketClient->editServerMessage(serverId, channelId, messageId, text);
+    m_socketClient->editServerMessage(messageId, text);
 }
 
 void SerchatAPI::deleteServerMessage(const QString& serverId, const QString& channelId,
                                       const QString& messageId) {
+    Q_UNUSED(channelId);  // New WebSocket API only requires serverId and messageId
     if (!isSocketConnected()) {
         qWarning() << "[SerchatAPI] Cannot delete message: socket not connected";
         return;
     }
-    m_socketClient->deleteServerMessage(serverId, channelId, messageId);
+    m_socketClient->deleteServerMessage(serverId, messageId);
 }
 
 void SerchatAPI::editDirectMessage(const QString& messageId, const QString& text) {
@@ -1146,21 +1178,29 @@ void SerchatAPI::deleteDirectMessage(const QString& messageId) {
 void SerchatAPI::addReaction(const QString& messageId, const QString& messageType,
                               const QString& emoji, const QString& serverId,
                               const QString& channelId) {
+    Q_UNUSED(serverId)
+    Q_UNUSED(channelId)
     if (!isSocketConnected()) {
         qWarning() << "[SerchatAPI] Cannot add reaction: socket not connected";
         return;
     }
-    m_socketClient->addReaction(messageId, messageType, emoji, serverId, channelId);
+    // New WS API uses emojiType/emojiId instead of serverId/channelId
+    // For now, assume all emojis are unicode type
+    m_socketClient->addReaction(messageId, messageType, emoji, "unicode", QString());
 }
 
 void SerchatAPI::removeReaction(const QString& messageId, const QString& messageType,
                                  const QString& emoji, const QString& serverId,
                                  const QString& channelId) {
+    Q_UNUSED(serverId)
+    Q_UNUSED(channelId)
     if (!isSocketConnected()) {
         qWarning() << "[SerchatAPI] Cannot remove reaction: socket not connected";
         return;
     }
-    m_socketClient->removeReaction(messageId, messageType, emoji, serverId, channelId);
+    // New WS API uses emojiType/emojiId instead of serverId/channelId
+    // For now, assume all emojis are unicode type
+    m_socketClient->removeReaction(messageId, messageType, emoji, "unicode", QString());
 }
 
 // ============================================================================
@@ -1183,29 +1223,35 @@ QStringList SerchatAPI::getOnlineUsers() const {
     return m_onlineUsers.values();
 }
 
-void SerchatAPI::handlePresenceState(const QVariantMap& presence) {
-    // presence_state event provides initial list of online users
-    // Format: { "online": ["username1", "username2", ...] }
+void SerchatAPI::handlePresenceSync(const QVariantList& onlineUsers) {
+    // presence_sync event provides initial list of online users
+    // Format: [ { userId, username, status? }, ... ]
     m_onlineUsers.clear();
     
-    QVariantList users = presence.value("online").toList();
-    for (const QVariant& user : users) {
-        m_onlineUsers.insert(user.toString());
+    for (const QVariant& userVar : onlineUsers) {
+        QVariantMap user = userVar.toMap();
+        QString username = user.value("username").toString();
+        if (!username.isEmpty()) {
+            m_onlineUsers.insert(username);
+        }
     }
     
-    qDebug() << "[SerchatAPI] Presence state received:" << m_onlineUsers.size() << "users online";
+    qDebug() << "[SerchatAPI] Presence sync received:" << m_onlineUsers.size() << "users online";
     emit onlineUsersChanged();
 }
 
-void SerchatAPI::handleUserOnline(const QString& username) {
-    if (!m_onlineUsers.contains(username)) {
+void SerchatAPI::handleUserOnline(const QString& userId, const QString& username, const QString& status) {
+    Q_UNUSED(userId);
+    Q_UNUSED(status);
+    if (!username.isEmpty() && !m_onlineUsers.contains(username)) {
         m_onlineUsers.insert(username);
         qDebug() << "[SerchatAPI] User came online:" << username;
         emit onlineUsersChanged();
     }
 }
 
-void SerchatAPI::handleUserOffline(const QString& username) {
+void SerchatAPI::handleUserOffline(const QString& userId, const QString& username) {
+    Q_UNUSED(userId);
     if (m_onlineUsers.remove(username)) {
         qDebug() << "[SerchatAPI] User went offline:" << username;
         emit onlineUsersChanged();
@@ -1378,10 +1424,15 @@ bool SerchatAPI::hasDMTypingUsers(const QString& recipientId) const {
     return m_typingUsers.contains(key) && !m_typingUsers[key].isEmpty();
 }
 
-void SerchatAPI::handleUserTyping(const QString& serverId, const QString& channelId, const QString& username) {
-    // Note: serverId may be empty as backend only sends channelId
+void SerchatAPI::handleUserTyping(const QString& channelId, const QString& userId, const QString& username) {
+    // Note: New WebSocket API sends (channelId, userId, username)
     // Use just channelId as the key since channels are globally unique
-    QString key = channelId;  // Just use channelId as key
+    QString key = channelId;
+    
+    // Ignore typing events from the current user
+    if (!m_currentUserId.isEmpty() && userId == m_currentUserId) {
+        return;
+    }
     
     // Check if user already has a typing timer
     if (m_typingUsers.contains(key) && m_typingUsers[key].contains(username)) {
@@ -1402,36 +1453,40 @@ void SerchatAPI::handleUserTyping(const QString& serverId, const QString& channe
         emit typingUsersChanged(channelId, channelId);
     }
     
-    // Also emit the raw event for any handlers that want it
-    emit userTyping(serverId, channelId, username);
+    // Also emit the raw event for any handlers that want it (use empty serverId for compatibility)
+    emit userTyping(QString(), channelId, username);
 }
 
-void SerchatAPI::handleDMTyping(const QString& username) {
-    // For DMs, we use the username as both the key identifier and the typing user
-    // The socket event gives us the username of who is typing
-    QString key = "dm:" + username;
+void SerchatAPI::handleDMTyping(const QString& senderId, const QString& senderUsername) {
+    // For DMs, use senderId as the key identifier
+    QString key = "dm:" + senderUsername;
+    
+    // Ignore typing events from the current user
+    if (!m_currentUserId.isEmpty() && senderId == m_currentUserId) {
+        return;
+    }
     
     // Check if user already has a typing timer
-    if (m_typingUsers.contains(key) && m_typingUsers[key].contains(username)) {
+    if (m_typingUsers.contains(key) && m_typingUsers[key].contains(senderUsername)) {
         // Reset the existing timer
-        m_typingUsers[key][username]->start(TYPING_TIMEOUT_MS);
+        m_typingUsers[key][senderUsername]->start(TYPING_TIMEOUT_MS);
     } else {
         // Create new timer for this user
         QTimer* timer = new QTimer(this);
         timer->setSingleShot(true);
-        connect(timer, &QTimer::timeout, this, [this, key, username]() {
-            removeTypingUser(key, username);
+        connect(timer, &QTimer::timeout, this, [this, key, senderUsername]() {
+            removeTypingUser(key, senderUsername);
         });
         timer->start(TYPING_TIMEOUT_MS);
         
-        m_typingUsers[key][username] = timer;
+        m_typingUsers[key][senderUsername] = timer;
         
         // Emit signal for UI update
-        emit dmTypingUsersChanged(username);
+        emit dmTypingUsersChanged(senderUsername);
     }
     
     // Also emit the raw event for any handlers that want it
-    emit dmTyping(username);
+    emit dmTyping(senderUsername);
 }
 
 void SerchatAPI::removeTypingUser(const QString& key, const QString& username) {
@@ -1629,7 +1684,7 @@ void SerchatAPI::calculateFirstUnreadMessage(const QString& serverId, const QStr
     }
 }
 
-void SerchatAPI::handleChannelUnread(const QString& serverId, const QString& channelId,
+void SerchatAPI::handleChannelUnread(const QString& channelId,
                                       const QString& lastMessageAt, const QString& senderId) {
     // Ignore messages sent by the current user
     if (!m_currentUserId.isEmpty() && senderId == m_currentUserId) {
@@ -1641,9 +1696,14 @@ void SerchatAPI::handleChannelUnread(const QString& serverId, const QString& cha
     if (!m_viewingChannelId.isEmpty() && channelId == m_viewingChannelId) {
         qDebug() << "[SerchatAPI] Ignoring unread notification for currently viewed channel" << channelId;
         // Still mark as read on server to keep sync
-        m_socketClient->markChannelRead(serverId, channelId);
+        if (!m_viewingServerId.isEmpty()) {
+            m_socketClient->markChannelRead(m_viewingServerId, channelId);
+        }
         return;
     }
+    
+    // Look up serverId from channel cache
+    QString serverId = m_channelCache->getServerIdForChannel(channelId);
     
     QString key = serverId + ":" + channelId;
     bool wasUnread = m_unreadState.value(key, false);
@@ -1732,6 +1792,32 @@ void SerchatAPI::handleSocketDisconnected() {
 // App Lifecycle Handling (for Ubuntu Touch suspension)
 // ============================================================================
 
+void SerchatAPI::handleReactionAdded(const QVariantMap& reaction) {
+    // Extract data from the new reaction format
+    QString messageId = reaction.value("messageId").toString();
+    QString messageType = reaction.value("messageType").toString();
+    
+    // Build reactions list from the single reaction
+    QVariantList reactions;
+    reactions.append(reaction);
+    
+    // Emit in the old format for compatibility with QML
+    emit reactionAdded(messageId, messageType, reactions);
+}
+
+void SerchatAPI::handleReactionRemoved(const QVariantMap& reaction) {
+    // Extract data from the new reaction format
+    QString messageId = reaction.value("messageId").toString();
+    QString messageType = reaction.value("messageType").toString();
+    
+    // Build reactions list from the single reaction
+    QVariantList reactions;
+    reactions.append(reaction);
+    
+    // Emit in the old format for compatibility with QML
+    emit reactionRemoved(messageId, messageType, reactions);
+}
+
 void SerchatAPI::handleApplicationStateChanged(Qt::ApplicationState state) {
     if (state == Qt::ApplicationActive) {
         // App resumed - check if socket needs reconnection
@@ -1782,6 +1868,13 @@ void SerchatAPI::handleServerMessageDeleted(const QString& messageId, const QStr
     }
     
     emit serverMessageDeleted(messageId, channelId);
+}
+
+void SerchatAPI::handleDirectMessageReceived(const QVariantMap& message) {
+    // DMs don't use channels in the same way, so we don't add to MessageCache
+    // (DM messages are managed separately)
+    // Just forward the signal to QML
+    emit directMessageReceived(message);
 }
 
 void SerchatAPI::handleChannelUpdated(const QString& serverId, const QVariantMap& channel) {

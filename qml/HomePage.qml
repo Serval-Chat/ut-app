@@ -809,7 +809,7 @@ Page {
         }
         
         onMessageSent: {
-            console.log("[HomePage] Message sent via HTTP:", message._id)
+            console.log("[HomePage] Message sent:", message._id)
             // Use C++ method that handles duplicate detection and temp message replacement
             SerchatAPI.messageModel.addRealMessage(message)
         }
@@ -902,7 +902,7 @@ Page {
         }
         
         onDmMessageSent: {
-            console.log("[HomePage] DM Message sent via HTTP:", message._id)
+            console.log("[HomePage] DM Message sent:", message._id)
             // Use C++ method that handles duplicate detection and temp message replacement
             SerchatAPI.messageModel.addRealMessage(message)
         }
