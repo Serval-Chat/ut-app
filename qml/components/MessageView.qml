@@ -591,6 +591,15 @@ Rectangle {
             }
             messageView.sendMessage(message, replyToId)
         }
+        
+        onEditMessage: {
+            // Call appropriate API method based on whether we're in DM or channel mode
+            if (isDMMode) {
+                SerchatAPI.editDirectMessage(messageId, newText)
+            } else {
+                SerchatAPI.editServerMessage(serverId, channelId, messageId, newText)
+            }
+        }
     }
     
     // Get sender name from C++ cache for reply previews (not from model roles)
@@ -883,8 +892,8 @@ Rectangle {
         }
         
         onEditClicked: {
-            console.log("[MessageView] Edit message:", messageId)
-            // TODO: Implement edit UI
+            console.log("[MessageView] Edit message:", messageId, messageText)
+            composer.setEditMode(messageId, messageText)
         }
         
         onDeleteClicked: {

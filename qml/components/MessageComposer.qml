@@ -28,15 +28,22 @@ Item {
     property string replyToSenderName: ""
     property string replyToText: ""
     
+    // Edit state
+    property bool isEditing: false
+    property string editMessageId: ""
+    property string editMessageText: ""
+    
     // File upload state
     property var activeTransfer: null
     property bool uploading: false
     property int uploadRequestId: -1
     
     signal sendMessage(string message, string replyToId)
+    signal editMessage(string messageId, string newText)
     signal attachmentClicked()
     signal emojiClicked()
     signal cancelReply()
+    signal cancelEdit()
     
     width: parent ? parent.width : units.gu(40)
     height: contentColumn.height
@@ -46,13 +53,82 @@ Item {
         width: parent.width
         spacing: 0
         
+        // Edit preview bar
+        Rectangle {
+            id: editBar
+            width: parent.width
+            height: isEditing ? editContent.height + units.gu(1.5) : 0
+            color: Theme.palette.normal.base
+            visible: isEditing
+            clip: true
+            
+            Behavior on height {
+                NumberAnimation { duration: 150; easing.type: Easing.OutQuad }
+            }
+            
+            Rectangle {
+                id: editAccent
+                width: units.gu(0.4)
+                height: parent.height
+                color: LomiriColors.orange
+            }
+            
+            Column {
+                id: editContent
+                anchors.left: editAccent.right
+                anchors.leftMargin: units.gu(1)
+                anchors.right: closeEditButton.left
+                anchors.rightMargin: units.gu(1)
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: units.gu(0.2)
+                
+                Label {
+                    text: i18n.tr("Edit message")
+                    fontSize: "x-small"
+                    font.bold: true
+                    color: LomiriColors.orange
+                }
+                
+                Label {
+                    text: editMessageText.length > 100 ? editMessageText.substring(0, 100) + "..." : editMessageText
+                    fontSize: "x-small"
+                    color: Theme.palette.normal.backgroundSecondaryText
+                    elide: Text.ElideRight
+                    width: parent.width
+                }
+            }
+            
+            AbstractButton {
+                id: closeEditButton
+                width: units.gu(4)
+                height: parent.height
+                anchors.right: parent.right
+                
+                Icon {
+                    anchors.centerIn: parent
+                    width: units.gu(2)
+                    height: units.gu(2)
+                    name: "close"
+                    color: Theme.palette.normal.backgroundSecondaryText
+                }
+                
+                onClicked: {
+                    isEditing = false
+                    editMessageId = ""
+                    editMessageText = ""
+                    inputField.text = ""
+                    cancelEdit()
+                }
+            }
+        }
+        
         // Reply preview bar
         Rectangle {
             id: replyBar
             width: parent.width
-            height: isReplying ? replyContent.height + units.gu(1.5) : 0
+            height: isReplying && !isEditing ? replyContent.height + units.gu(1.5) : 0
             color: Theme.palette.normal.base
-            visible: isReplying
+            visible: isReplying && !isEditing
             clip: true
             
             Behavior on height {
@@ -184,13 +260,23 @@ Item {
                     
                     onAccepted: {
                         if (text.trim().length > 0) {
-                            sendMessage(text.trim(), isReplying ? replyToMessageId : "")
-                            text = ""
-                            if (isReplying) {
-                                isReplying = false
-                                replyToMessageId = ""
-                                replyToSenderName = ""
-                                replyToText = ""
+                            if (isEditing) {
+                                // Editing a message
+                                editMessage(editMessageId, text.trim())
+                                text = ""
+                                isEditing = false
+                                editMessageId = ""
+                                editMessageText = ""
+                            } else {
+                                // Sending a new message
+                                sendMessage(text.trim(), isReplying ? replyToMessageId : "")
+                                text = ""
+                                if (isReplying) {
+                                    isReplying = false
+                                    replyToMessageId = ""
+                                    replyToSenderName = ""
+                                    replyToText = ""
+                                }
                             }
                         }
                     }
@@ -239,7 +325,7 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         radius: width / 2
-                        color: enabled ? LomiriColors.blue : Theme.palette.disabled.background
+                        color: enabled ? (isEditing ? LomiriColors.orange : LomiriColors.blue) : Theme.palette.disabled.background
                         
                         Behavior on color {
                             ColorAnimation { duration: 100 }
@@ -250,19 +336,29 @@ Item {
                         anchors.centerIn: parent
                         width: units.gu(2)
                         height: units.gu(2)
-                        name: "send"
+                        name: isEditing ? "save" : "send"
                         color: "white"
                     }
                     
                     onClicked: {
                         if (inputField.text.trim().length > 0) {
-                            sendMessage(inputField.text.trim(), isReplying ? replyToMessageId : "")
-                            inputField.text = ""
-                            if (isReplying) {
-                                isReplying = false
-                                replyToMessageId = ""
-                                replyToSenderName = ""
-                                replyToText = ""
+                            if (isEditing) {
+                                // Editing a message
+                                editMessage(editMessageId, inputField.text.trim())
+                                inputField.text = ""
+                                isEditing = false
+                                editMessageId = ""
+                                editMessageText = ""
+                            } else {
+                                // Sending a new message
+                                sendMessage(inputField.text.trim(), isReplying ? replyToMessageId : "")
+                                inputField.text = ""
+                                if (isReplying) {
+                                    isReplying = false
+                                    replyToMessageId = ""
+                                    replyToSenderName = ""
+                                    replyToText = ""
+                                }
                             }
                         }
                     }
@@ -280,12 +376,33 @@ Item {
         inputField.forceActiveFocus()
     }
     
+    // Public function to set edit state
+    function setEditMode(messageId, messageText) {
+        // Clear reply mode if active
+        if (isReplying) {
+            isReplying = false
+            replyToMessageId = ""
+            replyToSenderName = ""
+            replyToText = ""
+        }
+        
+        editMessageId = messageId
+        editMessageText = messageText
+        isEditing = true
+        inputField.text = messageText
+        inputField.forceActiveFocus()
+        inputField.cursorPosition = messageText.length
+    }
+    
     function clear() {
         inputField.text = ""
         isReplying = false
         replyToMessageId = ""
         replyToSenderName = ""
         replyToText = ""
+        isEditing = false
+        editMessageId = ""
+        editMessageText = ""
         emojiPicker.visible = false
     }
     
