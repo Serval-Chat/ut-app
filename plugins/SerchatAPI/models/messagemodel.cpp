@@ -59,6 +59,8 @@ QVariant MessageModel::data(const QModelIndex &index, int role) const
         return data.value("attachments", QVariantList());
     case IsTempMessageRole:
         return msg.id.startsWith("temp_");
+    case ShowAvatarRole:
+        return msg.showAvatar;
     default:
         return QVariant();
     }
@@ -79,6 +81,7 @@ QHash<int, QByteArray> MessageModel::roleNames() const
     roles[ReactionsRole] = "reactions";
     roles[AttachmentsRole] = "attachments";
     roles[IsTempMessageRole] = "isTempMessage";
+    roles[ShowAvatarRole] = "showAvatar";
     return roles;
 }
 
@@ -177,6 +180,7 @@ void MessageModel::prependMessage(const QVariantMap& message)
     
     // Rebuild index map (prepend shifts all indices)
     rebuildIndexMap();
+    recalculateAvatarGrouping();
     
     endInsertRows();
     
@@ -215,10 +219,12 @@ void MessageModel::appendMessages(const QVariantList& messages)
         m_idToIndex[msg.id] = m_messages.count();
         m_messages.append(msg);
     }
+    recalculateAvatarGrouping();
     
     endInsertRows();
     
     emit countChanged();
+    emit dataChanged(createIndex(0, 0), createIndex(m_messages.count() - 1, 0), { ShowAvatarRole });
     for (const Message& msg : toAdd) {
         emit messageAdded(msg.id, false);
     }
@@ -247,10 +253,14 @@ void MessageModel::replaceTempMessage(const QString& tempId, const QVariantMap& 
     m_messages[index].id = newId;
     m_messages[index].data = realMessage;
     m_idToIndex[newId] = index;
+    recalculateAvatarGrouping();
     
     // Emit dataChanged for the affected row
     QModelIndex modelIndex = createIndex(index, 0);
     emit dataChanged(modelIndex, modelIndex);
+    if (index > 0) {
+        emit dataChanged(createIndex(index - 1, 0), createIndex(index - 1, 0), { ShowAvatarRole });
+    }
     
     emit messageUpdated(newId);
 }
@@ -262,10 +272,14 @@ bool MessageModel::updateMessage(const QString& messageId, const QVariantMap& up
     
     int index = m_idToIndex[messageId];
     m_messages[index].data = updatedMessage;
+    recalculateAvatarGrouping();
     
     // Emit dataChanged - this is the key to updating without scroll reset!
     QModelIndex modelIndex = createIndex(index, 0);
     emit dataChanged(modelIndex, modelIndex);
+    if (index > 0) {
+        emit dataChanged(createIndex(index - 1, 0), createIndex(index - 1, 0), { ShowAvatarRole });
+    }
     
     emit messageUpdated(messageId);
     return true;
@@ -399,6 +413,58 @@ void MessageModel::rebuildIndexMap()
     }
 }
 
+void MessageModel::recalculateAvatarGrouping()
+{
+    for (int i = 0; i < m_messages.count(); ++i) {
+        m_messages[i].showAvatar = calculateShowAvatar(i);
+    }
+}
+
+bool MessageModel::calculateShowAvatar(int index) const
+{
+    if (index < 0 || index >= m_messages.count()) {
+        return true;
+    }
+    if (index >= m_messages.count() - 1) {
+        return true;
+    }
+
+    const QVariantMap& currentMsg = m_messages.at(index).data;
+    const QVariantMap& prevMsg = m_messages.at(index + 1).data;
+
+    QString currentSender = currentMsg.value("senderId").toString();
+    QString prevSender = prevMsg.value("senderId").toString();
+    if (currentSender != prevSender) {
+        return true;
+    }
+
+    QDateTime currentTime = parseTimestamp(currentMsg.value("createdAt"));
+    QDateTime prevTime = parseTimestamp(prevMsg.value("createdAt"));
+
+    if (currentTime.isValid() && prevTime.isValid()) {
+        qint64 diffMs = currentTime.toMSecsSinceEpoch() - prevTime.toMSecsSinceEpoch();
+        if (diffMs > 5 * 60 * 1000) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+QDateTime MessageModel::parseTimestamp(const QVariant& timestamp)
+{
+    if (timestamp.type() == QVariant::DateTime) {
+        return timestamp.toDateTime();
+    }
+
+    QString timestampText = timestamp.toString();
+    QDateTime dateTime = QDateTime::fromString(timestampText, Qt::ISODate);
+    if (!dateTime.isValid()) {
+        dateTime = QDateTime::fromString(timestampText, Qt::ISODateWithMs);
+    }
+    return dateTime;
+}
+
 QString MessageModel::extractId(const QVariantMap& message)
 {
     // Support "_id" (MongoDB), "id", and "messageId" (WebSocket) formats
@@ -439,40 +505,10 @@ QString MessageModel::getSenderAvatar(const QString& senderId) const
 
 bool MessageModel::shouldShowAvatar(int index) const
 {
-    // First message (last in reversed list) always shows avatar
-    if (index >= m_messages.count() - 1) {
+    if (index < 0 || index >= m_messages.count()) {
         return true;
     }
-
-    // Get current and previous messages
-    const QVariantMap& currentMsg = m_messages.at(index).data;
-    const QVariantMap& prevMsg = m_messages.at(index + 1).data;  // Previous in time (above in view)
-
-    // Show avatar if different sender
-    QString currentSender = currentMsg.value("senderId").toString();
-    QString prevSender = prevMsg.value("senderId").toString();
-    if (currentSender != prevSender) {
-        return true;
-    }
-
-    // Show avatar if more than 5 minutes apart
-    QDateTime currentTime = QDateTime::fromString(currentMsg.value("createdAt").toString(), Qt::ISODate);
-    QDateTime prevTime = QDateTime::fromString(prevMsg.value("createdAt").toString(), Qt::ISODate);
-
-    if (!currentTime.isValid() || !prevTime.isValid()) {
-        // Try with milliseconds format
-        currentTime = QDateTime::fromString(currentMsg.value("createdAt").toString(), Qt::ISODateWithMs);
-        prevTime = QDateTime::fromString(prevMsg.value("createdAt").toString(), Qt::ISODateWithMs);
-    }
-
-    if (currentTime.isValid() && prevTime.isValid()) {
-        qint64 diffMs = currentTime.toMSecsSinceEpoch() - prevTime.toMSecsSinceEpoch();
-        if (diffMs > 5 * 60 * 1000) {  // 5 minutes
-            return true;
-        }
-    }
-
-    return false;
+    return m_messages.at(index).showAvatar;
 }
 
 bool MessageModel::addRealMessage(const QVariantMap& message)

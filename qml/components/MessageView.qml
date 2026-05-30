@@ -307,7 +307,7 @@ Rectangle {
                         timestamp: model.timestamp || ""
                         isOwn: model.senderId === currentUserId
                         isEdited: model.isEdited || false
-                        showAvatar: SerchatAPI.messageModel.shouldShowAvatar(index)
+                        showAvatar: model.showAvatar
                         isReply: model.replyToId ? true : false
                         replyToText: model.repliedMessage ? model.repliedMessage.text : ""
                         replyToSender: model.repliedMessage ? getSenderName(model.repliedMessage.senderId) : ""

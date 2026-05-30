@@ -66,6 +66,7 @@ public:
         ReactionsRole,              // reactions array
         AttachmentsRole,            // attachments array
         IsTempMessageRole,          // true if this is a pending optimistic message
+        ShowAvatarRole,             // true when this row should show avatar/header
     };
     Q_ENUM(MessageRoles)
 
@@ -250,6 +251,7 @@ private:
     struct Message {
         QString id;
         QVariantMap data;
+        bool showAvatar = true;
     };
     
     // Message storage - QList provides fast prepend/append
@@ -270,6 +272,11 @@ private:
     
     // Helper to rebuild index map after structural changes
     void rebuildIndexMap();
+
+    // Helper to update precomputed avatar grouping metadata
+    void recalculateAvatarGrouping();
+    bool calculateShowAvatar(int index) const;
+    static QDateTime parseTimestamp(const QVariant& timestamp);
     
     // Helper to extract message ID from data
     static QString extractId(const QVariantMap& message);
