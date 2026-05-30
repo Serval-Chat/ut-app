@@ -1170,25 +1170,23 @@ void SerchatAPI::deleteDirectMessage(const QString& messageId) {
 }
 
 void SerchatAPI::addReaction(const QString& messageId, const QString& messageType,
-                              const QString& emoji) {
+                              const QString& emoji, const QString& emojiType,
+                              const QString& emojiId) {
     if (!isSocketConnected()) {
         qWarning() << "[SerchatAPI] Cannot add reaction: socket not connected";
         return;
     }
-    // WebSocket API uses emojiType/emojiId for custom emojis
-    // For now, assume all emojis are unicode type
-    m_socketClient->addReaction(messageId, messageType, emoji, "unicode", QString());
+    m_socketClient->addReaction(messageId, messageType, emoji, emojiType, emojiId);
 }
 
 void SerchatAPI::removeReaction(const QString& messageId, const QString& messageType,
-                                 const QString& emoji) {
+                                 const QString& emoji, const QString& emojiType,
+                                 const QString& emojiId) {
     if (!isSocketConnected()) {
         qWarning() << "[SerchatAPI] Cannot remove reaction: socket not connected";
         return;
     }
-    // WebSocket API uses emojiType/emojiId for custom emojis
-    // For now, assume all emojis are unicode type
-    m_socketClient->removeReaction(messageId, messageType, emoji, "unicode", QString());
+    m_socketClient->removeReaction(messageId, messageType, emoji, emojiType, emojiId);
 }
 
 // ============================================================================

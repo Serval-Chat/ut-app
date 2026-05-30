@@ -617,11 +617,15 @@ public:
 
     /// Add reaction to a message via WebSocket
     Q_INVOKABLE void addReaction(const QString& messageId, const QString& messageType,
-                                 const QString& emoji);
+                                            const QString& emoji,
+                                            const QString& emojiType = QStringLiteral("unicode"),
+                                            const QString& emojiId = QString());
 
     /// Remove reaction from a message via WebSocket
     Q_INVOKABLE void removeReaction(const QString& messageId, const QString& messageType,
-                                    const QString& emoji);
+                                                const QString& emoji,
+                                                const QString& emojiType = QStringLiteral("unicode"),
+                                                const QString& emojiId = QString());
 
     // ========================================================================
     // Configuration

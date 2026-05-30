@@ -645,13 +645,15 @@ Rectangle {
         
         // Use the message type based on whether it's a DM or server message
         var messageType = isDMMode ? "dm" : "server"
+        var typeToSend = emojiType || "unicode"
+        var idToSend = emojiId || ""
         
         if (hasReacted) {
             // Remove reaction
-            SerchatAPI.removeReaction(messageId, messageType, emoji)
+            SerchatAPI.removeReaction(messageId, messageType, emoji, typeToSend, idToSend)
         } else {
             // Add reaction
-            SerchatAPI.addReaction(messageId, messageType, emoji)
+            SerchatAPI.addReaction(messageId, messageType, emoji, typeToSend, idToSend)
         }
     }
 
@@ -659,7 +661,7 @@ Rectangle {
     function addReaction(messageId, emoji, emojiType, emojiId) {
         console.log("[MessageView] Add reaction:", messageId, emoji, emojiType, emojiId)
         var messageType = isDMMode ? "dm" : "server"
-        SerchatAPI.addReaction(messageId, messageType, emoji)
+        SerchatAPI.addReaction(messageId, messageType, emoji, emojiType || "unicode", emojiId || "")
     }
     
     // Delete a message
