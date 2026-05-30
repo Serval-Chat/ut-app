@@ -12,7 +12,6 @@ Rectangle {
     
     property string selectedServerId: ""
     property var servers: []
-    property var unreadCounts: ({})  // serverId -> count
     property var mentionServers: ({})  // serverId -> hasMention
     
     signal serverSelected(string serverId, string serverName, string ownerId)
@@ -117,11 +116,9 @@ Rectangle {
                     serverName: modelData.name || ""
                     iconUrl: modelData.icon ? (SerchatAPI.apiBaseUrl + modelData.icon) : ""
                     selected: selectedServerId === serverId
-                    // Show unread indicator if server has any unread channels
-                    // Reference unreadStateVersion to trigger re-evaluation when state changes
                     unreadCount: {
-                        var v = SerchatAPI.unreadStateVersion  // Trigger re-binding on change
-                        return SerchatAPI.hasServerUnread(serverId) ? 1 : (unreadCounts[serverId] || 0)
+                        var version = SerchatAPI.unreadStateVersion
+                        return SerchatAPI.hasServerUnread(serverId) ? 1 : 0
                     }
                     hasMention: mentionServers[serverId] || false
                     anchors.horizontalCenter: parent.horizontalCenter

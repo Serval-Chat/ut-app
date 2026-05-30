@@ -14,13 +14,13 @@ class ApiClient;
 
 /**
  * @brief Global cache for server channels with TTL support.
- * 
+ *
  * This cache provides centralized channel storage with:
  * - TTL-based expiration with stale-while-revalidate pattern
  * - Automatic refresh when data is stale
- * - Socket.IO event-driven updates
+ * - WebSocket event-driven updates
  * - Graceful handling of app suspension/reconnection
- * 
+ *
  * Usage in QML:
  *   var channels = SerchatAPI.channelCache.getChannels(serverId)
  *   var channel = SerchatAPI.channelCache.getChannel(serverId, channelId)

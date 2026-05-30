@@ -229,10 +229,6 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::handleDMMessagesFetched);
     connect(m_apiClient, &ApiClient::dmMessagesFetchFailed,
             this, &SerchatAPI::dmMessagesFetchFailed);
-    connect(m_apiClient, &ApiClient::dmMessageSent,
-            this, &SerchatAPI::dmMessageSent);
-    connect(m_apiClient, &ApiClient::dmMessageSendFailed,
-            this, &SerchatAPI::dmMessageSendFailed);
     
     // Connect friends signals
     connect(m_apiClient, &ApiClient::friendsFetched,
@@ -287,12 +283,9 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::handleServerMessageReceived);
     connect(m_socketClient, &SocketClient::serverMessageSent,
             this, [this](const QVariantMap& message) {
-                // WebSocket message sent confirmation
-                // 1. Add to cache via the standard handler
+                // Add to cache via the standard handler.
                 handleServerMessageReceived(message);
-                // 2. Emit messageSent for QML handlers that track HTTP-style confirmations
-                //    Note: serverMessageReceived is already emitted by handleServerMessageReceived
-                emit messageSent(0, message);  // requestId 0 for WebSocket
+                emit messageSent(0, message);
             });
     connect(m_socketClient, &SocketClient::serverMessageEdited,
             this, &SerchatAPI::handleServerMessageEdited);
@@ -304,11 +297,9 @@ SerchatAPI::SerchatAPI() {
             this, &SerchatAPI::handleDirectMessageReceived);
     connect(m_socketClient, &SocketClient::directMessageSent,
             this, [this](const QVariantMap& message) {
-                // WebSocket DM sent confirmation
-                // 1. Route through handler like a received message (for cache updates)
+                // Route through handler like a received message for cache updates.
                 handleDirectMessageReceived(message);
-                // 2. Emit dmMessageSent for QML handlers that track HTTP-style confirmations
-                emit dmMessageSent(0, message);  // requestId 0 for WebSocket
+                emit dmMessageSent(0, message);
             });
     connect(m_socketClient, &SocketClient::directMessageEdited,
             this, &SerchatAPI::directMessageEdited);
@@ -325,6 +316,8 @@ SerchatAPI::SerchatAPI() {
     // Route through internal handler for unread tracking
     connect(m_socketClient, &SocketClient::channelUnread,
             this, &SerchatAPI::handleChannelUnread);
+    connect(m_socketClient, &SocketClient::serverUnread,
+            this, &SerchatAPI::handleServerUnread);
     
     // Real-time category events - route through internal handlers
     connect(m_socketClient, &SocketClient::categoryCreated,
@@ -457,7 +450,7 @@ SerchatAPI::~SerchatAPI() {
 // ============================================================================
 
 QString SerchatAPI::apiBaseUrl() const {
-    return m_settings->value("apiBaseUrl", "https://catfla.re/").toString();
+    return m_settings->value("apiBaseUrl", "https://ser.chat/").toString();
 }
 
 void SerchatAPI::setApiBaseUrl(const QString& baseUrl) {
@@ -799,14 +792,15 @@ int SerchatAPI::getMessages(const QString& serverId, const QString& channelId,
 }
 
 int SerchatAPI::sendMessage(const QString& serverId, const QString& channelId,
-                            const QString& text, const QString& replyToId) {
+                            const QString& text, const QString& replyToId,
+                            const QVariantList& attachments) {
     // Prefer WebSocket for real-time delivery when connected
     if (isSocketConnected()) {
-        m_socketClient->sendServerMessage(serverId, channelId, text, replyToId);
+        m_socketClient->sendServerMessage(serverId, channelId, text, replyToId, attachments);
         return 0;  // No request ID for WebSocket (confirmation comes via serverMessageSent signal)
     }
     // Fallback to REST API
-    return m_apiClient->sendMessage(serverId, channelId, text, replyToId);
+    return m_apiClient->sendMessage(serverId, channelId, text, replyToId, attachments);
 }
 
 // ============================================================================
@@ -817,14 +811,15 @@ int SerchatAPI::getDMMessages(const QString& userId, int limit, const QString& b
     return m_apiClient->getDMMessages(userId, limit, before);
 }
 
-int SerchatAPI::sendDMMessage(const QString& userId, const QString& text, const QString& replyToId) {
-    // Prefer WebSocket for real-time delivery when connected
-    if (isSocketConnected()) {
-        m_socketClient->sendDirectMessage(userId, text, replyToId);
-        return 0;  // No request ID for WebSocket (confirmation comes via directMessageSent signal)
+int SerchatAPI::sendDMMessage(const QString& userId, const QString& text, const QString& replyToId,
+                              const QVariantList& attachments) {
+    if (!isSocketConnected()) {
+        emit dmMessageSendFailed(0, "Socket is not connected");
+        return -1;
     }
-    // Fallback to REST API
-    return m_apiClient->sendDMMessage(userId, text, replyToId);
+
+    m_socketClient->sendDirectMessage(userId, text, replyToId, attachments);
+    return 0;
 }
 
 // ============================================================================
@@ -926,8 +921,10 @@ void SerchatAPI::clearAuthState() {
 
     // Clear unread state
     m_unreadState.clear();
+    m_serverUnreadState.clear();
     m_channelLastReadAt.clear();
     m_firstUnreadMessageId.clear();
+    m_unreadDividerLastReadAt.clear();
     m_unreadStateVersion = 0;
 
     // Clear navigation state from settings
@@ -1056,7 +1053,7 @@ void SerchatAPI::onNetworkAuthTokenExpired() {
 }
 
 // ============================================================================
-// Socket.IO Real-time Connection
+// WebSocket Real-time Connection
 // ============================================================================
 
 bool SerchatAPI::isSocketConnected() const {
@@ -1100,8 +1097,7 @@ void SerchatAPI::joinChannel(const QString& serverId, const QString& channelId) 
     m_socketClient->joinChannel(serverId, channelId);
 }
 
-void SerchatAPI::leaveChannel(const QString& serverId, const QString& channelId) {
-    Q_UNUSED(serverId);  // New WebSocket API only requires channelId
+void SerchatAPI::leaveChannel(const QString& channelId) {
     m_socketClient->leaveChannel(channelId);
 }
 
@@ -1122,26 +1118,26 @@ void SerchatAPI::sendDMTyping(const QString& receiver) {
 }
 
 void SerchatAPI::sendServerMessageRT(const QString& serverId, const QString& channelId,
-                                      const QString& text, const QString& replyToId) {
+                                      const QString& text, const QString& replyToId,
+                                      const QVariantList& attachments) {
     if (!isSocketConnected()) {
         qWarning() << "[SerchatAPI] Cannot send message: socket not connected";
         return;
     }
-    m_socketClient->sendServerMessage(serverId, channelId, text, replyToId);
+    m_socketClient->sendServerMessage(serverId, channelId, text, replyToId, attachments);
 }
 
 void SerchatAPI::sendDirectMessageRT(const QString& receiver, const QString& text,
-                                      const QString& replyToId) {
+                                      const QString& replyToId,
+                                      const QVariantList& attachments) {
     if (!isSocketConnected()) {
         qWarning() << "[SerchatAPI] Cannot send DM: socket not connected";
         return;
     }
-    m_socketClient->sendDirectMessage(receiver, text, replyToId);
+    m_socketClient->sendDirectMessage(receiver, text, replyToId, attachments);
 }
 
-void SerchatAPI::editServerMessage(const QString& serverId, const QString& channelId,
-                                    const QString& messageId, const QString& text) {
-    Q_UNUSED(channelId);  // New WebSocket API only requires messageId
+void SerchatAPI::editServerMessage(const QString& messageId, const QString& text) {
     if (!isSocketConnected()) {
         qWarning() << "[SerchatAPI] Cannot edit message: socket not connected";
         return;
@@ -1149,9 +1145,7 @@ void SerchatAPI::editServerMessage(const QString& serverId, const QString& chann
     m_socketClient->editServerMessage(messageId, text);
 }
 
-void SerchatAPI::deleteServerMessage(const QString& serverId, const QString& channelId,
-                                      const QString& messageId) {
-    Q_UNUSED(channelId);  // New WebSocket API only requires serverId and messageId
+void SerchatAPI::deleteServerMessage(const QString& serverId, const QString& messageId) {
     if (!isSocketConnected()) {
         qWarning() << "[SerchatAPI] Cannot delete message: socket not connected";
         return;
@@ -1176,29 +1170,23 @@ void SerchatAPI::deleteDirectMessage(const QString& messageId) {
 }
 
 void SerchatAPI::addReaction(const QString& messageId, const QString& messageType,
-                              const QString& emoji, const QString& serverId,
-                              const QString& channelId) {
-    Q_UNUSED(serverId)
-    Q_UNUSED(channelId)
+                              const QString& emoji) {
     if (!isSocketConnected()) {
         qWarning() << "[SerchatAPI] Cannot add reaction: socket not connected";
         return;
     }
-    // New WS API uses emojiType/emojiId instead of serverId/channelId
+    // WebSocket API uses emojiType/emojiId for custom emojis
     // For now, assume all emojis are unicode type
     m_socketClient->addReaction(messageId, messageType, emoji, "unicode", QString());
 }
 
 void SerchatAPI::removeReaction(const QString& messageId, const QString& messageType,
-                                 const QString& emoji, const QString& serverId,
-                                 const QString& channelId) {
-    Q_UNUSED(serverId)
-    Q_UNUSED(channelId)
+                                 const QString& emoji) {
     if (!isSocketConnected()) {
         qWarning() << "[SerchatAPI] Cannot remove reaction: socket not connected";
         return;
     }
-    // New WS API uses emojiType/emojiId instead of serverId/channelId
+    // WebSocket API uses emojiType/emojiId for custom emojis
     // For now, assume all emojis are unicode type
     m_socketClient->removeReaction(messageId, messageType, emoji, "unicode", QString());
 }
@@ -1540,6 +1528,10 @@ bool SerchatAPI::hasDMUnreadMessages(const QString& recipientId) const {
 }
 
 bool SerchatAPI::hasServerUnread(const QString& serverId) const {
+    if (m_serverUnreadState.value(serverId, false)) {
+        return true;
+    }
+
     // Check if any channel in this server has unread messages
     QString prefix = serverId + ":";
     for (auto it = m_unreadState.constBegin(); it != m_unreadState.constEnd(); ++it) {
@@ -1557,6 +1549,8 @@ QString SerchatAPI::getFirstUnreadMessageId(const QString& serverId, const QStri
 
 void SerchatAPI::clearFirstUnreadMessageId(const QString& serverId, const QString& channelId) {
     QString key = serverId + ":" + channelId;
+    m_unreadDividerLastReadAt.remove(key);
+
     if (m_firstUnreadMessageId.contains(key)) {
         m_firstUnreadMessageId.remove(key);
         emit firstUnreadMessageIdChanged(serverId, channelId, QString());
@@ -1565,36 +1559,65 @@ void SerchatAPI::clearFirstUnreadMessageId(const QString& serverId, const QStrin
 }
 
 void SerchatAPI::markChannelAsRead(const QString& serverId, const QString& channelId) {
-    QString key = serverId + ":" + channelId;
-    bool hadUnread = m_unreadState.value(key, false);
-
-    // Update local lastReadAt to current time - this is the key fix!
-    // When we mark as read, we're saying "I've read everything up to now"
-    QString currentTime = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
-    m_channelLastReadAt[key] = currentTime;
-    qDebug() << "[SerchatAPI] Updated lastReadAt for channel" << channelId << "to" << currentTime;
-
-    // Clear the first unread message ID since we've now read everything
-    if (m_firstUnreadMessageId.contains(key)) {
-        m_firstUnreadMessageId.remove(key);
-        emit firstUnreadMessageIdChanged(serverId, channelId, QString());
-    }
-
-    if (hadUnread) {
-        m_unreadState[key] = false;
-        m_unreadStateVersion++;
-        emit unreadStateVersionChanged();
-        emit channelUnreadStateChanged(serverId, channelId, false);
-
-        // Check if server still has any unread channels
-        if (!hasServerUnread(serverId)) {
-            emit serverUnreadStateChanged(serverId, false);
-        }
-    }
+    setChannelReadLocally(serverId, channelId);
 
     // Notify the server via socket that we've read the channel
     m_socketClient->markChannelRead(serverId, channelId);
     qDebug() << "[SerchatAPI] Marked channel as read:" << channelId;
+}
+
+void SerchatAPI::setChannelReadLocally(const QString& serverId, const QString& channelId,
+                                       const QString& lastReadAt,
+                                       bool preserveUnreadDivider) {
+    if (serverId.isEmpty() || channelId.isEmpty()) {
+        return;
+    }
+
+    QString key = serverId + ":" + channelId;
+    if (preserveUnreadDivider
+            && m_unreadState.value(key, false)
+            && !m_firstUnreadMessageId.contains(key)
+            && !m_unreadDividerLastReadAt.contains(key)) {
+        QString previousReadAt = m_channelLastReadAt.value(key);
+        if (!previousReadAt.isEmpty()) {
+            m_unreadDividerLastReadAt[key] = previousReadAt;
+        }
+    }
+
+    QString readAt = lastReadAt.isEmpty()
+        ? QDateTime::currentDateTimeUtc().toString(Qt::ISODate)
+        : lastReadAt;
+    m_channelLastReadAt[key] = readAt;
+
+    bool previousServerState = hasServerUnread(serverId);
+    bool changed = false;
+    if (m_unreadState.value(key, false)) {
+        m_unreadState[key] = false;
+        changed = true;
+        emit channelUnreadStateChanged(serverId, channelId, false);
+    }
+
+    bool serverStillHasChannelUnread = false;
+    QString prefix = serverId + ":";
+    for (auto it = m_unreadState.constBegin(); it != m_unreadState.constEnd(); ++it) {
+        if (it.key().startsWith(prefix) && it.value()) {
+            serverStillHasChannelUnread = true;
+            break;
+        }
+    }
+    if (!serverStillHasChannelUnread && m_serverUnreadState.value(serverId, false)) {
+        m_serverUnreadState[serverId] = false;
+    }
+
+    bool newServerState = hasServerUnread(serverId);
+
+    if (changed || previousServerState != newServerState) {
+        m_unreadStateVersion++;
+        emit unreadStateVersionChanged();
+    }
+    if (previousServerState != newServerState) {
+        emit serverUnreadStateChanged(serverId, newServerState);
+    }
 }
 
 void SerchatAPI::clearDMUnread(const QString& recipientId) {
@@ -1624,7 +1647,12 @@ QString SerchatAPI::getChannelLastReadAt(const QString& serverId, const QString&
 
 void SerchatAPI::calculateFirstUnreadMessage(const QString& serverId, const QString& channelId, const QVariantList& messages) {
     QString key = serverId + ":" + channelId;
-    QString lastReadAt = m_channelLastReadAt.value(key);
+    QString existingFirstUnreadId = m_firstUnreadMessageId.value(key);
+    if (!existingFirstUnreadId.isEmpty()) {
+        return;
+    }
+
+    QString lastReadAt = m_unreadDividerLastReadAt.value(key, m_channelLastReadAt.value(key));
 
     qDebug() << "[SerchatAPI] Calculating first unread for channel" << channelId
              << "lastReadAt:" << lastReadAt << "messages count:" << messages.size();
@@ -1676,6 +1704,7 @@ void SerchatAPI::calculateFirstUnreadMessage(const QString& serverId, const QStr
     if (previousId != firstUnreadId) {
         if (firstUnreadId.isEmpty()) {
             m_firstUnreadMessageId.remove(key);
+            m_unreadDividerLastReadAt.remove(key);
         } else {
             m_firstUnreadMessageId[key] = firstUnreadId;
         }
@@ -1684,26 +1713,25 @@ void SerchatAPI::calculateFirstUnreadMessage(const QString& serverId, const QStr
     }
 }
 
-void SerchatAPI::handleChannelUnread(const QString& channelId,
-                                      const QString& lastMessageAt, const QString& senderId) {
-    // Ignore messages sent by the current user
+void SerchatAPI::handleChannelUnread(const QString& serverId, const QString& channelId,
+                                      const QString& lastMessageAt, const QString& senderId,
+                                      const QString& lastReadAt) {
+    if (!lastReadAt.isEmpty() || lastMessageAt.isEmpty()) {
+        setChannelReadLocally(serverId, channelId, lastReadAt);
+        return;
+    }
+
     if (!m_currentUserId.isEmpty() && senderId == m_currentUserId) {
-        qDebug() << "[SerchatAPI] Ignoring unread notification for own message in channel" << channelId;
+        setChannelReadLocally(serverId, channelId, lastMessageAt, false);
+        m_socketClient->markChannelRead(serverId, channelId);
         return;
     }
     
-    // Ignore messages in the currently viewed channel (user is already reading them)
     if (!m_viewingChannelId.isEmpty() && channelId == m_viewingChannelId) {
-        qDebug() << "[SerchatAPI] Ignoring unread notification for currently viewed channel" << channelId;
-        // Still mark as read on server to keep sync
-        if (!m_viewingServerId.isEmpty()) {
-            m_socketClient->markChannelRead(m_viewingServerId, channelId);
-        }
+        setChannelReadLocally(serverId, channelId, lastMessageAt, false);
+        m_socketClient->markChannelRead(serverId, channelId);
         return;
     }
-    
-    // Look up serverId from channel cache
-    QString serverId = m_channelCache->getServerIdForChannel(channelId);
     
     QString key = serverId + ":" + channelId;
     bool wasUnread = m_unreadState.value(key, false);
@@ -1713,14 +1741,37 @@ void SerchatAPI::handleChannelUnread(const QString& channelId,
     
     // Emit state change if this is a new unread
     if (!wasUnread) {
+        m_serverUnreadState[serverId] = true;
         m_unreadStateVersion++;
         emit unreadStateVersionChanged();
         emit channelUnreadStateChanged(serverId, channelId, true);
         emit serverUnreadStateChanged(serverId, true);
     }
     
-    // Forward the raw signal for any other handlers (for count tracking in QML)
     emit channelUnread(serverId, channelId, lastMessageAt, senderId);
+}
+
+void SerchatAPI::handleServerUnread(const QString& serverId, bool hasUnread) {
+    bool previousState = hasServerUnread(serverId);
+    m_serverUnreadState[serverId] = hasUnread;
+
+    if (!hasUnread) {
+        QString prefix = serverId + ":";
+        for (auto it = m_unreadState.begin(); it != m_unreadState.end(); ++it) {
+            if (it.key().startsWith(prefix) && it.value()) {
+                it.value() = false;
+                QString channelId = it.key().mid(prefix.length());
+                emit channelUnreadStateChanged(serverId, channelId, false);
+            }
+        }
+    }
+
+    bool newState = hasServerUnread(serverId);
+    if (previousState != newState) {
+        m_unreadStateVersion++;
+        emit unreadStateVersionChanged();
+        emit serverUnreadStateChanged(serverId, newState);
+    }
 }
 
 void SerchatAPI::handleDMUnread(const QString& peer, int count) {

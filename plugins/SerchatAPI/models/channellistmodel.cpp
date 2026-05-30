@@ -449,7 +449,7 @@ void ChannelListModel::rebuildDisplayList()
     
     for (int i = 0; i < m_channels.count(); ++i) {
         QString catId = m_channels[i].value("categoryId").toString();
-        if (catId.isEmpty()) {
+        if (catId.isEmpty() || !m_categoryIdToIndex.contains(catId)) {
             uncategorizedChannels.append(i);
         } else {
             categoryChannels[catId].append(i);

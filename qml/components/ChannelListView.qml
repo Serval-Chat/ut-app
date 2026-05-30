@@ -20,7 +20,6 @@ Rectangle {
     property string serverName: ""
     property string serverIcon: ""
     property string selectedChannelId: ""
-    property var unreadCounts: ({})  // channelId -> count
     property var mentionChannels: ({})  // channelId -> hasMention
     property var mutedChannels: ({})  // channelId -> muted
     property bool canManageChannels: false
@@ -179,13 +178,9 @@ Rectangle {
             channelIcon: itemIcon
             description: itemDescription
             selected: selectedChannelId === channelId
-            // Use C++ unread tracking, fall back to legacy counts
-            // Reference unreadStateVersion to trigger re-evaluation when state changes
             unreadCount: {
-                var v = SerchatAPI.unreadStateVersion  // Trigger re-binding on change
-                return SerchatAPI.hasUnreadMessages(channelList.serverId, channelId) ? 
-                       Math.max(1, unreadCounts[channelId] || 0) : 
-                       (unreadCounts[channelId] || 0)
+                var version = SerchatAPI.unreadStateVersion
+                return SerchatAPI.hasUnreadMessages(channelList.serverId, channelId) ? 1 : 0
             }
             hasMention: mentionChannels[channelId] || false
             muted: mutedChannels[channelId] || false

@@ -37,8 +37,9 @@ Item {
     property var activeTransfer: null
     property bool uploading: false
     property int uploadRequestId: -1
+    property var pendingAttachments: []
     
-    signal sendMessage(string message, string replyToId)
+    signal sendMessage(string message, string replyToId, var attachments)
     signal editMessage(string messageId, string newText)
     signal attachmentClicked()
     signal emojiClicked()
@@ -193,6 +194,63 @@ Item {
         
         // Main composer row
         Rectangle {
+            id: attachmentBar
+            width: parent.width
+            height: pendingAttachments.length > 0 ? attachmentRow.height + units.gu(1) : 0
+            color: Theme.palette.normal.base
+            visible: pendingAttachments.length > 0
+            clip: true
+
+            Row {
+                id: attachmentRow
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.leftMargin: units.gu(1)
+                anchors.rightMargin: units.gu(1)
+                spacing: units.gu(0.5)
+
+                Repeater {
+                    model: pendingAttachments
+
+                    Rectangle {
+                        height: units.gu(3)
+                        width: Math.min(attachmentName.width + removeAttachmentButton.width + units.gu(2), composer.width - units.gu(2))
+                        radius: units.gu(0.5)
+                        color: Qt.rgba(LomiriColors.blue.r, LomiriColors.blue.g, LomiriColors.blue.b, 0.16)
+
+                        Label {
+                            id: attachmentName
+                            anchors.left: parent.left
+                            anchors.leftMargin: units.gu(0.75)
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Math.min(implicitWidth, parent.width - removeAttachmentButton.width - units.gu(1.5))
+                            text: modelData.name || modelData.attachmentId || i18n.tr("Attachment")
+                            fontSize: "x-small"
+                            elide: Text.ElideMiddle
+                        }
+
+                        AbstractButton {
+                            id: removeAttachmentButton
+                            width: units.gu(3)
+                            height: parent.height
+                            anchors.right: parent.right
+
+                            Icon {
+                                anchors.centerIn: parent
+                                width: units.gu(1.5)
+                                height: units.gu(1.5)
+                                name: "close"
+                            }
+
+                            onClicked: removeAttachment(index)
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
             width: parent.width
             height: inputRow.height + units.gu(1.5)
             color: Theme.palette.normal.base
@@ -258,28 +316,7 @@ Item {
                         }
                     }
                     
-                    onAccepted: {
-                        if (text.trim().length > 0) {
-                            if (isEditing) {
-                                // Editing a message
-                                editMessage(editMessageId, text.trim())
-                                text = ""
-                                isEditing = false
-                                editMessageId = ""
-                                editMessageText = ""
-                            } else {
-                                // Sending a new message
-                                sendMessage(text.trim(), isReplying ? replyToMessageId : "")
-                                text = ""
-                                if (isReplying) {
-                                    isReplying = false
-                                    replyToMessageId = ""
-                                    replyToSenderName = ""
-                                    replyToText = ""
-                                }
-                            }
-                        }
-                    }
+                    onAccepted: submitCurrentInput()
                     
                     Keys.onReturnPressed: {
                         if (event.modifiers & Qt.ShiftModifier) {
@@ -320,7 +357,7 @@ Item {
                     id: sendButton
                     width: units.gu(4)
                     height: units.gu(4)
-                    enabled: composer.enabled && inputField.text.trim().length > 0
+                    enabled: composer.enabled && canSubmit()
                     
                     Rectangle {
                         anchors.fill: parent
@@ -340,28 +377,7 @@ Item {
                         color: "white"
                     }
                     
-                    onClicked: {
-                        if (inputField.text.trim().length > 0) {
-                            if (isEditing) {
-                                // Editing a message
-                                editMessage(editMessageId, inputField.text.trim())
-                                inputField.text = ""
-                                isEditing = false
-                                editMessageId = ""
-                                editMessageText = ""
-                            } else {
-                                // Sending a new message
-                                sendMessage(inputField.text.trim(), isReplying ? replyToMessageId : "")
-                                inputField.text = ""
-                                if (isReplying) {
-                                    isReplying = false
-                                    replyToMessageId = ""
-                                    replyToSenderName = ""
-                                    replyToText = ""
-                                }
-                            }
-                        }
-                    }
+                    onClicked: submitCurrentInput()
                 }
             }
         }
@@ -404,6 +420,44 @@ Item {
         editMessageId = ""
         editMessageText = ""
         emojiPicker.visible = false
+        pendingAttachments = []
+    }
+
+    function canSubmit() {
+        if (isEditing) {
+            return inputField.text.trim().length > 0
+        }
+        return inputField.text.trim().length > 0 || pendingAttachments.length > 0
+    }
+
+    function submitCurrentInput() {
+        if (!canSubmit()) return
+
+        if (isEditing) {
+            editMessage(editMessageId, inputField.text.trim())
+            inputField.text = ""
+            isEditing = false
+            editMessageId = ""
+            editMessageText = ""
+            return
+        }
+
+        var attachmentsToSend = pendingAttachments.slice()
+        sendMessage(inputField.text.trim(), isReplying ? replyToMessageId : "", attachmentsToSend)
+        inputField.text = ""
+        pendingAttachments = []
+        if (isReplying) {
+            isReplying = false
+            replyToMessageId = ""
+            replyToSenderName = ""
+            replyToText = ""
+        }
+    }
+
+    function removeAttachment(index) {
+        var nextAttachments = pendingAttachments.slice()
+        nextAttachments.splice(index, 1)
+        pendingAttachments = nextAttachments
     }
     
     // Emoji picker popup
@@ -463,20 +517,22 @@ Item {
         target: SerchatAPI
         onFileUploadSuccess: {
             if (requestId === uploadRequestId) {
-                // Insert file link at cursor position
-                var fileMarkdown = "[%file%](" + url + ")"
-                var cursorPos = inputField.cursorPosition
-                var currentText = inputField.text
-                
-                // Add space before if there's already text and no trailing space
-                var prefix = ""
-                if (cursorPos > 0 && currentText.charAt(cursorPos - 1) !== " ") {
-                    prefix = " "
+                var uploadedAttachment = attachment || {}
+                if (!uploadedAttachment.attachmentId && url) {
+                    var parts = url.split("/")
+                    var filename = parts.length > 0 ? parts[parts.length - 1] : url
+                    uploadedAttachment = {
+                        attachmentId: filename,
+                        type: "file",
+                        mimeType: "application/octet-stream",
+                        name: filename,
+                        size: 0,
+                        url: url
+                    }
                 }
-                
-                inputField.text = currentText.substring(0, cursorPos) + prefix + fileMarkdown + currentText.substring(cursorPos)
-                inputField.cursorPosition = cursorPos + prefix.length + fileMarkdown.length
-                
+                var nextAttachments = pendingAttachments.slice()
+                nextAttachments.push(uploadedAttachment)
+                pendingAttachments = nextAttachments
                 uploading = false
                 uploadRequestId = -1
                 inputField.forceActiveFocus()

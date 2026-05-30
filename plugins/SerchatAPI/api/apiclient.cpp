@@ -402,7 +402,8 @@ void ApiClient::emitSuccess(int requestId, const PendingRequest& req, const QVar
             break;
             
         case RequestType::UploadFile:
-            emit fileUploadSuccess(requestId, data.value("url").toString());
+            emit fileUploadSuccess(requestId, data.value("url").toString(),
+                                   data.value("attachment").toMap());
             break;
             
         case RequestType::Servers:
@@ -483,10 +484,6 @@ void ApiClient::emitSuccess(int requestId, const PendingRequest& req, const QVar
         case RequestType::DMMessages:
             emit dmMessagesFetched(requestId, req.context.value("recipientId").toString(),
                                    data.value("items").toList());
-            break;
-            
-        case RequestType::SendDMMessage:
-            emit dmMessageSent(requestId, data);
             break;
             
         case RequestType::SystemInfo:
@@ -590,10 +587,6 @@ void ApiClient::emitFailure(int requestId, const PendingRequest& req, const QStr
             
         case RequestType::DMMessages:
             emit dmMessagesFetchFailed(requestId, req.context.value("recipientId").toString(), error);
-            break;
-            
-        case RequestType::SendDMMessage:
-            emit dmMessageSendFailed(requestId, error);
             break;
             
         case RequestType::SystemInfo:

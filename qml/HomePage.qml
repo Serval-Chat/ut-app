@@ -49,7 +49,6 @@ Page {
     property var servers: []
     // Channels and categories are now managed by SerchatAPI.channelListModel
     // Messages are now managed by SerchatAPI.messageModel (C++ QAbstractListModel)
-    property var unreadCounts: ({})
     
     // DM data stores
     property var dmConversations: []
@@ -140,6 +139,31 @@ Page {
                 NumberAnimation { duration: animationDuration; easing.type: Easing.OutCubic }
             }
             
+            // Mark channel/DM as read when MessageView becomes visible
+            // This ensures we only mark as read when user actually views the messages
+            // not just when selecting a channel (especially on mobile)
+            onVisibleChanged: {
+                if (visible) {
+                    // Use a small delay to ensure the view is fully loaded and visible
+                    markAsReadTimer.restart()
+                }
+            }
+            
+            Timer {
+                id: markAsReadTimer
+                interval: 300
+                repeat: false
+                onTriggered: {
+                    if (messageView.visible) {
+                        if (currentChannelId !== "" && currentServerId !== "") {
+                            SerchatAPI.markChannelAsRead(currentServerId, currentChannelId)
+                        } else if (currentDMRecipientId !== "") {
+                            SerchatAPI.clearDMUnread(currentDMRecipientId)
+                        }
+                    }
+                }
+            }
+            
             // Server channel properties
             serverId: currentServerId
             serverOwnerId: currentServerOwnerId
@@ -166,9 +190,9 @@ Page {
             onSendMessage: {
                 // Check if we're in DM mode or channel mode
                 if (currentDMRecipientId !== "") {
-                    sendDMMessageToUser(text, replyToId)
+                    sendDMMessageToUser(text, replyToId, attachments || [])
                 } else {
-                    sendMessageToChannel(text, replyToId)
+                    sendMessageToChannel(text, replyToId, attachments || [])
                 }
             }
             
@@ -199,7 +223,7 @@ Page {
                 // Clear unread divider for channel when leaving
                 if (currentServerId && currentChannelId) {
                     SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
-                    SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+                    SerchatAPI.leaveChannel(currentChannelId)
                 }
 
                 // Set viewing state BEFORE setting currentDMRecipientId
@@ -429,7 +453,7 @@ Page {
                 // Clear unread divider for channel when leaving
                 if (currentServerId && currentChannelId) {
                     SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
-                    SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+                    SerchatAPI.leaveChannel(currentChannelId)
                 }
 
                 currentServerId = ""
@@ -490,7 +514,7 @@ Page {
                 // Clear unread divider for old channel when leaving
                 if (currentServerId && currentChannelId) {
                     SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
-                    SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+                    SerchatAPI.leaveChannel(currentChannelId)
                 }
 
                 // Set viewing state BEFORE setting currentDMRecipientId
@@ -551,7 +575,7 @@ Page {
                 // Clear unread divider for old channel when leaving
                 if (currentServerId && currentChannelId) {
                     SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
-                    SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+                    SerchatAPI.leaveChannel(currentChannelId)
                 }
 
                 // Clear DM state when switching to channel
@@ -796,6 +820,10 @@ Page {
 
                 // Check if there are more messages
                 SerchatAPI.messageModel.hasMoreMessages = (fetchedMessages.length >= 50)
+
+                if (messageView.visible) {
+                    markAsReadTimer.restart()
+                }
             } else {
                 console.log("[HomePage] Ignoring messages for old channel:", channelId)
             }
@@ -889,6 +917,10 @@ Page {
 
                 // Check if there are more messages
                 SerchatAPI.messageModel.hasMoreMessages = (fetchedMessages.length >= 50)
+
+                if (messageView.visible) {
+                    markAsReadTimer.restart()
+                }
             } else {
                 console.log("[HomePage] Ignoring DM messages for old recipient:", recipientId)
             }
@@ -935,7 +967,7 @@ Page {
         }
         
         // ====================================================================
-        // Real-time Socket.IO Events
+        // Real-time WebSocket Events
         // ====================================================================
         
         onSocketConnected: {
@@ -996,27 +1028,12 @@ Page {
         // Channel unread notifications
         onChannelUnread: {
             console.log("[HomePage] Channel unread:", serverId, channelId)
-            
-            // Update channel-level unread counts
-            var newCounts = Object.assign({}, unreadCounts)
-            var key = serverId + ":" + channelId
-            newCounts[key] = (newCounts[key] || 0) + 1
-            unreadCounts = newCounts
         }
         
         // Channel unread state changes (from C++ tracking)
         // This is primarily used for clearing unread state when channel is marked as read
         onChannelUnreadStateChanged: {
             console.log("[HomePage] Channel unread state changed:", serverId, channelId, hasUnread)
-            if (!hasUnread) {
-                // Clear the unread count when C++ tells us channel is read
-                var key = serverId + ":" + channelId
-                var newCounts = Object.assign({}, unreadCounts)
-                newCounts[key] = 0
-                unreadCounts = newCounts
-            }
-            // Note: We don't set counts here for hasUnread=true because
-            // onChannelUnread handles incrementing the count properly
         }
         
         // Server unread state changes (any channel in server has unread)
@@ -1050,9 +1067,8 @@ Page {
                 var isDuplicate = SerchatAPI.messageModel.hasMessage(newId)
                 
                 if (!isDuplicate) {
-                    // Add new message using C++ model - uses proper insert signals
-                    SerchatAPI.messageModel.prependMessage(message)
-                    console.log("[HomePage] Added DM to list, new count:", SerchatAPI.messageModel.count)
+                    SerchatAPI.messageModel.addRealMessage(message)
+                    console.log("[HomePage] Added/reconciled DM, new count:", SerchatAPI.messageModel.count)
                 }
             }
         }
@@ -1340,7 +1356,7 @@ Page {
         // Clear unread divider for current channel when leaving
         if (currentServerId && currentChannelId) {
             SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
-            SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+            SerchatAPI.leaveChannel(currentChannelId)
         }
 
         // Clear viewing state when navigating away from a channel view
@@ -1375,10 +1391,12 @@ Page {
         // Join the channel room for real-time updates
         SerchatAPI.joinChannel(serverId, channelId)
         
-        // Mark channel as read on the server (sends mark_channel_read event)
-        SerchatAPI.markChannelAsRead(serverId, channelId)
 
         SerchatAPI.getMessages(serverId, channelId, 50, "")
+
+        if (messageView.visible) {
+            markAsReadTimer.restart()
+        }
     }
     
     function loadOlderMessages() {
@@ -1392,8 +1410,9 @@ Page {
         SerchatAPI.getMessages(currentServerId, currentChannelId, 50, oldestId)
     }
     
-    function sendMessageToChannel(text, replyToId) {
-        if (!currentServerId || !currentChannelId || !text) return
+    function sendMessageToChannel(text, replyToId, attachments) {
+        attachments = attachments || []
+        if (!currentServerId || !currentChannelId || (!text && attachments.length === 0)) return
         
         // Optimistically add message to view using C++ model
         var newMessage = {
@@ -1402,6 +1421,7 @@ Page {
             channelId: currentChannelId,
             senderId: currentUserId,
             text: text,
+            attachments: attachments,
             createdAt: new Date().toISOString(),
             replyToId: replyToId || null
         }
@@ -1410,7 +1430,7 @@ Page {
         SerchatAPI.messageModel.prependMessage(newMessage)
         
         // Send via API
-        SerchatAPI.sendMessage(currentServerId, currentChannelId, text, replyToId || "")
+        SerchatAPI.sendMessage(currentServerId, currentChannelId, text || "", replyToId || "", attachments)
     }
     
     function loadDMMessages(recipientId) {
@@ -1427,11 +1447,13 @@ Page {
         // Set DM mode and clear messages using proper model signals
         SerchatAPI.messageModel.setDMRecipient(recipientId)
         
-        // Mark DM as read when viewing
-        SerchatAPI.clearDMUnread(recipientId)
         
         // Fetch DM messages from API
         SerchatAPI.getDMMessages(recipientId, 50, "")
+
+        if (messageView.visible) {
+            markAsReadTimer.restart()
+        }
     }
     
     function loadOlderDMMessages() {
@@ -1445,8 +1467,9 @@ Page {
         SerchatAPI.getDMMessages(currentDMRecipientId, 50, oldestId)
     }
     
-    function sendDMMessageToUser(text, replyToId) {
-        if (!currentDMRecipientId || !text) return
+    function sendDMMessageToUser(text, replyToId, attachments) {
+        attachments = attachments || []
+        if (!currentDMRecipientId || (!text && attachments.length === 0)) return
         
         // Optimistically add message to view using C++ model
         var newMessage = {
@@ -1454,6 +1477,7 @@ Page {
             senderId: currentUserId,
             receiverId: currentDMRecipientId,
             text: text,
+            attachments: attachments,
             createdAt: new Date().toISOString(),
             pending: true,
             replyToId: replyToId || null
@@ -1463,7 +1487,7 @@ Page {
         SerchatAPI.messageModel.prependMessage(newMessage)
         
         // Send via API
-        SerchatAPI.sendDMMessage(currentDMRecipientId, text, replyToId || "")
+        SerchatAPI.sendDMMessage(currentDMRecipientId, text || "", replyToId || "", attachments)
     }
     
     // Open DM with a specific user (can be called from ProfilePage)
@@ -1471,7 +1495,7 @@ Page {
         // Clear unread divider for channel when leaving
         if (currentServerId && currentChannelId) {
             SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
-            SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+            SerchatAPI.leaveChannel(currentChannelId)
         }
 
         // Set viewing state BEFORE setting currentDMRecipientId
@@ -1528,7 +1552,7 @@ Page {
             // Clear unread divider for channel when leaving
             if (currentServerId && currentChannelId) {
                 SerchatAPI.clearFirstUnreadMessageId(currentServerId, currentChannelId)
-                SerchatAPI.leaveChannel(currentServerId, currentChannelId)
+                SerchatAPI.leaveChannel(currentChannelId)
             }
 
             // Set viewing state BEFORE setting currentDMRecipientId

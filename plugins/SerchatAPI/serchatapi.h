@@ -342,7 +342,6 @@ public:
     
     /**
      * @brief Get list of users currently typing in a DM.
-     * @param recipientId The DM recipient ID
      * @return List of usernames currently typing (usually 0 or 1)
      */
     Q_INVOKABLE QStringList getDMTypingUsers(const QString& recipientId) const;
@@ -422,7 +421,7 @@ public:
     /**
      * @brief Mark a channel as read. Call when entering a channel.
      * - Updates local lastReadAt to current time
-     * - Clears the unread divider
+    * - Preserves the unread divider for the current view session
      * - Sends mark_channel_read event to server
      */
     Q_INVOKABLE void markChannelAsRead(const QString& serverId, const QString& channelId);
@@ -495,7 +494,8 @@ public:
      * @return Request ID for matching with messageSent signal
      */
     Q_INVOKABLE int sendMessage(const QString& serverId, const QString& channelId,
-                                const QString& text, const QString& replyToId = QString());
+                                const QString& text, const QString& replyToId = QString(),
+                                const QVariantList& attachments = QVariantList());
 
     // ========================================================================
     // Direct Messages API
@@ -517,7 +517,9 @@ public:
      * @param replyToId Optional message ID to reply to
      * @return Request ID for matching with dmMessageSent signal
      */
-    Q_INVOKABLE int sendDMMessage(const QString& userId, const QString& text, const QString& replyToId = QString());
+    Q_INVOKABLE int sendDMMessage(const QString& userId, const QString& text,
+                                  const QString& replyToId = QString(),
+                                  const QVariantList& attachments = QVariantList());
 
     // ========================================================================
     // Cache Management
@@ -549,79 +551,77 @@ public:
     Q_INVOKABLE bool isRequestPending(int requestId) const;
 
     // ========================================================================
-    // Socket.IO Real-time Connection
+    // WebSocket Real-time Connection
     // ========================================================================
-    
+
     /// Check if socket is connected
     Q_INVOKABLE bool isSocketConnected() const;
-    
+
     /// Get socket ID
     Q_INVOKABLE QString socketId() const;
-    
+
     /// Get unread state version (for QML binding updates)
     int unreadStateVersion() const { return m_unreadStateVersion; }
-    
+
     /// Connect to the real-time socket server (called automatically on login)
     Q_INVOKABLE void connectSocket();
-    
+
     /// Disconnect from the socket server
     Q_INVOKABLE void disconnectSocket();
-    
+
     /// Join a server room to receive server events
     Q_INVOKABLE void joinServer(const QString& serverId);
-    
+
     /// Leave a server room
     Q_INVOKABLE void leaveServer(const QString& serverId);
-    
+
     /// Join a channel room to receive channel events
     Q_INVOKABLE void joinChannel(const QString& serverId, const QString& channelId);
-    
+
     /// Leave a channel room
-    Q_INVOKABLE void leaveChannel(const QString& serverId, const QString& channelId);
-    
+    Q_INVOKABLE void leaveChannel(const QString& channelId);
+
     /// Mark a channel as read
     Q_INVOKABLE void markChannelRead(const QString& serverId, const QString& channelId);
-    
+
     /// Mark DM as read
     Q_INVOKABLE void markDMRead(const QString& peerId);
-    
+
     /// Send typing indicator for server channel
     Q_INVOKABLE void sendTyping(const QString& serverId, const QString& channelId);
-    
+
     /// Send typing indicator for DM
     Q_INVOKABLE void sendDMTyping(const QString& receiver);
-    
-    /// Send server message via Socket.IO (real-time, preferred over HTTP)
+
+    /// Send server message via WebSocket (real-time, preferred over HTTP)
     Q_INVOKABLE void sendServerMessageRT(const QString& serverId, const QString& channelId,
-                                         const QString& text, const QString& replyToId = QString());
-    
-    /// Send direct message via Socket.IO (real-time)
+                                         const QString& text, const QString& replyToId = QString(),
+                                         const QVariantList& attachments = QVariantList());
+
+    /// Send direct message via WebSocket (real-time)
     Q_INVOKABLE void sendDirectMessageRT(const QString& receiver, const QString& text,
-                                         const QString& replyToId = QString());
-    
-    /// Edit server message via Socket.IO
-    Q_INVOKABLE void editServerMessage(const QString& serverId, const QString& channelId,
-                                       const QString& messageId, const QString& text);
-    
-    /// Delete server message via Socket.IO
-    Q_INVOKABLE void deleteServerMessage(const QString& serverId, const QString& channelId,
-                                         const QString& messageId);
-    
-    /// Edit direct message via Socket.IO
+                                         const QString& replyToId = QString(),
+                                         const QVariantList& attachments = QVariantList());
+
+    /// Edit server message via WebSocket
+    Q_INVOKABLE void editServerMessage(const QString& messageId, const QString& text);
+
+    /// Delete server message via WebSocket
+    Q_INVOKABLE void deleteServerMessage(const QString& serverId, const QString& messageId);
+
+    /// Edit direct message via WebSocket
     Q_INVOKABLE void editDirectMessage(const QString& messageId, const QString& text);
-    
-    /// Delete direct message via Socket.IO
+
+    /// Delete direct message via WebSocket
     Q_INVOKABLE void deleteDirectMessage(const QString& messageId);
-    
-    /// Add reaction to a message via Socket.IO
+
+    /// Add reaction to a message via WebSocket
     Q_INVOKABLE void addReaction(const QString& messageId, const QString& messageType,
-                                 const QString& emoji, const QString& serverId = QString(),
-                                 const QString& channelId = QString());
-    
-    /// Remove reaction from a message via Socket.IO
+                                 const QString& emoji);
+
+    /// Remove reaction from a message via WebSocket
     Q_INVOKABLE void removeReaction(const QString& messageId, const QString& messageType,
-                                    const QString& emoji, const QString& serverId = QString(),
-                                    const QString& channelId = QString());
+                                    const QString& emoji);
 
     // ========================================================================
     // Configuration
@@ -718,7 +718,7 @@ signals:
     void myProfileFetchFailed(const QString& error);
     
     // File upload signals
-    void fileUploadSuccess(int requestId, const QString& url);
+    void fileUploadSuccess(int requestId, const QString& url, const QVariantMap& attachment);
     void fileUploadFailed(int requestId, const QString& error);
     
     // Server signals
@@ -788,7 +788,7 @@ signals:
     void serverCreated(int requestId, const QVariantMap& server);
     void serverCreateFailed(int requestId, const QString& error);
     
-    // Socket.IO connection signals
+    // WebSocket connection signals
     void socketConnectedChanged();
     void socketIdChanged();
     void socketConnected();
@@ -1084,6 +1084,9 @@ private:
     // Unread status for badge display. Key: "serverId:channelId" or "dm:recipientId"
     QMap<QString, bool> m_unreadState;
 
+    // Server-level unread status from the backend.
+    QMap<QString, bool> m_serverUnreadState;
+
     // Last read timestamp per channel (from API or updated when marking as read)
     // Key: "serverId:channelId", Value: ISO timestamp string
     QMap<QString, QString> m_channelLastReadAt;
@@ -1091,6 +1094,10 @@ private:
     // First unread message ID per channel (for "NEW MESSAGES" divider)
     // Key: "serverId:channelId", Value: message ID
     QMap<QString, QString> m_firstUnreadMessageId;
+
+    // Last-read baseline used to keep the divider stable after badges are cleared.
+    // Key: "serverId:channelId", Value: ISO timestamp string
+    QMap<QString, QString> m_unreadDividerLastReadAt;
 
     // Version counter to trigger QML binding updates for unread badges
     int m_unreadStateVersion = 0;
@@ -1123,10 +1130,15 @@ private:
     void handleUserTyping(const QString& channelId, const QString& userId, const QString& username);
     void handleDMTyping(const QString& senderId, const QString& senderUsername);
     void removeTypingUser(const QString& key, const QString& username);
+    void setChannelReadLocally(const QString& serverId, const QString& channelId,
+                               const QString& lastReadAt = QString(),
+                               bool preserveUnreadDivider = true);
     
     // Unread event handlers
-    void handleChannelUnread(const QString& channelId,
-                             const QString& lastMessageAt, const QString& senderId);
+    void handleChannelUnread(const QString& serverId, const QString& channelId,
+                                                         const QString& lastMessageAt, const QString& senderId,
+                                                         const QString& lastReadAt);
+    void handleServerUnread(const QString& serverId, bool hasUnread);
     void handleDMUnread(const QString& peer, int count);
     
     // Model population handlers

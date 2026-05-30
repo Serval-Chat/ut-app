@@ -24,6 +24,7 @@ Item {
     property string replyToText: ""
     property string replyToSender: ""
     property var reactions: []
+    property var attachments: []
     property bool isPending: false  // True for messages awaiting server confirmation
     
     // Expose swipe state to parent for scroll locking
@@ -228,6 +229,7 @@ Item {
                     text: messageBubble.text
                     fontSize: "small"
                     textColor: Theme.palette.normal.baseText
+                    visible: text !== ""
                     
                     onUserMentionClicked: {
                         // Bubble up to parent - open profile for mentioned user
@@ -237,6 +239,26 @@ Item {
                     onMediaViewRequested: {
                         // Bubble up to parent - open media viewer
                         messageBubble.mediaViewRequested(url, name, mime)
+                    }
+                }
+
+                Column {
+                    width: parent.width
+                    spacing: units.gu(0.5)
+                    visible: attachments.length > 0
+
+                    Repeater {
+                        model: attachments
+
+                        Components.FilePreview {
+                            width: parent.width
+                            filename: modelData.name || modelData.attachmentId || ""
+                            downloadUrl: modelData.url || (modelData.attachmentId ? ("/api/v1/files/download/" + modelData.attachmentId) : "")
+
+                            onMediaViewRequested: {
+                                messageBubble.mediaViewRequested(url, name, mime)
+                            }
+                        }
                     }
                 }
                 

@@ -44,7 +44,7 @@ Rectangle {
     // Expose the message list for external scroll control
     property alias messageList: messageList
     
-    signal sendMessage(string text, string replyToId)
+    signal sendMessage(string text, string replyToId, var attachments)
     signal loadMoreMessages()
     signal userProfileClicked(string userId)
     signal backClicked()
@@ -312,6 +312,7 @@ Rectangle {
                         replyToText: model.repliedMessage ? model.repliedMessage.text : ""
                         replyToSender: model.repliedMessage ? getSenderName(model.repliedMessage.senderId) : ""
                         reactions: model.reactions || []
+                        attachments: model.attachments || []
                         isPending: model.isTempMessage || false  // Grey out pending messages
                         
                         // Bind swipe state to list scroll lock
@@ -589,7 +590,7 @@ Rectangle {
             if (messageView.serverId && messageView.channelId) {
                 SerchatAPI.clearFirstUnreadMessageId(messageView.serverId, messageView.channelId)
             }
-            messageView.sendMessage(message, replyToId)
+            messageView.sendMessage(message, replyToId, attachments || [])
         }
         
         onEditMessage: {
@@ -597,7 +598,7 @@ Rectangle {
             if (isDMMode) {
                 SerchatAPI.editDirectMessage(messageId, newText)
             } else {
-                SerchatAPI.editServerMessage(serverId, channelId, messageId, newText)
+                SerchatAPI.editServerMessage(messageId, newText)
             }
         }
     }
@@ -647,31 +648,18 @@ Rectangle {
         
         if (hasReacted) {
             // Remove reaction
-            if (isDMMode) {
-                SerchatAPI.removeReaction(messageId, messageType, emoji)
-            } else {
-                SerchatAPI.removeReaction(messageId, messageType, emoji, serverId, channelId)
-            }
+            SerchatAPI.removeReaction(messageId, messageType, emoji)
         } else {
             // Add reaction
-            if (isDMMode) {
-                SerchatAPI.addReaction(messageId, messageType, emoji)
-            } else {
-                SerchatAPI.addReaction(messageId, messageType, emoji, serverId, channelId)
-            }
+            SerchatAPI.addReaction(messageId, messageType, emoji)
         }
     }
-    
+
     // Add reaction to a message
     function addReaction(messageId, emoji, emojiType, emojiId) {
         console.log("[MessageView] Add reaction:", messageId, emoji, emojiType, emojiId)
         var messageType = isDMMode ? "dm" : "server"
-        
-        if (isDMMode) {
-            SerchatAPI.addReaction(messageId, messageType, emoji)
-        } else {
-            SerchatAPI.addReaction(messageId, messageType, emoji, serverId, channelId)
-        }
+        SerchatAPI.addReaction(messageId, messageType, emoji)
     }
     
     // Delete a message
@@ -679,12 +667,12 @@ Rectangle {
         // Use C++ level deferred deletion to avoid delegate context crashes
         // Optimistically removes from UI before server confirms
         SerchatAPI.messageModel.deleteMessageDeferred(messageId)
-        
+
         // Send deletion request to server
         if (isDMMode) {
             SerchatAPI.deleteDirectMessage(messageId)
         } else {
-            SerchatAPI.deleteServerMessage(serverId, channelId, messageId)
+            SerchatAPI.deleteServerMessage(serverId, messageId)
         }
     }
     

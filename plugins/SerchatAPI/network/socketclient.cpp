@@ -240,7 +240,8 @@ void SocketClient::sendDMTyping(const QString& receiverId)
 }
 
 void SocketClient::sendServerMessage(const QString& serverId, const QString& channelId, 
-                                      const QString& text, const QString& replyToId)
+                                      const QString& text, const QString& replyToId,
+                                      const QVariantList& attachments)
 {
     QVariantMap payload;
     payload["serverId"] = serverId;
@@ -249,17 +250,24 @@ void SocketClient::sendServerMessage(const QString& serverId, const QString& cha
     if (!replyToId.isEmpty()) {
         payload["replyToId"] = replyToId;
     }
+    if (!attachments.isEmpty()) {
+        payload["attachments"] = attachments;
+    }
     emitEvent("send_message_server", payload);
 }
 
 void SocketClient::sendDirectMessage(const QString& receiverId, const QString& text, 
-                                      const QString& replyToId)
+                                      const QString& replyToId,
+                                      const QVariantList& attachments)
 {
     QVariantMap payload;
     payload["receiverId"] = receiverId;
     payload["text"] = text;
     if (!replyToId.isEmpty()) {
         payload["replyToId"] = replyToId;
+    }
+    if (!attachments.isEmpty()) {
+        payload["attachments"] = attachments;
     }
     emitEvent("send_message_dm", payload);
 }
@@ -550,9 +558,15 @@ void SocketClient::handleEvent(const QString& eventType, const QJsonObject& payl
                                   payload["channelId"].toString());
     }
     else if (eventType == "channel_unread_updated") {
-        emit channelUnread(payload["channelId"].toString(),
+        emit channelUnread(payload["serverId"].toString(),
+                          payload["channelId"].toString(),
                           payload["lastMessageAt"].toString(),
-                          payload["senderId"].toString());
+                          payload["senderId"].toString(),
+                          payload["lastReadAt"].toString());
+    }
+    else if (eventType == "server_unread_updated") {
+        emit serverUnread(payload["serverId"].toString(),
+                          payload["hasUnread"].toBool());
     }
     else if (eventType == "typing_server") {
         emit userTyping(payload["channelId"].toString(),

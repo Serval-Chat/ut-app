@@ -13,18 +13,18 @@ class ApiClient;
 
 /**
  * @brief Global cache for channel messages with TTL support.
- * 
+ *
  * This cache provides centralized message storage with:
  * - TTL-based expiration with stale-while-revalidate pattern
  * - Automatic refresh when data is stale
- * - Socket.IO event-driven updates
+ * - WebSocket event-driven updates
  * - Pagination support for message history
  * - Graceful handling of app suspension/reconnection
- * 
+ *
  * Messages are stored per-channel with support for:
- * - Adding new messages from socket events
- * - Editing messages from socket events  
- * - Deleting messages from socket events
+ * - Adding new messages from WebSocket events
+ * - Editing messages from WebSocket events
+ * - Deleting messages from WebSocket events
  * - Loading historical messages with pagination
  * 
  * Usage in QML:

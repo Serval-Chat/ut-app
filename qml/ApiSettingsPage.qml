@@ -40,7 +40,7 @@ Page {
             id: apiUrlField
             Layout.fillWidth: true
             text: SerchatAPI.apiBaseUrl
-            placeholderText: i18n.tr("https://catfla.re")
+            placeholderText: i18n.tr("https://ser.chat")
             inputMethodHints: Qt.ImhUrlCharactersOnly
         }
         
@@ -82,7 +82,7 @@ Page {
             text: i18n.tr("Official Server")
             Layout.fillWidth: true
             onClicked: {
-                apiUrlField.text = "https://catfla.re"
+                apiUrlField.text = "https://ser.chat"
             }
         }
         

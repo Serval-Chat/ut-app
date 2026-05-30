@@ -483,7 +483,7 @@ bool MessageModel::addRealMessage(const QVariantMap& message)
         return false;
     }
 
-    // Check if real message already exists (duplicate from Socket.IO vs HTTP)
+    // Check if real message already exists (duplicate from WebSocket vs HTTP)
     if (m_idToIndex.contains(msgId)) {
         qDebug() << "[MessageModel] Duplicate message ignored:" << msgId;
         return false;

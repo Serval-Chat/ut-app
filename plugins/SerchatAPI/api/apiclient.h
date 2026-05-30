@@ -52,7 +52,6 @@ enum class RequestType {
     Messages,
     DMMessages,
     SendMessage,
-    SendDMMessage,
     Friends,
     SendFriendRequest,
     RemoveFriend,
@@ -280,7 +279,8 @@ public:
      * @return Request ID for matching with messageSent signal
      */
     int sendMessage(const QString& serverId, const QString& channelId,
-                    const QString& text, const QString& replyToId = QString());
+                    const QString& text, const QString& replyToId = QString(),
+                    const QVariantList& attachments = QVariantList());
 
     // ========================================================================
     // Direct Messages API (implemented in messages.cpp)
@@ -295,15 +295,6 @@ public:
      */
     int getDMMessages(const QString& userId, int limit = 50, const QString& before = QString());
     
-    /**
-     * @brief Send a direct message to a user.
-     * @param userId The recipient user ID
-     * @param text The message text
-     * @param replyToId Optional message ID to reply to
-     * @return Request ID for matching with dmMessageSent signal
-     */
-    int sendDMMessage(const QString& userId, const QString& text, const QString& replyToId = QString());
-
     // ========================================================================
     // Friends API (implemented in servers.cpp)
     // ========================================================================
@@ -393,7 +384,7 @@ signals:
     // ========================================================================
     // File Signals
     // ========================================================================
-    void fileUploadSuccess(int requestId, const QString& url);
+    void fileUploadSuccess(int requestId, const QString& url, const QVariantMap& attachment);
     void fileUploadFailed(int requestId, const QString& error);
     
     // ========================================================================
@@ -463,8 +454,6 @@ signals:
     // ========================================================================
     void dmMessagesFetched(int requestId, const QString& recipientId, const QVariantList& messages);
     void dmMessagesFetchFailed(int requestId, const QString& recipientId, const QString& error);
-    void dmMessageSent(int requestId, const QVariantMap& message);
-    void dmMessageSendFailed(int requestId, const QString& error);
     
     // ========================================================================
     // Friends Signals

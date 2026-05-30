@@ -1,6 +1,7 @@
 #include "apiclient.h"
 #include "../network/networkclient.h"
 #include <QDebug>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 
@@ -41,7 +42,8 @@ int ApiClient::getMessages(const QString& serverId, const QString& channelId,
 }
 
 int ApiClient::sendMessage(const QString& serverId, const QString& channelId,
-                           const QString& text, const QString& replyToId) {
+                           const QString& text, const QString& replyToId,
+                           const QVariantList& attachments) {
     int requestId = generateRequestId();
     
     if (serverId.isEmpty() || channelId.isEmpty()) {
@@ -53,11 +55,11 @@ int ApiClient::sendMessage(const QString& serverId, const QString& channelId,
         return requestId;
     }
     
-    if (text.trimmed().isEmpty()) {
+    if (text.trimmed().isEmpty() && attachments.isEmpty()) {
         QMetaObject::invokeMethod(this, [this, requestId]() {
             PendingRequest req;
             req.type = RequestType::SendMessage;
-            emitFailure(requestId, req, "Message text is required");
+            emitFailure(requestId, req, "Message text or attachment is required");
         }, Qt::QueuedConnection);
         return requestId;
     }
@@ -76,9 +78,14 @@ int ApiClient::sendMessage(const QString& serverId, const QString& channelId,
     
     // Build JSON body
     QJsonObject body;
-    body["content"] = text.trimmed();
+    if (!text.trimmed().isEmpty()) {
+        body["content"] = text.trimmed();
+    }
     if (!replyToId.isEmpty()) {
         body["replyToId"] = replyToId;
+    }
+    if (!attachments.isEmpty()) {
+        body["attachments"] = QJsonArray::fromVariantList(attachments);
     }
     
     QJsonDocument doc(body);
@@ -137,67 +144,4 @@ int ApiClient::getDMMessages(const QString& userId, int limit, const QString& be
     context["recipientId"] = userId;
     
     return startGetRequest(RequestType::DMMessages, endpoint, cacheKey, false, context);
-}
-
-int ApiClient::sendDMMessage(const QString& userId, const QString& text, const QString& replyToId) {
-    int requestId = generateRequestId();
-    
-    if (userId.isEmpty()) {
-        QMetaObject::invokeMethod(this, [this, requestId]() {
-            PendingRequest req;
-            req.type = RequestType::SendDMMessage;
-            emitFailure(requestId, req, "User ID is required");
-        }, Qt::QueuedConnection);
-        return requestId;
-    }
-    
-    if (text.trimmed().isEmpty()) {
-        QMetaObject::invokeMethod(this, [this, requestId]() {
-            PendingRequest req;
-            req.type = RequestType::SendDMMessage;
-            emitFailure(requestId, req, "Message text is required");
-        }, Qt::QueuedConnection);
-        return requestId;
-    }
-    
-    if (m_baseUrl.isEmpty()) {
-        QMetaObject::invokeMethod(this, [this, requestId]() {
-            PendingRequest req;
-            req.type = RequestType::SendDMMessage;
-            emitFailure(requestId, req, "API base URL not configured");
-        }, Qt::QueuedConnection);
-        return requestId;
-    }
-    
-    QString endpoint = QStringLiteral("/api/v1/messages/%1").arg(userId);
-    
-    // Build JSON body
-    QJsonObject body;
-    body["content"] = text.trimmed();
-    if (!replyToId.isEmpty()) {
-        body["replyToId"] = replyToId;
-    }
-    
-    QJsonDocument doc(body);
-    QByteArray jsonData = doc.toJson(QJsonDocument::Compact);
-    
-    // Make the POST request
-    QUrl url = buildUrl(m_baseUrl, endpoint);
-    QNetworkReply* reply = m_networkClient->post(url, jsonData);
-    
-    // Track the request
-    PendingRequest pending;
-    pending.reply = reply;
-    pending.endpoint = endpoint;
-    pending.cacheKey = QString();  // No caching for POST
-    pending.type = RequestType::SendDMMessage;
-    pending.context["recipientId"] = userId;
-    m_pendingRequests[requestId] = pending;
-    
-    // Store requestId in reply for lookup in slot
-    reply->setProperty("requestId", requestId);
-    connect(reply, &QNetworkReply::finished, this, &ApiClient::onReplyFinished);
-    
-    qDebug() << "[ApiClient] Started send DM message request" << requestId;
-    return requestId;
 }

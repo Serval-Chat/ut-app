@@ -83,11 +83,13 @@ public slots:
     
     /// Send server message via WebSocket (real-time)
     void sendServerMessage(const QString& serverId, const QString& channelId,
-                          const QString& text, const QString& replyToId = QString());
+                          const QString& text, const QString& replyToId = QString(),
+                          const QVariantList& attachments = QVariantList());
     
     /// Send direct message via WebSocket (real-time)
     void sendDirectMessage(const QString& receiverId, const QString& text,
-                          const QString& replyToId = QString());
+                          const QString& replyToId = QString(),
+                          const QVariantList& attachments = QVariantList());
     
     /// Edit messages via WebSocket
     void editServerMessage(const QString& messageId, const QString& text);
@@ -132,7 +134,9 @@ signals:
     void channelUpdated(const QString& serverId, const QVariantMap& channel);
     void channelCreated(const QString& serverId, const QVariantMap& channel);
     void channelDeleted(const QString& serverId, const QString& channelId);
-    void channelUnread(const QString& channelId, const QString& lastMessageAt, const QString& senderId);
+    void channelUnread(const QString& serverId, const QString& channelId,
+                       const QString& lastMessageAt, const QString& senderId,
+                       const QString& lastReadAt);
     void channelPermissionsUpdated(const QString& serverId, const QString& channelId,
                                    const QVariantMap& permissions);
     void channelsReordered(const QString& serverId, const QVariantList& channelPositions);
@@ -154,6 +158,7 @@ signals:
     void serverOwnershipTransferred(const QString& serverId, const QString& oldOwnerId,
                                     const QString& newOwnerId);
     void serverJoined(const QString& serverId);
+    void serverUnread(const QString& serverId, bool hasUnread);
     
     // Role events
     void roleCreated(const QString& serverId, const QVariantMap& role);
