@@ -544,16 +544,13 @@ Rectangle {
             target: SerchatAPI
             
             onTypingUsersChanged: {
-                // Backend doesn't send serverId, so serverId === channelId
-                // Just compare channelId
                 if (channelId === messageView.channelId) {
                     typingIndicator.updateTypingUsers()
                 }
             }
             
             onDmTypingUsersChanged: {
-                // The signal sends username, but we have recipientId - check both
-                if (recipientId === messageView.dmRecipientId || recipientId === messageView.dmRecipientName) {
+                if (username === messageView.dmRecipientName) {
                     typingIndicator.updateTypingUsers()
                 }
             }
@@ -610,14 +607,6 @@ Rectangle {
         // Use C++ cache - it auto-fetches if not present
         var displayName = SerchatAPI.userProfileCache.getDisplayName(senderId)
         return displayName || i18n.tr("Unknown")
-    }
-    
-    // Show message context menu (legacy - now handled by MessageBubble)
-    function showMessageOptions(message) {
-        // Now handled directly in MessageBubble via context menu
-        composer.setReplyTo(message._id || message.id, 
-                           getSenderName(message.senderId),
-                           message.text)
     }
     
     // Show reaction picker for a message

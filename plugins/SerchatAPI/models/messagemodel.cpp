@@ -305,11 +305,11 @@ bool MessageModel::updateReactions(const QString& messageId, const QVariantList&
     return true;
 }
 
-QVariantList MessageModel::applyReactionDelta(const QString& messageId, const QVariantMap& reaction,
-                                              bool added, const QString& currentUserId)
+bool MessageModel::applyReactionDelta(const QString& messageId, const QVariantMap& reaction,
+                                      bool added, const QString& currentUserId)
 {
     if (!m_idToIndex.contains(messageId))
-        return QVariantList();
+        return false;
 
     int index = m_idToIndex[messageId];
     QVariantList reactions = m_messages[index].data.value("reactions").toList();
@@ -351,8 +351,7 @@ QVariantList MessageModel::applyReactionDelta(const QString& messageId, const QV
         }
     }
 
-    updateReactions(messageId, reactions);
-    return reactions;
+    return updateReactions(messageId, reactions);
 }
 
 bool MessageModel::deleteMessage(const QString& messageId)

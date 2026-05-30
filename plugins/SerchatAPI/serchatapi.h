@@ -534,12 +534,6 @@ public:
     /// Clear cached data for a specific cache key
     Q_INVOKABLE void clearCacheFor(const QString& cacheKey);
     
-    // Legacy profile cache methods (for backward compatibility)
-    Q_INVOKABLE void setProfileCacheTTL(int seconds) { setCacheTTL(seconds); }
-    Q_INVOKABLE void clearProfileCache() { clearCache(); }
-    Q_INVOKABLE void clearProfileCacheFor(const QString& userId);
-    Q_INVOKABLE bool hasProfileCached(const QString& userId) const;
-    
     // ========================================================================
     // Request Management
     // ========================================================================
@@ -839,20 +833,9 @@ signals:
     void userOffline(const QString& username);
     void userStatusUpdate(const QString& username, const QVariantMap& status);
     
-    // Real-time reaction signals
-    void reactionAdded(const QString& messageId, const QString& messageType,
-                       const QVariantList& reactions);
-    void reactionRemoved(const QString& messageId, const QString& messageType,
-                         const QVariantList& reactions);
-    
-    // Real-time typing signals
-    void userTyping(const QString& serverId, const QString& channelId,
-                    const QString& username);
-    void dmTyping(const QString& username);
-    
     // Typing indicator state change signals (for UI updates)
-    void typingUsersChanged(const QString& serverId, const QString& channelId);
-    void dmTypingUsersChanged(const QString& recipientId);
+    void typingUsersChanged(const QString& channelId);
+    void dmTypingUsersChanged(const QString& username);
     
     // Unread state change signals (for UI badge updates)
     void channelUnreadStateChanged(const QString& serverId, const QString& channelId, bool hasUnread);

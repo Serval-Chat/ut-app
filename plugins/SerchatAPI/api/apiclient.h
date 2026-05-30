@@ -359,9 +359,6 @@ public:
     void clearCacheFor(const QString& cacheKey);
     bool hasCachedData(const QString& cacheKey) const;
     
-    // Legacy profile-specific cache methods
-    bool hasCachedProfile(const QString& userId) const { return hasCachedData(userId); }
-
     // ========================================================================
     // Request Management (implemented in apiclient.cpp)
     // ========================================================================

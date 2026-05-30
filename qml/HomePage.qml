@@ -1160,17 +1160,6 @@ Page {
             }
         }
         
-        // Reaction updates
-        onReactionAdded: {
-            console.log("[HomePage] Reaction added to message:", messageId)
-            updateMessageReactions(messageId, reactions)
-        }
-        
-        onReactionRemoved: {
-            console.log("[HomePage] Reaction removed from message:", messageId)
-            updateMessageReactions(messageId, reactions)
-        }
-        
         // Friend events
         onFriendAdded: {
             console.log("[HomePage] Friend added:", friendData.username)
@@ -1518,20 +1507,6 @@ Page {
 
         if (isSmallScreen) {
             mobileViewMode = "messages"
-        }
-    }
-    
-    // Update reactions for a message (preserves scroll position via C++ model)
-    function updateMessageReactions(messageId, newReactions) {
-        var targetId = String(messageId)
-        console.log("[HomePage] updateMessageReactions - Updating message:", targetId)
-        
-        // Use C++ model's updateReactions method - uses dataChanged signal to preserve scroll
-        var success = SerchatAPI.messageModel.updateReactions(targetId, newReactions)
-        if (success) {
-            console.log("[HomePage] Updated reactions for message:", targetId, "new reactions count:", newReactions.length)
-        } else {
-            console.log("[HomePage] Message not found for reaction update:", targetId)
         }
     }
     

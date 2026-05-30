@@ -186,9 +186,7 @@ Connections {
         SerchatAPI.messageModel.deleteMessage(messageId)
     }
     
-    onReactionAdded: {
-        SerchatAPI.messageModel.updateReactions(messageId, reactions)
-    }
+    // Reaction WebSocket deltas are applied by SerchatAPI directly to messageModel.
 }
 ```
 

@@ -839,14 +839,6 @@ void SerchatAPI::clearCacheFor(const QString& cacheKey) {
     m_apiClient->clearCacheFor(cacheKey);
 }
 
-void SerchatAPI::clearProfileCacheFor(const QString& userId) {
-    m_apiClient->clearCacheFor(QStringLiteral("profile:%1").arg(userId));
-}
-
-bool SerchatAPI::hasProfileCached(const QString& userId) const {
-    return m_apiClient->hasCachedData(QStringLiteral("profile:%1").arg(userId));
-}
-
 // ============================================================================
 // Request Management
 // ============================================================================
@@ -1438,12 +1430,8 @@ void SerchatAPI::handleUserTyping(const QString& channelId, const QString& userI
         
         m_typingUsers[key][username] = timer;
         
-        // Emit signal for UI update (pass channelId as both for compatibility)
-        emit typingUsersChanged(channelId, channelId);
+        emit typingUsersChanged(channelId);
     }
-    
-    // Also emit the raw event for any handlers that want it (use empty serverId for compatibility)
-    emit userTyping(QString(), channelId, username);
 }
 
 void SerchatAPI::handleDMTyping(const QString& senderId, const QString& senderUsername) {
@@ -1474,8 +1462,6 @@ void SerchatAPI::handleDMTyping(const QString& senderId, const QString& senderUs
         emit dmTypingUsersChanged(senderUsername);
     }
     
-    // Also emit the raw event for any handlers that want it
-    emit dmTyping(senderUsername);
 }
 
 void SerchatAPI::removeTypingUser(const QString& key, const QString& username) {
@@ -1498,7 +1484,7 @@ void SerchatAPI::removeTypingUser(const QString& key, const QString& username) {
         emit dmTypingUsersChanged(recipientId);
     } else {
         // Key is just the channelId for server channels
-        emit typingUsersChanged(key, key);  // Pass channelId as both params for compatibility
+        emit typingUsersChanged(key);
     }
 }
 
@@ -1847,33 +1833,25 @@ void SerchatAPI::handleSocketDisconnected() {
 void SerchatAPI::handleReactionAdded(const QVariantMap& reaction) {
     QVariantMap normalizedReaction = reaction;
     QString messageId = reaction.value("messageId").toString();
-    QString messageType = reaction.value("messageType").toString();
 
     const QString emojiId = reaction.value("emojiId").toString();
     if (!emojiId.isEmpty() && !normalizedReaction.contains("emojiUrl")) {
         normalizedReaction["emojiUrl"] = m_emojiCache->getEmojiUrl(emojiId);
     }
 
-    QVariantList reactions = m_messageModel->applyReactionDelta(messageId, normalizedReaction, true, m_currentUserId);
-
-    // Emit in the old format for compatibility with QML
-    emit reactionAdded(messageId, messageType, reactions);
+    m_messageModel->applyReactionDelta(messageId, normalizedReaction, true, m_currentUserId);
 }
 
 void SerchatAPI::handleReactionRemoved(const QVariantMap& reaction) {
     QVariantMap normalizedReaction = reaction;
     QString messageId = reaction.value("messageId").toString();
-    QString messageType = reaction.value("messageType").toString();
 
     const QString emojiId = reaction.value("emojiId").toString();
     if (!emojiId.isEmpty() && !normalizedReaction.contains("emojiUrl")) {
         normalizedReaction["emojiUrl"] = m_emojiCache->getEmojiUrl(emojiId);
     }
 
-    QVariantList reactions = m_messageModel->applyReactionDelta(messageId, normalizedReaction, false, m_currentUserId);
-
-    // Emit in the old format for compatibility with QML
-    emit reactionRemoved(messageId, messageType, reactions);
+    m_messageModel->applyReactionDelta(messageId, normalizedReaction, false, m_currentUserId);
 }
 
 void SerchatAPI::handleApplicationStateChanged(Qt::ApplicationState state) {

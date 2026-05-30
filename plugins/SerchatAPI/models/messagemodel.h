@@ -144,10 +144,10 @@ public:
     Q_INVOKABLE bool updateReactions(const QString& messageId, const QVariantList& reactions);
 
     /**
-     * @brief Apply a single WebSocket reaction delta and return the aggregate reactions.
+     * @brief Apply a single WebSocket reaction delta to this model.
      */
-    Q_INVOKABLE QVariantList applyReactionDelta(const QString& messageId, const QVariantMap& reaction,
-                                                bool added, const QString& currentUserId = QString());
+    bool applyReactionDelta(const QString& messageId, const QVariantMap& reaction,
+                            bool added, const QString& currentUserId = QString());
     
     /**
      * @brief Delete a message by ID.
@@ -251,8 +251,7 @@ signals:
 private:
     /**
      * @brief Internal message data structure.
-     * Storing as QVariantMap maintains compatibility with existing code
-     * while allowing efficient operations.
+    * Storing as QVariantMap keeps API payloads intact while allowing efficient operations.
      */
     struct Message {
         QString id;
