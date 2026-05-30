@@ -224,7 +224,10 @@ void MessageModel::appendMessages(const QVariantList& messages)
     endInsertRows();
     
     emit countChanged();
-    emit dataChanged(createIndex(0, 0), createIndex(m_messages.count() - 1, 0), { ShowAvatarRole });
+    if (first > 0) {
+        QModelIndex affectedIndex = createIndex(first - 1, 0);
+        emit dataChanged(affectedIndex, affectedIndex, { ShowAvatarRole });
+    }
     for (const Message& msg : toAdd) {
         emit messageAdded(msg.id, false);
     }
