@@ -21,6 +21,12 @@ Item {
     property string serverId: ""
     property string channelId: ""
     property string dmRecipientId: ""
+    property int typingThrottleMs: 3000
+    property double lastTypingSentAt: 0
+
+    onServerIdChanged: lastTypingSentAt = 0
+    onChannelIdChanged: lastTypingSentAt = 0
+    onDmRecipientIdChanged: lastTypingSentAt = 0
     
     // Reply state
     property bool isReplying: false
@@ -305,16 +311,7 @@ Item {
                     // Multi-line support would be nice but Lomiri TextField doesn't support it well
                     // For now, single line with enter to send
                     
-                    // Send typing indicator when text changes
-                    onTextChanged: {
-                        if (text.length > 0 && composer.enabled) {
-                            if (composer.dmRecipientId !== "") {
-                                SerchatAPI.sendDMTyping(composer.dmRecipientId)
-                            } else if (composer.serverId !== "" && composer.channelId !== "") {
-                                SerchatAPI.sendTyping(composer.serverId, composer.channelId)
-                            }
-                        }
-                    }
+                    onTextChanged: sendTypingIfDue()
                     
                     onAccepted: submitCurrentInput()
                     
@@ -428,6 +425,23 @@ Item {
             return inputField.text.trim().length > 0
         }
         return inputField.text.trim().length > 0 || pendingAttachments.length > 0
+    }
+
+    function sendTypingIfDue() {
+        if (inputField.text.length === 0 || !composer.enabled) return
+
+        var now = new Date().getTime()
+        if (now - lastTypingSentAt < typingThrottleMs) return
+
+        if (composer.dmRecipientId !== "") {
+            SerchatAPI.sendDMTyping(composer.dmRecipientId)
+        } else if (composer.serverId !== "" && composer.channelId !== "") {
+            SerchatAPI.sendTyping(composer.serverId, composer.channelId)
+        } else {
+            return
+        }
+
+        lastTypingSentAt = now
     }
 
     function submitCurrentInput() {
