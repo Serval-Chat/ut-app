@@ -21,7 +21,7 @@ Item {
     property string serverId: ""
     property string channelId: ""
     property string dmRecipientId: ""
-    property int typingThrottleMs: 3000
+    property int typingThrottleMs: 1000
     property double lastTypingSentAt: 0
 
     onServerIdChanged: lastTypingSentAt = 0
