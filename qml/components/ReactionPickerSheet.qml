@@ -348,7 +348,7 @@ Item {
                     isCustom: true,
                     id: emoji._id || emoji.id,
                     name: emoji.name,
-                    imageUrl: emoji.imageUrl || emoji.url || ""
+                    imageUrl: emoji.imageUrl || ""
                 }
             });
         }

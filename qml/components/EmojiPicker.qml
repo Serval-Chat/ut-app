@@ -205,8 +205,8 @@ Rectangle {
                     anchors.centerIn: parent
                     width: units.gu(3)
                     height: units.gu(3)
-                    source: (typeof modelData === "object" && (modelData.imageUrl || modelData.url)) ? 
-                            SerchatAPI.apiBaseUrl + (modelData.imageUrl || modelData.url) : ""
+                    source: (typeof modelData === "object" && modelData.imageUrl) ? 
+                            SerchatAPI.apiBaseUrl + modelData.imageUrl : ""
                     visible: typeof modelData === "object"
                     fillMode: Image.PreserveAspectFit
                 }
@@ -222,7 +222,7 @@ Rectangle {
                         } else if (typeof modelData === "object") {
                             // Custom emoji
                             emojiSelected(modelData.name, true, modelData._id || modelData.id, 
-                                         SerchatAPI.apiBaseUrl + (modelData.imageUrl || modelData.url || ""))
+                                         modelData.imageUrl ? SerchatAPI.apiBaseUrl + modelData.imageUrl : "")
                         }
                     }
                 }
