@@ -166,7 +166,7 @@ SerchatAPI::SerchatAPI() {
     
     // Connect category signals
     connect(m_apiClient, &ApiClient::categoriesFetched,
-            this, &SerchatAPI::categoriesFetched);
+            this, &SerchatAPI::handleCategoriesFetched);
     connect(m_apiClient, &ApiClient::categoriesFetchFailed,
             this, &SerchatAPI::categoriesFetchFailed);
     
@@ -558,17 +558,26 @@ void SerchatAPI::setActiveChannel(const QString& serverId, const QString& channe
 
 void SerchatAPI::setCurrentServer(const QString& serverId) {
     if (serverId.isEmpty()) {
-        qWarning() << "[SerchatAPI] setCurrentServer called with empty serverId";
+        m_currentServerId.clear();
+        m_channelListModel->clear();
+        m_channelListModel->setServerId(QString());
+        m_membersModel->clear();
+        m_rolesModel->clear();
+        m_messageModel->clear();
         return;
     }
 
     qDebug() << "[SerchatAPI] Setting current server and preloading data for:" << serverId;
+    m_currentServerId = serverId;
 
     // Clear any previous server's UI-specific data
     m_channelListModel->clear();
+    m_channelListModel->setServerId(serverId);
     m_membersModel->clear();
     m_rolesModel->clear();
     m_messageModel->clear();
+
+    hydrateChannelListModel(serverId);
 
     // Preload all data needed for the server UI in parallel:
     // Each cache handles its own TTL, deduplication, and stale-while-revalidate
@@ -576,9 +585,8 @@ void SerchatAPI::setCurrentServer(const QString& serverId) {
     // 1. Channels - via ChannelCache (triggers fetch if stale/missing)
     m_channelCache->refreshChannels(serverId);
 
-    // 2. Categories - via ChannelCache (triggers fetch if stale/missing, returns stale data immediately)
-    //    The getCategories call triggers an async fetch and the result is handled by onCategoriesFetched
-    m_channelCache->getCategories(serverId);
+    // 2. Categories - via ChannelCache
+    m_channelCache->refreshCategories(serverId);
 
     // 3. Members - via ServerMemberCache (for member list, username colors)
     m_serverMemberCache->fetchServerMembers(serverId);
@@ -592,6 +600,36 @@ void SerchatAPI::setCurrentServer(const QString& serverId) {
     m_apiClient->getServerEmojis(serverId, true);
 
     qDebug() << "[SerchatAPI] Initiated preload for server:" << serverId;
+}
+
+QVariantList SerchatAPI::filterChannelItems(const QVariantList& items) const {
+    QVariantList channels;
+    channels.reserve(items.size());
+
+    for (const QVariant& itemVar : items) {
+        QVariantMap item = itemVar.toMap();
+        if (item.value("type").toString() != QStringLiteral("category")) {
+            channels.append(item);
+        }
+    }
+
+    return channels;
+}
+
+void SerchatAPI::hydrateChannelListModel(const QString& serverId) {
+    if (serverId.isEmpty() || serverId != m_currentServerId) {
+        return;
+    }
+
+    QVariantList categories = m_channelCache->getCategories(serverId);
+    if (!categories.isEmpty()) {
+        m_channelListModel->setCategories(categories);
+    }
+
+    QVariantList channels = filterChannelItems(m_channelCache->getChannels(serverId));
+    if (!channels.isEmpty()) {
+        m_channelListModel->setChannels(channels);
+    }
 }
 
 void SerchatAPI::setDebug(bool debug) {
@@ -899,6 +937,7 @@ void SerchatAPI::clearAuthState() {
     m_friendsModel->clear();
     m_rolesModel->clear();
     m_channelListModel->clear();
+    m_currentServerId.clear();
 
     // Clear presence and typing state
     m_onlineUsers.clear();
@@ -1336,8 +1375,22 @@ void SerchatAPI::handleChannelsFetched(int requestId, const QString& serverId, c
     // Update channel cache
     m_channelCache->loadChannels(serverId, channels);
 
+    if (serverId == m_currentServerId) {
+        m_channelListModel->setChannels(filterChannelItems(channels));
+    }
+
     // Forward the signal to QML
     emit channelsFetched(requestId, serverId, channels);
+}
+
+void SerchatAPI::handleCategoriesFetched(int requestId, const QString& serverId, const QVariantList& categories) {
+    m_channelCache->loadCategories(serverId, categories);
+
+    if (serverId == m_currentServerId) {
+        m_channelListModel->setCategories(categories);
+    }
+
+    emit categoriesFetched(requestId, serverId, categories);
 }
 
 void SerchatAPI::handleMessagesFetched(int requestId, const QString& serverId, const QString& channelId, const QVariantList& messages) {

@@ -463,8 +463,7 @@ Page {
                 currentDMRecipientId = ""
                 currentDMRecipientName = ""
                 currentDMRecipientAvatar = ""
-                SerchatAPI.channelListModel.clear()
-                SerchatAPI.messageModel.clear()
+                SerchatAPI.setCurrentServer("")
 
                 // Clear viewing state when navigating away
                 SerchatAPI.viewingServerId = ""
@@ -729,9 +728,6 @@ Page {
                     }
                 }
                 
-                // Update the C++ model with channels
-                SerchatAPI.channelListModel.setChannels(chans)
-                
                 // Check for saved channel state and restore if valid
                 var savedChannelId = SerchatAPI.lastChannelId
                 if (savedChannelId && savedChannelId !== "") {
@@ -786,14 +782,6 @@ Page {
             if (serverId === currentServerId) {
                 loadingChannels = false
                 console.log("Failed to fetch channels:", error)
-            }
-        }
-        
-        // Categories
-        onCategoriesFetched: {
-            if (serverId === currentServerId) {
-                // Update the C++ model with categories
-                SerchatAPI.channelListModel.setCategories(categories)
             }
         }
         
@@ -1202,8 +1190,7 @@ Page {
                 currentServerName = ""
                 currentChannelId = ""
                 currentChannelName = ""
-                SerchatAPI.channelListModel.clear()
-                SerchatAPI.messageModel.clear()
+                SerchatAPI.setCurrentServer("")
             }
         }
         

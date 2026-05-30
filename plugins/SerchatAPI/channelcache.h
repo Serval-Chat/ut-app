@@ -86,6 +86,11 @@ public:
      * @brief Explicitly request a refresh of channels for a server.
      */
     Q_INVOKABLE void refreshChannels(const QString& serverId);
+
+    /**
+     * @brief Explicitly request a refresh of categories for a server.
+     */
+    Q_INVOKABLE void refreshCategories(const QString& serverId);
     
     /**
      * @brief Get all categories for a server.

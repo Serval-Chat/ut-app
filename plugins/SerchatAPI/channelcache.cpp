@@ -137,6 +137,24 @@ void ChannelCache::refreshChannels(const QString& serverId) {
     qDebug() << "ChannelCache: Fetching channels for server" << serverId;
 }
 
+void ChannelCache::refreshCategories(const QString& serverId) {
+    if (serverId.isEmpty() || !m_apiClient) {
+        qWarning() << "ChannelCache::refreshCategories - invalid server ID or no API client";
+        return;
+    }
+
+    if (m_pendingCategoryFetches.contains(serverId)) {
+        return;
+    }
+
+    m_pendingCategoryFetches.insert(serverId);
+
+    int requestId = m_apiClient->getCategories(serverId, false);
+    m_categoryRequestIds[requestId] = serverId;
+
+    qDebug() << "ChannelCache: Fetching categories for server" << serverId;
+}
+
 QVariantList ChannelCache::getCategories(const QString& serverId) {
     if (serverId.isEmpty()) {
         return QVariantList();
@@ -153,13 +171,7 @@ QVariantList ChannelCache::getCategories(const QString& serverId) {
     }
     
     if (needsRefresh && !m_pendingCategoryFetches.contains(serverId)) {
-        if (!m_apiClient) {
-            return hasData ? m_categories[serverId].data : QVariantList();
-        }
-        
-        m_pendingCategoryFetches.insert(serverId);
-        int requestId = m_apiClient->getCategories(serverId, false);  // Don't use ApiClient cache
-        m_categoryRequestIds[requestId] = serverId;
+        refreshCategories(serverId);
     }
     
     return hasData ? m_categories[serverId].data : QVariantList();
@@ -359,11 +371,7 @@ void ChannelCache::refreshStaleEntries(const QStringList& serverIds) {
         if (m_categories.contains(serverId)) {
             const CacheEntry& entry = m_categories[serverId];
             if (entry.isStale(m_ttlSeconds)) {
-                if (m_apiClient && !m_pendingCategoryFetches.contains(serverId)) {
-                    m_pendingCategoryFetches.insert(serverId);
-                    int requestId = m_apiClient->getCategories(serverId, false);
-                    m_categoryRequestIds[requestId] = serverId;
-                }
+                refreshCategories(serverId);
             }
         }
     }

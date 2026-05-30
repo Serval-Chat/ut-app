@@ -1093,6 +1093,7 @@ private:
     QString m_currentUserId;
     
     // Currently viewing channel/DM (for auto-marking as read)
+    QString m_currentServerId;
     QString m_viewingServerId;
     QString m_viewingChannelId;
     QString m_viewingDMRecipientId;
@@ -1107,6 +1108,8 @@ private:
     void clearAuthState();
     // Restore auth state from QSettings on startup
     void restoreAuthState();
+    QVariantList filterChannelItems(const QVariantList& items) const;
+    void hydrateChannelListModel(const QString& serverId);
     
     // Presence event handlers
     void handlePresenceSync(const QVariantList& onlineUsers);
@@ -1135,6 +1138,9 @@ private:
 
     // Channel data handler - extracts lastReadAt before forwarding
     void handleChannelsFetched(int requestId, const QString& serverId, const QVariantList& channels);
+
+    // Category data handler - keeps the current channel list model grouped
+    void handleCategoriesFetched(int requestId, const QString& serverId, const QVariantList& categories);
 
     // Messages data handler - calculates first unread message and reverses order
     void handleMessagesFetched(int requestId, const QString& serverId, const QString& channelId, const QVariantList& messages);
