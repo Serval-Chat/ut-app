@@ -3,6 +3,7 @@
 
 # Development documentation files I write to make clankering easier
 *.dev.md
+openapi.yaml
 
 venv
 # Generated Lucide icons QRC file (regenerated at build time)
