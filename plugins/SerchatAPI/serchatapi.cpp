@@ -1277,7 +1277,7 @@ void SerchatAPI::handleServerMembersFetched(int requestId, const QString& server
     
     // Also populate user profile cache with member data
     // This helps resolve user mentions and avatars without per-user API calls
-    m_userProfileCache->updateProfiles(members);
+    m_userProfileCache->updateProfilesFromMembers(members);
     
     // Update the server member cache with member data (includes roles)
     m_serverMemberCache->updateServerMembers(serverId, members);

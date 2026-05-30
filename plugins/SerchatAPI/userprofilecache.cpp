@@ -165,6 +165,7 @@ void UserProfileCache::updateProfile(const QString& userId, const QVariantMap& p
 void UserProfileCache::updateProfiles(const QVariantList& profiles)
 {
     qDebug() << "[UserProfileCache] Bulk updating" << profiles.size() << "profiles";
+    QSet<QString> updatedUserIds;
     
     for (const QVariant& profileVar : profiles) {
         QVariantMap profile = profileVar.toMap();
@@ -176,9 +177,54 @@ void UserProfileCache::updateProfiles(const QVariantList& profiles)
         
         m_profiles.insert(userId, profile);
         m_fetchingProfiles.remove(userId);
+        updatedUserIds.insert(userId);
     }
     
     bumpVersion();
+
+    for (const QString& userId : updatedUserIds) {
+        emit profileLoaded(userId);
+    }
+}
+
+void UserProfileCache::updateProfilesFromMembers(const QVariantList& members)
+{
+    qDebug() << "[UserProfileCache] Bulk updating profiles from" << members.size() << "members";
+    QSet<QString> updatedUserIds;
+
+    for (const QVariant& memberVar : members) {
+        QVariantMap member = memberVar.toMap();
+        QVariantMap profile = member.value("user").toMap();
+        QString userId = member.value("userId").toString();
+
+        if (profile.isEmpty()) {
+            profile = member;
+        }
+        if (userId.isEmpty()) {
+            userId = extractId(profile);
+        }
+        if (userId.isEmpty()) {
+            continue;
+        }
+
+        if (!profile.contains("_id") && !profile.contains("id")) {
+            profile["_id"] = userId;
+        }
+
+        m_profiles.insert(userId, profile);
+        m_fetchingProfiles.remove(userId);
+        updatedUserIds.insert(userId);
+    }
+
+    if (updatedUserIds.isEmpty()) {
+        return;
+    }
+
+    bumpVersion();
+
+    for (const QString& userId : updatedUserIds) {
+        emit profileLoaded(userId);
+    }
 }
 
 void UserProfileCache::markAllStale()

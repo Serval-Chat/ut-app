@@ -115,9 +115,14 @@ public:
     Q_INVOKABLE void updateProfile(const QString& userId, const QVariantMap& profile);
     
     /**
-     * @brief Bulk update profiles from server members list.
+     * @brief Bulk update profiles from profile-shaped objects.
      */
     void updateProfiles(const QVariantList& profiles);
+
+    /**
+     * @brief Bulk update profiles from server member objects with nested user data.
+     */
+    void updateProfilesFromMembers(const QVariantList& members);
     
     /**
      * @brief Mark all entries as potentially stale.
