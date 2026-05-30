@@ -1250,6 +1250,8 @@ void SerchatAPI::handleUserOffline(const QString& userId, const QString& usernam
 // ============================================================================
 
 void SerchatAPI::handleServersFetched(int requestId, const QVariantList& servers) {
+    m_serversModel->setItems(servers);
+
     // Preload channel cache for all servers at startup
     // This ensures the channel list is available quickly when switching servers
     for (const QVariant& serverVar : servers) {
