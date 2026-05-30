@@ -5,7 +5,7 @@
 #include <QRegularExpression>
 #include <QDateTime>
 #include <QStringList>
-#include <QDebug>
+#include <QVector>
 
 MarkdownParser::MarkdownParser(QObject *parent)
     : QObject(parent)
@@ -183,15 +183,7 @@ bool MarkdownParser::hasFileAttachments(const QString& input) const
     
     // Match [%file%](url) pattern - url can be relative or absolute
     static QRegularExpression fileRegex(QStringLiteral("\\[%file%\\]\\(([^)]+)\\)"));
-    bool hasMatch = fileRegex.match(input).hasMatch();
-    
-    // Debug logging
-    if (input.contains(QStringLiteral("%file%")) || input.contains(QStringLiteral("/download"))) {
-        qDebug() << "[MarkdownParser] hasFileAttachments check for:" << input;
-        qDebug() << "[MarkdownParser] Pattern match result:" << hasMatch;
-    }
-    
-    return hasMatch;
+    return fileRegex.match(input).hasMatch();
 }
 
 QVariantList MarkdownParser::extractFileAttachments(const QString& input) const
@@ -207,8 +199,6 @@ QVariantList MarkdownParser::extractFileAttachments(const QString& input) const
     static QRegularExpression fileRegex(QStringLiteral("\\[%file%\\]\\(((?:https?://[^/]+)?/api/v1/(?:files/)?download/[^)]+)\\)"));
     QRegularExpressionMatchIterator it = fileRegex.globalMatch(input);
     
-    qDebug() << "[MarkdownParser] extractFileAttachments input:" << input;
-    
     while (it.hasNext()) {
         QRegularExpressionMatch match = it.next();
         QString downloadUrl = match.captured(1);
@@ -220,15 +210,11 @@ QVariantList MarkdownParser::extractFileAttachments(const QString& input) const
             filename = downloadUrl.mid(lastSlash + 1);
         }
         
-        qDebug() << "[MarkdownParser] Extracted file attachment:" << filename << "URL:" << downloadUrl;
-        
         QVariantMap attachment;
         attachment[QStringLiteral("filename")] = filename;
         attachment[QStringLiteral("downloadUrl")] = downloadUrl;
         attachments.append(attachment);
     }
-    
-    qDebug() << "[MarkdownParser] Total attachments found:" << attachments.size();
     
     return attachments;
 }
