@@ -358,18 +358,23 @@ bool MessageModel::deleteMessage(const QString& messageId)
         return false;
     
     int index = m_idToIndex[messageId];
-    
-    // For BottomToTop ListView with delegates, use full model reset
-    // to avoid crashes during delegate cleanup
-    beginResetModel();
+
+    beginRemoveRows(QModelIndex(), index, index);
     
     m_messages.removeAt(index);
     rebuildIndexMap();
+    recalculateAvatarGrouping();
     
-    endResetModel();
+    endRemoveRows();
     
     emit countChanged();
     emit messageDeleted(messageId);
+
+    if (index > 0 && index - 1 < m_messages.count()) {
+        QModelIndex affectedIndex = createIndex(index - 1, 0);
+        emit dataChanged(affectedIndex, affectedIndex, { ShowAvatarRole });
+    }
+
     return true;
 }
 
