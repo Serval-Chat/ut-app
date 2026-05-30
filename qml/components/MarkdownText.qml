@@ -36,14 +36,14 @@ Item {
     property int wrapMode: Text.Wrap
     property int maximumLineCount: -1
 
-    // Use C++ cache versions to trigger re-render when data changes
-    property int emojiCacheVersion: SerchatAPI.emojiCache.version
-    property int profileCacheVersion: SerchatAPI.userProfileCache.version
+    property int renderVersion: 0
 
     // File attachment support
     readonly property bool hasFiles: SerchatAPI.markdownParser.hasFileAttachments(text)
     readonly property var fileAttachments: hasFiles ? SerchatAPI.markdownParser.extractFileAttachments(text) : []
     readonly property string textWithoutFiles: hasFiles ? SerchatAPI.markdownParser.removeFileAttachments(text) : text
+    readonly property var referencedEmojiIds: extractReferencedIds(textWithoutFiles, /<emoji:([a-zA-Z0-9]+)>/g)
+    readonly property var referencedUserIds: extractReferencedIds(textWithoutFiles, /<userid:'([a-zA-Z0-9]+)'>/g)
 
     // Check if the message is emoji-only using C++ (for larger display)
     // Use text without files to avoid false negatives
@@ -55,12 +55,10 @@ Item {
     readonly property int currentEmojiSize: isEmojiOnly ? largeEmojiSize : normalEmojiSize
 
     // The rendered HTML content (using C++ parser)
-    // Dependencies on cache versions ensure re-render when data changes
     property string renderedHtml: {
         // Create explicit dependencies on all relevant properties
         var _text = textWithoutFiles
-        var _emojiVersion = emojiCacheVersion
-        var _profileVersion = profileCacheVersion
+        var _renderVersion = renderVersion
         var _emojiSize = currentEmojiSize
         var _textColor = textColor
         var _linkColor = linkColor
@@ -125,6 +123,44 @@ Item {
                 }
             }
         }
+    }
+
+    Connections {
+        target: SerchatAPI.emojiCache
+
+        onEmojiLoaded: function(emojiId) {
+            if (containsId(referencedEmojiIds, emojiId)) {
+                renderVersion++
+            }
+        }
+    }
+
+    Connections {
+        target: SerchatAPI.userProfileCache
+
+        onProfileLoaded: function(userId) {
+            if (containsId(referencedUserIds, userId)) {
+                renderVersion++
+            }
+        }
+    }
+
+    function extractReferencedIds(value, regex) {
+        var ids = []
+        var match = null
+        regex.lastIndex = 0
+
+        while ((match = regex.exec(value)) !== null) {
+            if (ids.indexOf(match[1]) < 0) {
+                ids.push(match[1])
+            }
+        }
+
+        return ids
+    }
+
+    function containsId(ids, id) {
+        return ids && id && ids.indexOf(id) >= 0
     }
 
     signal userMentionClicked(string userId)

@@ -141,6 +141,7 @@ void EmojiCache::loadServerEmojis(const QString& serverId, const QVariantList& e
     qDebug() << "[EmojiCache] Loading" << emojis.size() << "emojis for server:" << serverId;
     
     QSet<QString>& serverEmojiSet = m_serverEmojis[serverId];
+    QSet<QString> loadedEmojiIds;
     
     for (const QVariant& emojiVar : emojis) {
         QVariantMap emoji = emojiVar.toMap();
@@ -153,17 +154,23 @@ void EmojiCache::loadServerEmojis(const QString& serverId, const QVariantList& e
         // Store the emoji
         m_emojis.insert(emojiId, emoji);
         serverEmojiSet.insert(emojiId);
+        loadedEmojiIds.insert(emojiId);
         
         // Remove from pending fetches if it was being fetched
         m_fetchingEmojis.remove(emojiId);
     }
     
     bumpVersion();
+
+    for (const QString& emojiId : loadedEmojiIds) {
+        emit emojiLoaded(emojiId);
+    }
 }
 
 void EmojiCache::loadAllEmojis(const QVariantList& emojis)
 {
     qDebug() << "[EmojiCache] Loading" << emojis.size() << "emojis from all servers";
+    QSet<QString> loadedEmojiIds;
     
     for (const QVariant& emojiVar : emojis) {
         QVariantMap emoji = emojiVar.toMap();
@@ -175,6 +182,7 @@ void EmojiCache::loadAllEmojis(const QVariantList& emojis)
         
         // Store the emoji
         m_emojis.insert(emojiId, emoji);
+        loadedEmojiIds.insert(emojiId);
         
         // Track server association
         QString serverId = emoji.value("serverId").toString();
@@ -187,6 +195,10 @@ void EmojiCache::loadAllEmojis(const QVariantList& emojis)
     }
     
     bumpVersion();
+
+    for (const QString& emojiId : loadedEmojiIds) {
+        emit emojiLoaded(emojiId);
+    }
 }
 
 void EmojiCache::addEmoji(const QVariantMap& emoji)
