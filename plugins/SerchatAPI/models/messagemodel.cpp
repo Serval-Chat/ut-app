@@ -302,6 +302,56 @@ bool MessageModel::updateReactions(const QString& messageId, const QVariantList&
     return true;
 }
 
+QVariantList MessageModel::applyReactionDelta(const QString& messageId, const QVariantMap& reaction,
+                                              bool added, const QString& currentUserId)
+{
+    if (!m_idToIndex.contains(messageId))
+        return QVariantList();
+
+    int index = m_idToIndex[messageId];
+    QVariantList reactions = m_messages[index].data.value("reactions").toList();
+    int reactionIndex = -1;
+
+    for (int i = 0; i < reactions.count(); ++i) {
+        if (reactionsMatch(reactions.at(i).toMap(), reaction)) {
+            reactionIndex = i;
+            break;
+        }
+    }
+
+    const QString userId = reaction.value("userId").toString();
+    const bool isCurrentUser = !currentUserId.isEmpty() && userId == currentUserId;
+
+    if (added) {
+        if (reactionIndex >= 0) {
+            QVariantMap aggregate = reactions.at(reactionIndex).toMap();
+            aggregate["count"] = aggregate.value("count", 0).toInt() + 1;
+            if (isCurrentUser) {
+                aggregate["hasReacted"] = true;
+            }
+            reactions[reactionIndex] = aggregate;
+        } else {
+            reactions.append(aggregateReactionFromDelta(reaction, currentUserId));
+        }
+    } else if (reactionIndex >= 0) {
+        QVariantMap aggregate = reactions.at(reactionIndex).toMap();
+        const int count = aggregate.value("count", 1).toInt() - 1;
+
+        if (count <= 0) {
+            reactions.removeAt(reactionIndex);
+        } else {
+            aggregate["count"] = count;
+            if (isCurrentUser) {
+                aggregate["hasReacted"] = false;
+            }
+            reactions[reactionIndex] = aggregate;
+        }
+    }
+
+    updateReactions(messageId, reactions);
+    return reactions;
+}
+
 bool MessageModel::deleteMessage(const QString& messageId)
 {
     if (!m_idToIndex.contains(messageId))
@@ -476,6 +526,34 @@ QString MessageModel::extractId(const QVariantMap& message)
         id = message.value("messageId").toString();
     }
     return id;
+}
+
+bool MessageModel::reactionsMatch(const QVariantMap& existingReaction, const QVariantMap& reaction)
+{
+    const QString existingEmojiId = existingReaction.value("emojiId").toString();
+    const QString emojiId = reaction.value("emojiId").toString();
+    if (!existingEmojiId.isEmpty() || !emojiId.isEmpty()) {
+        return existingEmojiId == emojiId;
+    }
+
+    const QString existingEmojiType = existingReaction.value("emojiType", QStringLiteral("unicode")).toString();
+    const QString emojiType = reaction.value("emojiType", QStringLiteral("unicode")).toString();
+    return existingEmojiType == emojiType
+        && existingReaction.value("emoji").toString() == reaction.value("emoji").toString();
+}
+
+QVariantMap MessageModel::aggregateReactionFromDelta(const QVariantMap& reaction, const QString& currentUserId)
+{
+    QVariantMap aggregate;
+    aggregate["emoji"] = reaction.value("emoji");
+    aggregate["emojiType"] = reaction.value("emojiType", QStringLiteral("unicode"));
+    aggregate["emojiId"] = reaction.value("emojiId");
+    aggregate["emojiUrl"] = reaction.value("emojiUrl", reaction.value("imageUrl"));
+    aggregate["count"] = 1;
+
+    const QString userId = reaction.value("userId").toString();
+    aggregate["hasReacted"] = !currentUserId.isEmpty() && userId == currentUserId;
+    return aggregate;
 }
 
 QString MessageModel::getSenderName(const QString& senderId) const

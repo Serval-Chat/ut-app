@@ -656,11 +656,11 @@ Page {
         
         // Profile
         onMyProfileFetched: {
-            currentUserId = profile.id || ""
+            currentUserId = profile._id || profile.id || ""
             currentUserName = profile.displayName || profile.username || ""
             
             // Also set in C++ API for filtering own messages from unread counts
-            SerchatAPI.currentUserId = profile.id || ""
+            SerchatAPI.currentUserId = currentUserId
 
             // Set avatar URL - profilePicture contains the full path
             if (profile.profilePicture) {

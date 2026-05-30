@@ -142,6 +142,12 @@ public:
      * Uses dataChanged signal to preserve scroll position.
      */
     Q_INVOKABLE bool updateReactions(const QString& messageId, const QVariantList& reactions);
+
+    /**
+     * @brief Apply a single WebSocket reaction delta and return the aggregate reactions.
+     */
+    Q_INVOKABLE QVariantList applyReactionDelta(const QString& messageId, const QVariantMap& reaction,
+                                                bool added, const QString& currentUserId = QString());
     
     /**
      * @brief Delete a message by ID.
@@ -280,6 +286,10 @@ private:
     
     // Helper to extract message ID from data
     static QString extractId(const QVariantMap& message);
+
+    // Helpers for reaction aggregation
+    static bool reactionsMatch(const QVariantMap& existingReaction, const QVariantMap& reaction);
+    static QVariantMap aggregateReactionFromDelta(const QVariantMap& reaction, const QString& currentUserId);
     
     // Helper to get sender name from profile cache
     QString getSenderName(const QString& senderId) const;

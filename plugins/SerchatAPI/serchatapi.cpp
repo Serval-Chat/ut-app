@@ -126,6 +126,7 @@ SerchatAPI::SerchatAPI() {
                     userId = profile.value("id").toString();
                 }
                 if (!userId.isEmpty()) {
+                    setCurrentUserId(userId);
                     m_userProfileCache->updateProfile(userId, profile);
                 }
                 emit myProfileFetched(profile);
@@ -1842,27 +1843,33 @@ void SerchatAPI::handleSocketDisconnected() {
 // ============================================================================
 
 void SerchatAPI::handleReactionAdded(const QVariantMap& reaction) {
-    // Extract data from the new reaction format
+    QVariantMap normalizedReaction = reaction;
     QString messageId = reaction.value("messageId").toString();
     QString messageType = reaction.value("messageType").toString();
-    
-    // Build reactions list from the single reaction
-    QVariantList reactions;
-    reactions.append(reaction);
-    
+
+    const QString emojiId = reaction.value("emojiId").toString();
+    if (!emojiId.isEmpty() && !normalizedReaction.contains("emojiUrl")) {
+        normalizedReaction["emojiUrl"] = m_emojiCache->getEmojiUrl(emojiId);
+    }
+
+    QVariantList reactions = m_messageModel->applyReactionDelta(messageId, normalizedReaction, true, m_currentUserId);
+
     // Emit in the old format for compatibility with QML
     emit reactionAdded(messageId, messageType, reactions);
 }
 
 void SerchatAPI::handleReactionRemoved(const QVariantMap& reaction) {
-    // Extract data from the new reaction format
+    QVariantMap normalizedReaction = reaction;
     QString messageId = reaction.value("messageId").toString();
     QString messageType = reaction.value("messageType").toString();
-    
-    // Build reactions list from the single reaction
-    QVariantList reactions;
-    reactions.append(reaction);
-    
+
+    const QString emojiId = reaction.value("emojiId").toString();
+    if (!emojiId.isEmpty() && !normalizedReaction.contains("emojiUrl")) {
+        normalizedReaction["emojiUrl"] = m_emojiCache->getEmojiUrl(emojiId);
+    }
+
+    QVariantList reactions = m_messageModel->applyReactionDelta(messageId, normalizedReaction, false, m_currentUserId);
+
     // Emit in the old format for compatibility with QML
     emit reactionRemoved(messageId, messageType, reactions);
 }
