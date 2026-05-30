@@ -194,9 +194,9 @@ QVariantList MarkdownParser::extractFileAttachments(const QString& input) const
         return attachments;
     }
     
-    // Match [%file%](url) pattern - url can be absolute (https://...) or relative (/api/v1/...)
+    // Match [%file%](url) pattern for current file download URLs.
     // Captures the full URL for download
-    static QRegularExpression fileRegex(QStringLiteral("\\[%file%\\]\\(((?:https?://[^/]+)?/api/v1/(?:files/)?download/[^)]+)\\)"));
+    static QRegularExpression fileRegex(QStringLiteral("\\[%file%\\]\\(((?:https?://[^/]+)?/api/v1/files/download/[^)]+)\\)"));
     QRegularExpressionMatchIterator it = fileRegex.globalMatch(input);
     
     while (it.hasNext()) {
@@ -227,7 +227,7 @@ QString MarkdownParser::removeFileAttachments(const QString& input) const
     
     QString result = input;
     
-    // Remove [%file%](/api/v1/download/{filename}) patterns
+    // Remove [%file%](/api/v1/files/download/{filename}) patterns
     static QRegularExpression fileRegex(QStringLiteral("\\[%file%\\]\\([^)]+\\)"));
     result.remove(fileRegex);
     
