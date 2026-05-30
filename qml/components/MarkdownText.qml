@@ -2,7 +2,6 @@ import QtQuick 2.7
 import Lomiri.Components 1.3
 
 import SerchatAPI 1.0
-import "." as Components
 
 /*
  * MarkdownText - Renders text with markdown formatting and custom emojis
@@ -20,7 +19,6 @@ import "." as Components
  * - User mentions (<userid:'id'>)
  * - Channel references (#channel)
  * - Emoji-only messages with larger emoji display
- * - File attachments ([%file%](url))
  */
 Item {
     id: markdownText
@@ -38,16 +36,12 @@ Item {
 
     property int renderVersion: 0
 
-    // File attachment support
-    readonly property bool hasFiles: SerchatAPI.markdownParser.hasFileAttachments(text)
-    readonly property var fileAttachments: hasFiles ? SerchatAPI.markdownParser.extractFileAttachments(text) : []
-    readonly property string textWithoutFiles: hasFiles ? SerchatAPI.markdownParser.removeFileAttachments(text) : text
-    readonly property var referencedEmojiIds: extractReferencedIds(textWithoutFiles, /<emoji:([a-zA-Z0-9]+)>/g)
-    readonly property var referencedUserIds: extractReferencedIds(textWithoutFiles, /<userid:'([a-zA-Z0-9]+)'>/g)
+    readonly property var referencedEmojiIds: extractReferencedIds(text, /<emoji:([a-zA-Z0-9]+)>/g)
+    readonly property var referencedUserIds: extractReferencedIds(text, /<userid:'([a-zA-Z0-9]+)'>/g)
 
     // Check if the message is emoji-only using C++ (for larger display)
     // Use text without files to avoid false negatives
-    readonly property bool isEmojiOnly: SerchatAPI.markdownParser.isEmojiOnly(textWithoutFiles)
+    readonly property bool isEmojiOnly: SerchatAPI.markdownParser.isEmojiOnly(text)
 
     // Emoji sizes based on context
     readonly property int normalEmojiSize: 20  // Same as text
@@ -57,7 +51,7 @@ Item {
     // The rendered HTML content (using C++ parser)
     property string renderedHtml: {
         // Create explicit dependencies on all relevant properties
-        var _text = textWithoutFiles
+        var _text = text
         var _renderVersion = renderVersion
         var _emojiSize = currentEmojiSize
         var _textColor = textColor
@@ -108,21 +102,6 @@ Item {
                 }
             }
         }
-
-        // File attachments
-        Repeater {
-            model: fileAttachments
-
-            Components.FilePreview {
-                width: Math.min(contentColumn.width, units.gu(35))
-                filename: modelData.filename
-                downloadUrl: modelData.downloadUrl
-                
-                onMediaViewRequested: {
-                    markdownText.mediaViewRequested(url, name, mime)
-                }
-            }
-        }
     }
 
     Connections {
@@ -165,5 +144,4 @@ Item {
 
     signal userMentionClicked(string userId)
     signal channelMentionClicked(string channelId)
-    signal mediaViewRequested(string url, string name, string mime)
 }

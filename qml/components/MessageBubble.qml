@@ -235,11 +235,6 @@ Item {
                         // Bubble up to parent - open profile for mentioned user
                         messageBubble.avatarClicked(userId)
                     }
-                    
-                    onMediaViewRequested: {
-                        // Bubble up to parent - open media viewer
-                        messageBubble.mediaViewRequested(url, name, mime)
-                    }
                 }
 
                 Column {

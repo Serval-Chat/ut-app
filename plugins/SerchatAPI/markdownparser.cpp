@@ -175,69 +175,6 @@ bool MarkdownParser::isEmojiOnly(const QString& input) const
     return true;
 }
 
-bool MarkdownParser::hasFileAttachments(const QString& input) const
-{
-    if (input.isEmpty()) {
-        return false;
-    }
-    
-    // Match [%file%](url) pattern - url can be relative or absolute
-    static QRegularExpression fileRegex(QStringLiteral("\\[%file%\\]\\(([^)]+)\\)"));
-    return fileRegex.match(input).hasMatch();
-}
-
-QVariantList MarkdownParser::extractFileAttachments(const QString& input) const
-{
-    QVariantList attachments;
-    
-    if (input.isEmpty()) {
-        return attachments;
-    }
-    
-    // Match [%file%](url) pattern for current file download URLs.
-    // Captures the full URL for download
-    static QRegularExpression fileRegex(QStringLiteral("\\[%file%\\]\\(((?:https?://[^/]+)?/api/v1/files/download/[^)]+)\\)"));
-    QRegularExpressionMatchIterator it = fileRegex.globalMatch(input);
-    
-    while (it.hasNext()) {
-        QRegularExpressionMatch match = it.next();
-        QString downloadUrl = match.captured(1);
-        
-        // Extract filename from URL path
-        QString filename = downloadUrl;
-        int lastSlash = downloadUrl.lastIndexOf(QLatin1Char('/'));
-        if (lastSlash >= 0 && lastSlash < downloadUrl.length() - 1) {
-            filename = downloadUrl.mid(lastSlash + 1);
-        }
-        
-        QVariantMap attachment;
-        attachment[QStringLiteral("filename")] = filename;
-        attachment[QStringLiteral("downloadUrl")] = downloadUrl;
-        attachments.append(attachment);
-    }
-    
-    return attachments;
-}
-
-QString MarkdownParser::removeFileAttachments(const QString& input) const
-{
-    if (input.isEmpty()) {
-        return input;
-    }
-    
-    QString result = input;
-    
-    // Remove [%file%](/api/v1/files/download/{filename}) patterns
-    static QRegularExpression fileRegex(QStringLiteral("\\[%file%\\]\\([^)]+\\)"));
-    result.remove(fileRegex);
-    
-    // Clean up any resulting double newlines or trailing whitespace
-    static QRegularExpression multipleNewlines(QStringLiteral("\\n{3,}"));
-    result.replace(multipleNewlines, QStringLiteral("\n\n"));
-    
-    return result.trimmed();
-}
-
 QString MarkdownParser::formatTimestamp(const QString& timestamp) const
 {
     if (timestamp.isEmpty()) {
