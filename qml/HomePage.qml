@@ -665,11 +665,6 @@ Page {
             if (profile.profilePicture) {
                 currentUserAvatar = SerchatAPI.apiBaseUrl + profile.profilePicture
             }
-
-            // Cache own profile in C++ cache (MessageModel uses this automatically)
-            if (SerchatAPI.userProfileCache) {
-                SerchatAPI.userProfileCache.updateProfile(profile.id, profile)
-            }
         }
         
         onMyProfileFetchFailed: {

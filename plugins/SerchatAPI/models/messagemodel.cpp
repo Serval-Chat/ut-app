@@ -178,6 +178,7 @@ void MessageModel::prependMessage(const QVariantMap& message)
     Message msg;
     msg.id = id;
     msg.data = message;
+    prefetchSenderProfile(message);
     m_messages.prepend(msg);
     
     // Rebuild index map (prepend shifts all indices)
@@ -204,6 +205,7 @@ void MessageModel::appendMessages(const QVariantList& messages)
             Message msg;
             msg.id = id;
             msg.data = msgData;
+            prefetchSenderProfile(msgData);
             toAdd.append(msg);
         }
     }
@@ -257,6 +259,7 @@ void MessageModel::replaceTempMessage(const QString& tempId, const QVariantMap& 
     m_idToIndex.remove(tempId);
     m_messages[index].id = newId;
     m_messages[index].data = realMessage;
+    prefetchSenderProfile(realMessage);
     m_idToIndex[newId] = index;
     recalculateAvatarGrouping();
     
@@ -277,6 +280,7 @@ bool MessageModel::updateMessage(const QString& messageId, const QVariantMap& up
     
     int index = m_idToIndex[messageId];
     m_messages[index].data = updatedMessage;
+    prefetchSenderProfile(updatedMessage);
     recalculateAvatarGrouping();
     
     // Emit dataChanged - this is the key to updating without scroll reset!
@@ -576,6 +580,18 @@ QString MessageModel::getSenderName(const QString& senderId) const
     // Use the shared UserProfileCache - returns empty if not cached (triggers auto-fetch)
     QString displayName = m_userProfileCache->getDisplayName(senderId);
     return displayName.isEmpty() ? QString() : displayName;
+}
+
+void MessageModel::prefetchSenderProfile(const QVariantMap& message) const
+{
+    if (!m_userProfileCache) {
+        return;
+    }
+
+    const QString senderId = message.value("senderId").toString();
+    if (!senderId.isEmpty()) {
+        m_userProfileCache->fetchProfile(senderId);
+    }
 }
 
 QString MessageModel::getSenderAvatar(const QString& senderId) const

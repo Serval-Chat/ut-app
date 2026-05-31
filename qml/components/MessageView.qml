@@ -741,38 +741,6 @@ Rectangle {
         }
     }
     
-    // Connect to C++ caches for re-rendering when profiles/emojis load
-    Connections {
-        target: SerchatAPI.userProfileCache
-        
-        onVersionChanged: {
-            // Force delegate re-binding when profiles are loaded
-            // The ListView will automatically update via role bindings
-        }
-    }
-    
-    Connections {
-        target: SerchatAPI.emojiCache
-        
-        onVersionChanged: {
-            // MarkdownText components will re-render via emojiCacheVersion binding
-        }
-    }
-    
-    // Connect to C++ model signals
-    Connections {
-        target: SerchatAPI.messageModel
-        
-        // When a message is added, prefetch the sender's profile if needed
-        onMessageAdded: {
-            var message = SerchatAPI.messageModel.getMessage(messageId)
-            if (message && message.senderId) {
-                // Cache will auto-fetch if not present
-                SerchatAPI.userProfileCache.fetchProfile(message.senderId)
-            }
-        }
-    }
-    
     // Search overlay
     Components.SearchOverlay {
         id: searchOverlay

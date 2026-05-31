@@ -294,6 +294,7 @@ private:
     static QVariantMap aggregateReactionFromDelta(const QVariantMap& reaction, const QString& currentUserId);
     
     // Helper to get sender name from profile cache
+    void prefetchSenderProfile(const QVariantMap& message) const;
     QString getSenderName(const QString& senderId) const;
     QString getSenderAvatar(const QString& senderId) const;
 };
