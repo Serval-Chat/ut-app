@@ -15,7 +15,6 @@
 #include "userprofilecache.h"
 #include "servermembercache.h"
 #include "channelcache.h"
-#include "messagecache.h"
 #include "markdownparser.h"
 
 SerchatAPI::SerchatAPI() {
@@ -46,7 +45,6 @@ SerchatAPI::SerchatAPI() {
     m_userProfileCache = new UserProfileCache(this);
     m_serverMemberCache = new ServerMemberCache(this);
     m_channelCache = new ChannelCache(this);
-    m_messageCache = new MessageCache(this);
 
     // Initialize markdown parser (moves text processing from QML to C++)
     m_markdownParser = new MarkdownParser(this);
@@ -68,7 +66,6 @@ SerchatAPI::SerchatAPI() {
     m_userProfileCache->setBaseUrl(baseUrl);
     m_serverMemberCache->setApiClient(m_apiClient);
     m_channelCache->setApiClient(m_apiClient);
-    m_messageCache->setApiClient(m_apiClient);
 
     // Configure markdown parser with base URL
     m_markdownParser->setBaseUrl(baseUrl);
@@ -215,11 +212,6 @@ SerchatAPI::SerchatAPI() {
     connect(m_apiClient, &ApiClient::messagesFetchFailed,
             this, &SerchatAPI::messagesFetchFailed);
 
-    // Also connect to MessageCache for its internal refresh mechanism
-    connect(m_apiClient, &ApiClient::messagesFetched,
-            m_messageCache, &MessageCache::onMessagesFetched);
-    connect(m_apiClient, &ApiClient::messagesFetchFailed,
-            m_messageCache, &MessageCache::onMessagesFetchFailed);
     connect(m_apiClient, &ApiClient::messageSent,
             this, [this](int requestId, const QVariantMap& message) {
                 if (isCurrentChannelMessage(message)) {
@@ -557,11 +549,6 @@ void SerchatAPI::setViewingDMRecipientId(const QString& id) {
         m_viewingDMRecipientId = id;
         emit viewingDMRecipientIdChanged();
     }
-}
-
-void SerchatAPI::setActiveChannel(const QString& serverId, const QString& channelId) {
-    m_messageCache->setActiveChannel(serverId, channelId);
-    qDebug() << "[SerchatAPI] Active channel set to:" << serverId << "/" << channelId;
 }
 
 void SerchatAPI::setCurrentServer(const QString& serverId) {
@@ -933,7 +920,6 @@ void SerchatAPI::clearAuthState() {
     m_userProfileCache->clear();
     m_serverMemberCache->clear();
     m_channelCache->clear();
-    m_messageCache->clear();
 
     // Clear API client cache to prevent stale data from previous account
     m_apiClient->clearCache();
@@ -1414,9 +1400,6 @@ void SerchatAPI::handleMessagesFetched(int requestId, const QString& serverId, c
     // Calculate the first unread message based on timestamps
     // Note: This function handles messages in any order (compares all timestamps)
     calculateFirstUnreadMessage(serverId, channelId, reversedMessages);
-
-    // Update message cache with reversed messages (newest-first order)
-    m_messageCache->loadMessages(serverId, channelId, reversedMessages);
 
     if (!m_messageModel->isDMMode()
             && m_messageModel->serverId() == serverId
@@ -1903,10 +1886,6 @@ void SerchatAPI::handleSocketConnected() {
     m_emojiCache->markAllStale();
     m_userProfileCache->markAllStale();
     m_channelCache->markAllStale();
-    m_messageCache->markAllStale();
-    
-    // Refresh the active channel immediately for fluid UX
-    m_messageCache->refreshActiveChannel();
     
     // Forward signal to QML
     emit socketConnected();
@@ -1972,20 +1951,10 @@ void SerchatAPI::handleApplicationStateChanged(Qt::ApplicationState state) {
 }
 
 // ============================================================================
-// Socket Event Handlers for Cache Updates
+// Socket Event Handlers
 // ============================================================================
 
 void SerchatAPI::handleServerMessageReceived(const QVariantMap& message) {
-    // Extract channel ID and add to message cache
-    QString channelId = message.value("channelId").toString();
-    if (channelId.isEmpty()) {
-        channelId = message.value("channel").toMap().value("_id").toString();
-    }
-    
-    if (!channelId.isEmpty()) {
-        m_messageCache->addMessage(channelId, message);
-    }
-
     if (isCurrentChannelMessage(message)) {
         m_messageModel->addRealMessage(message);
     }
@@ -1995,24 +1964,13 @@ void SerchatAPI::handleServerMessageReceived(const QVariantMap& message) {
 }
 
 void SerchatAPI::handleServerMessageEdited(const QVariantMap& message) {
-    QString channelId = message.value("channelId").toString();
-    if (channelId.isEmpty()) {
-        channelId = message.value("channel").toMap().value("_id").toString();
-    }
-    
-    if (!channelId.isEmpty()) {
-        m_messageCache->updateMessage(channelId, message);
-    }
-
     m_messageModel->updateMessage(message.value("_id", message.value("id")).toString(), message);
     
     emit serverMessageEdited(message);
 }
 
 void SerchatAPI::handleServerMessageDeleted(const QString& messageId, const QString& channelId) {
-    if (!channelId.isEmpty() && !messageId.isEmpty()) {
-        m_messageCache->removeMessage(channelId, messageId);
-    }
+    Q_UNUSED(channelId);
 
     m_messageModel->deleteMessage(messageId);
     
@@ -2020,8 +1978,6 @@ void SerchatAPI::handleServerMessageDeleted(const QString& messageId, const QStr
 }
 
 void SerchatAPI::handleDirectMessageReceived(const QVariantMap& message) {
-    // DMs don't use channels in the same way, so we don't add to MessageCache
-    // (DM messages are managed separately)
     if (isCurrentDirectMessage(message)) {
         m_messageModel->addRealMessage(message);
     }
@@ -2059,7 +2015,6 @@ void SerchatAPI::handleChannelCreated(const QString& serverId, const QVariantMap
 void SerchatAPI::handleChannelDeleted(const QString& serverId, const QString& channelId) {
     if (!serverId.isEmpty() && !channelId.isEmpty()) {
         m_channelCache->removeChannel(serverId, channelId);
-        m_messageCache->clearChannel(channelId);
     }
     
     emit channelDeleted(serverId, channelId);
