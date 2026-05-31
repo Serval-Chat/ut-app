@@ -481,8 +481,7 @@ Rectangle {
         // Update typing users list
         function updateTypingUsers() {
             if (isDMMode) {
-                // DM typing events use username, not userId
-                typingUsers = SerchatAPI.getDMTypingUsers(dmRecipientName)
+                typingUsers = SerchatAPI.getDMTypingUsers(dmRecipientId)
             } else if (serverId !== "" && channelId !== "") {
                 typingUsers = SerchatAPI.getTypingUsers(serverId, channelId)
             } else {
@@ -550,7 +549,7 @@ Rectangle {
             }
             
             onDmTypingUsersChanged: {
-                if (username === messageView.dmRecipientName) {
+                if (recipientId === messageView.dmRecipientId) {
                     typingIndicator.updateTypingUsers()
                 }
             }

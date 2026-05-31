@@ -831,7 +831,7 @@ signals:
     
     // Typing indicator state change signals (for UI updates)
     void typingUsersChanged(const QString& channelId);
-    void dmTypingUsersChanged(const QString& username);
+    void dmTypingUsersChanged(const QString& recipientId);
     
     // Unread state change signals (for UI badge updates)
     void channelUnreadStateChanged(const QString& serverId, const QString& channelId, bool hasUnread);

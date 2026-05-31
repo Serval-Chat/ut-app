@@ -1523,8 +1523,12 @@ void SerchatAPI::handleUserTyping(const QString& channelId, const QString& userI
 }
 
 void SerchatAPI::handleDMTyping(const QString& senderId, const QString& senderUsername) {
-    // For DMs, use senderId as the key identifier
-    QString key = "dm:" + senderUsername;
+    if (senderId.isEmpty()) {
+        return;
+    }
+
+    // For DMs, use the sender ID as the stable conversation key.
+    QString key = "dm:" + senderId;
     
     // Ignore typing events from the current user
     if (!m_currentUserId.isEmpty() && senderId == m_currentUserId) {
@@ -1547,7 +1551,7 @@ void SerchatAPI::handleDMTyping(const QString& senderId, const QString& senderUs
         m_typingUsers[key][senderUsername] = timer;
         
         // Emit signal for UI update
-        emit dmTypingUsersChanged(senderUsername);
+        emit dmTypingUsersChanged(senderId);
     }
     
 }
