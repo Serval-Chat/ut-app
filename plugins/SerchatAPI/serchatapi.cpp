@@ -221,9 +221,17 @@ SerchatAPI::SerchatAPI() {
     connect(m_apiClient, &ApiClient::messagesFetchFailed,
             m_messageCache, &MessageCache::onMessagesFetchFailed);
     connect(m_apiClient, &ApiClient::messageSent,
-            this, &SerchatAPI::messageSent);
+            this, [this](int requestId, const QVariantMap& message) {
+                if (isCurrentChannelMessage(message)) {
+                    m_messageModel->addRealMessage(message);
+                }
+                emit messageSent(requestId, message);
+            });
     connect(m_apiClient, &ApiClient::messageSendFailed,
-            this, &SerchatAPI::messageSendFailed);
+            this, [this](int requestId, const QString& error) {
+                m_messageModel->removeAllTempMessages();
+                emit messageSendFailed(requestId, error);
+            });
     
     // Connect DM message signals - intercept to reverse order
     connect(m_apiClient, &ApiClient::dmMessagesFetched,
@@ -303,9 +311,9 @@ SerchatAPI::SerchatAPI() {
                 emit dmMessageSent(0, message);
             });
     connect(m_socketClient, &SocketClient::directMessageEdited,
-            this, &SerchatAPI::directMessageEdited);
+            this, &SerchatAPI::handleDirectMessageEdited);
     connect(m_socketClient, &SocketClient::directMessageDeleted,
-            this, &SerchatAPI::directMessageDeleted);
+            this, &SerchatAPI::handleDirectMessageDeleted);
     
     // Real-time channel events - route through internal handlers to update caches
     connect(m_socketClient, &SocketClient::channelUpdated,
@@ -853,6 +861,7 @@ int SerchatAPI::getDMMessages(const QString& userId, int limit, const QString& b
 int SerchatAPI::sendDMMessage(const QString& userId, const QString& text, const QString& replyToId,
                               const QVariantList& attachments) {
     if (!isSocketConnected()) {
+        m_messageModel->removeAllTempMessages();
         emit dmMessageSendFailed(0, "Socket is not connected");
         return -1;
     }
@@ -1409,6 +1418,13 @@ void SerchatAPI::handleMessagesFetched(int requestId, const QString& serverId, c
     // Update message cache with reversed messages (newest-first order)
     m_messageCache->loadMessages(serverId, channelId, reversedMessages);
 
+    if (!m_messageModel->isDMMode()
+            && m_messageModel->serverId() == serverId
+            && m_messageModel->channelId() == channelId) {
+        m_messageModel->appendMessages(reversedMessages);
+        m_messageModel->setHasMoreMessages(messages.size() >= 50);
+    }
+
     // Forward reversed messages to QML (ready for display without further processing)
     emit messagesFetched(requestId, serverId, channelId, reversedMessages);
 }
@@ -1422,8 +1438,44 @@ void SerchatAPI::handleDMMessagesFetched(int requestId, const QString& recipient
         reversedMessages.append(messages.at(i));
     }
 
+    if (m_messageModel->isDMMode() && m_messageModel->dmRecipientId() == recipientId) {
+        m_messageModel->appendMessages(reversedMessages);
+        m_messageModel->setHasMoreMessages(messages.size() >= 50);
+    }
+
     // Forward reversed messages to QML (ready for display without further processing)
     emit dmMessagesFetched(requestId, recipientId, reversedMessages);
+}
+
+bool SerchatAPI::isCurrentChannelMessage(const QVariantMap& message) const {
+    if (m_messageModel->isDMMode()) {
+        return false;
+    }
+
+    QString channelId = message.value("channelId").toString();
+    if (channelId.isEmpty()) {
+        channelId = message.value("channel").toMap().value("_id").toString();
+    }
+    if (channelId.isEmpty()) {
+        channelId = message.value("channel").toMap().value("id").toString();
+    }
+
+    return !channelId.isEmpty() && channelId == m_messageModel->channelId();
+}
+
+bool SerchatAPI::isCurrentDirectMessage(const QVariantMap& message) const {
+    if (!m_messageModel->isDMMode()) {
+        return false;
+    }
+
+    const QString recipientId = m_messageModel->dmRecipientId();
+    if (recipientId.isEmpty()) {
+        return false;
+    }
+
+    const QString senderId = message.value("senderId").toString();
+    const QString receiverId = message.value("receiverId").toString();
+    return senderId == recipientId || receiverId == recipientId;
 }
 
 // ============================================================================
@@ -1933,6 +1985,10 @@ void SerchatAPI::handleServerMessageReceived(const QVariantMap& message) {
     if (!channelId.isEmpty()) {
         m_messageCache->addMessage(channelId, message);
     }
+
+    if (isCurrentChannelMessage(message)) {
+        m_messageModel->addRealMessage(message);
+    }
     
     // Forward signal to QML
     emit serverMessageReceived(message);
@@ -1947,6 +2003,8 @@ void SerchatAPI::handleServerMessageEdited(const QVariantMap& message) {
     if (!channelId.isEmpty()) {
         m_messageCache->updateMessage(channelId, message);
     }
+
+    m_messageModel->updateMessage(message.value("_id", message.value("id")).toString(), message);
     
     emit serverMessageEdited(message);
 }
@@ -1955,6 +2013,8 @@ void SerchatAPI::handleServerMessageDeleted(const QString& messageId, const QStr
     if (!channelId.isEmpty() && !messageId.isEmpty()) {
         m_messageCache->removeMessage(channelId, messageId);
     }
+
+    m_messageModel->deleteMessage(messageId);
     
     emit serverMessageDeleted(messageId, channelId);
 }
@@ -1962,8 +2022,22 @@ void SerchatAPI::handleServerMessageDeleted(const QString& messageId, const QStr
 void SerchatAPI::handleDirectMessageReceived(const QVariantMap& message) {
     // DMs don't use channels in the same way, so we don't add to MessageCache
     // (DM messages are managed separately)
+    if (isCurrentDirectMessage(message)) {
+        m_messageModel->addRealMessage(message);
+    }
+
     // Just forward the signal to QML
     emit directMessageReceived(message);
+}
+
+void SerchatAPI::handleDirectMessageEdited(const QVariantMap& message) {
+    m_messageModel->updateMessage(message.value("_id", message.value("id")).toString(), message);
+    emit directMessageEdited(message);
+}
+
+void SerchatAPI::handleDirectMessageDeleted(const QString& messageId) {
+    m_messageModel->deleteMessage(messageId);
+    emit directMessageDeleted(messageId);
 }
 
 void SerchatAPI::handleChannelUpdated(const QString& serverId, const QVariantMap& channel) {

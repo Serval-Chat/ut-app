@@ -47,6 +47,7 @@ class MessageModel : public QAbstractListModel {
     Q_PROPERTY(bool hasMoreMessages READ hasMoreMessages WRITE setHasMoreMessages NOTIFY hasMoreMessagesChanged)
     Q_PROPERTY(QString channelId READ channelId NOTIFY channelIdChanged)
     Q_PROPERTY(QString serverId READ serverId NOTIFY serverIdChanged)
+    Q_PROPERTY(QString dmRecipientId READ dmRecipientId NOTIFY dmRecipientIdChanged)
     Q_PROPERTY(bool isDMMode READ isDMMode NOTIFY isDMModeChanged)
 
 public:
@@ -90,6 +91,7 @@ public:
     void setHasMoreMessages(bool hasMore);
     QString channelId() const { return m_channelId; }
     QString serverId() const { return m_serverId; }
+    QString dmRecipientId() const { return m_dmRecipientId; }
     bool isDMMode() const { return m_isDMMode; }
 
     // ========================================================================
@@ -241,6 +243,7 @@ signals:
     void hasMoreMessagesChanged();
     void channelIdChanged();
     void serverIdChanged();
+    void dmRecipientIdChanged();
     void isDMModeChanged();
     
     // Signals for external coordination

@@ -800,15 +800,6 @@ Page {
             if (channelId === currentChannelId) {
                 loadingMessages = false
 
-                // Messages are already reversed in C++ (newest-first, ready for BottomToTop ListView)
-                // Just append them to the model
-                SerchatAPI.messageModel.appendMessages(fetchedMessages)
-
-                console.log("[HomePage] Messages updated, total:", SerchatAPI.messageModel.count)
-
-                // Check if there are more messages
-                SerchatAPI.messageModel.hasMoreMessages = (fetchedMessages.length >= 50)
-
                 if (messageView.visible) {
                     markAsReadTimer.restart()
                 }
@@ -826,14 +817,10 @@ Page {
         
         onMessageSent: {
             console.log("[HomePage] Message sent:", message._id)
-            // Use C++ method that handles duplicate detection and temp message replacement
-            SerchatAPI.messageModel.addRealMessage(message)
         }
 
         onMessageSendFailed: {
             console.log("Failed to send message:", error)
-            // Use C++ method to remove all temp messages
-            SerchatAPI.messageModel.removeAllTempMessages()
         }
         
         // Friends (for DM list)
@@ -897,15 +884,6 @@ Page {
             if (recipientId === currentDMRecipientId) {
                 loadingMessages = false
 
-                // Messages are already reversed in C++ (newest-first, ready for BottomToTop ListView)
-                // Just append them to the model
-                SerchatAPI.messageModel.appendMessages(fetchedMessages)
-
-                console.log("[HomePage] DM Messages updated, total:", SerchatAPI.messageModel.count)
-
-                // Check if there are more messages
-                SerchatAPI.messageModel.hasMoreMessages = (fetchedMessages.length >= 50)
-
                 if (messageView.visible) {
                     markAsReadTimer.restart()
                 }
@@ -923,14 +901,10 @@ Page {
         
         onDmMessageSent: {
             console.log("[HomePage] DM Message sent:", message._id)
-            // Use C++ method that handles duplicate detection and temp message replacement
-            SerchatAPI.messageModel.addRealMessage(message)
         }
 
         onDmMessageSendFailed: {
             console.log("[HomePage] Failed to send DM message:", error)
-            // Use C++ method to remove all temp messages
-            SerchatAPI.messageModel.removeAllTempMessages()
         }
         
         // Server management
@@ -987,30 +961,14 @@ Page {
         // Real-time server messages
         onServerMessageReceived: {
             console.log("[HomePage] Server message received:", message._id, "channelId:", message.channelId)
-
-            // Only add if it's for the current channel
-            var msgChannelId = String(message.channelId || "")
-            var currChannelId = String(currentChannelId || "")
-
-            if (msgChannelId === currChannelId && msgChannelId !== "") {
-                // Use C++ method that handles duplicate detection and temp message replacement
-                SerchatAPI.messageModel.addRealMessage(message)
-            }
         }
         
         onServerMessageEdited: {
             console.log("[HomePage] Server message edited:", message._id)
-            
-            // Update message using C++ model - uses dataChanged signal to preserve scroll
-            var msgId = String(message._id || message.id || "")
-            SerchatAPI.messageModel.updateMessage(msgId, message)
         }
         
         onServerMessageDeleted: {
             console.log("[HomePage] Server message deleted:", messageId)
-            
-            // Delete message using C++ model - uses proper remove signals to preserve scroll
-            SerchatAPI.messageModel.deleteMessage(String(messageId))
         }
         
         // Channel unread notifications
@@ -1044,29 +1002,10 @@ Page {
         // Direct message events
         onDirectMessageReceived: {
             console.log("[HomePage] DM received:", message._id)
-            
-            // If currently in DM with this user, add message
-            var senderId = String(message.senderId || "")
-            var receiverId = String(message.receiverId || "")
-            var currRecipient = String(currentDMRecipientId || "")
-            
-            if (currRecipient !== "" && (currRecipient === senderId || currRecipient === receiverId)) {
-                var newId = String(message._id || message.id || "")
-                var isDuplicate = SerchatAPI.messageModel.hasMessage(newId)
-                
-                if (!isDuplicate) {
-                    SerchatAPI.messageModel.addRealMessage(message)
-                    console.log("[HomePage] Added/reconciled DM, new count:", SerchatAPI.messageModel.count)
-                }
-            }
         }
         
         onDirectMessageDeleted: {
             console.log("[HomePage] Direct message deleted:", messageId)
-            
-            // Delete message using C++ model - uses proper remove signals to preserve scroll
-            // This handles the socket event confirmation (message may already be optimistically deleted)
-            SerchatAPI.messageModel.deleteMessage(String(messageId))
         }
         
         // User presence

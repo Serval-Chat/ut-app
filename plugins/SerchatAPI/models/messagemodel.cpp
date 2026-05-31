@@ -116,6 +116,7 @@ void MessageModel::setChannel(const QString& serverId, const QString& channelId)
     
     emit serverIdChanged();
     emit channelIdChanged();
+    emit dmRecipientIdChanged();
     emit isDMModeChanged();
     emit hasMoreMessagesChanged();
 }
@@ -135,6 +136,7 @@ void MessageModel::setDMRecipient(const QString& recipientId)
     
     emit serverIdChanged();
     emit channelIdChanged();
+    emit dmRecipientIdChanged();
     emit isDMModeChanged();
     emit hasMoreMessagesChanged();
 }

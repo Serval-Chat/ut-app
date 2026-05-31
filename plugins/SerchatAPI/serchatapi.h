@@ -997,6 +997,8 @@ private slots:
     void handleServerMessageEdited(const QVariantMap& message);
     void handleServerMessageDeleted(const QString& messageId, const QString& channelId);
     void handleDirectMessageReceived(const QVariantMap& message);
+    void handleDirectMessageEdited(const QVariantMap& message);
+    void handleDirectMessageDeleted(const QString& messageId);
     void handleChannelUpdated(const QString& serverId, const QVariantMap& channel);
     void handleChannelCreated(const QString& serverId, const QVariantMap& channel);
     void handleChannelDeleted(const QString& serverId, const QString& channelId);
@@ -1110,6 +1112,8 @@ private:
     void restoreAuthState();
     QVariantList filterChannelItems(const QVariantList& items) const;
     void hydrateChannelListModel(const QString& serverId);
+    bool isCurrentChannelMessage(const QVariantMap& message) const;
+    bool isCurrentDirectMessage(const QVariantMap& message) const;
     
     // Presence event handlers
     void handlePresenceSync(const QVariantList& onlineUsers);
