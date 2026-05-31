@@ -840,10 +840,6 @@ signals:
     // Signal when first unread message ID is calculated (for displaying divider)
     void firstUnreadMessageIdChanged(const QString& serverId, const QString& channelId, const QString& messageId);
     
-    // Real-time server membership signals
-    void serverMemberJoined(const QString& serverId, const QString& userId);
-    void serverMemberLeft(const QString& serverId, const QString& userId);
-    
     // Real-time friend signals
     void friendAdded(const QVariantMap& friendData);
     void friendRemoved(const QString& username, const QString& userId);

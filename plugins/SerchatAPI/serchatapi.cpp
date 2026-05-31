@@ -1300,28 +1300,30 @@ void SerchatAPI::handleServersFetched(int requestId, const QVariantList& servers
 }
 
 void SerchatAPI::handleServerMembersFetched(int requestId, const QString& serverId, const QVariantList& members) {
-    // Populate the members model with the fetched data
-    m_membersModel->setItems(members);
-    qDebug() << "[SerchatAPI] Members model populated with" << members.size() << "members for server:" << serverId;
-    
     // Also populate user profile cache with member data
     // This helps resolve user mentions and avatars without per-user API calls
     m_userProfileCache->updateProfilesFromMembers(members);
     
     // Update the server member cache with member data (includes roles)
     m_serverMemberCache->updateServerMembers(serverId, members);
+
+    if (serverId == m_currentServerId) {
+        m_membersModel->setItems(members);
+        qDebug() << "[SerchatAPI] Members model populated with" << members.size() << "members for server:" << serverId;
+    }
     
     // Forward the signal to QML for any additional handling
     emit serverMembersFetched(requestId, serverId, members);
 }
 
 void SerchatAPI::handleServerRolesFetched(int requestId, const QString& serverId, const QVariantList& roles) {
-    // Populate the roles model with the fetched data
-    m_rolesModel->setItems(roles);
-    qDebug() << "[SerchatAPI] Roles model populated with" << roles.size() << "roles for server:" << serverId;
-
     // Update the server member cache with role data
     m_serverMemberCache->updateServerRoles(serverId, roles);
+
+    if (serverId == m_currentServerId) {
+        m_rolesModel->setItems(roles);
+        qDebug() << "[SerchatAPI] Roles model populated with" << roles.size() << "roles for server:" << serverId;
+    }
 
     // Forward the signal to QML for any additional handling
     emit serverRolesFetched(requestId, serverId, roles);
@@ -2143,6 +2145,9 @@ void SerchatAPI::handleMemberRemoved(const QString& serverId, const QString& use
     // Remove member from cache
     if (!serverId.isEmpty() && !userId.isEmpty()) {
         m_serverMemberCache->removeMember(serverId, userId);
+        if (serverId == m_currentServerId) {
+            m_membersModel->removeItem(userId);
+        }
     }
     
     emit memberRemoved(serverId, userId);
@@ -2154,6 +2159,9 @@ void SerchatAPI::handleMemberUpdated(const QString& serverId, const QString& use
     // Update member in cache (includes updated roles)
     if (!serverId.isEmpty() && !member.isEmpty()) {
         m_serverMemberCache->updateMember(serverId, member);
+        if (serverId == m_currentServerId) {
+            m_membersModel->updateItem(userId, member);
+        }
     }
     
     emit memberUpdated(serverId, userId, member);

@@ -32,9 +32,6 @@ Rectangle {
     property int membersVersion: 0
     property int rolesVersion: 0
     
-    // Track which server's data is currently loaded in the model
-    property string loadedServerId: ""
-    
     signal memberClicked(string userId)
     signal close()
     
@@ -334,35 +331,8 @@ Rectangle {
         }
     }
     
-    // Fetch members when serverId changes
     onServerIdChanged: {
-        if (serverId && visible) {
-            fetchMembers()
-            fetchRoles()
-        }
-    }
-    
-    // Also fetch when the panel becomes visible if we have stale data
-    onVisibleChanged: {
-        // Fetch if visible and either:
-        // 1. No data loaded yet (model empty), or
-        // 2. Data is from a different server than we're currently viewing
-        var needsFetch = SerchatAPI.membersModel.count === 0 || loadedServerId !== serverId
-        if (visible && serverId && needsFetch && !loading) {
-            fetchMembers()
-            fetchRoles()
-        }
-    }
-    
-    function fetchMembers() {
-        if (!serverId) return
-        loading = true
-        SerchatAPI.getServerMembers(serverId)
-    }
-    
-    function fetchRoles() {
-        if (!serverId) return
-        SerchatAPI.getServerRoles(serverId)
+        loading = serverId !== "" && SerchatAPI.membersModel.count === 0
     }
     
     // Connection for API signals
@@ -371,8 +341,6 @@ Rectangle {
         
         onServerMembersFetched: {
             if (serverId === membersPanel.serverId) {
-                // Model is populated by C++, track which server's data we have
-                membersPanel.loadedServerId = serverId
                 loading = false
             }
         }
@@ -396,19 +364,5 @@ Rectangle {
             membersPanel.onlineUsersVersion++
         }
         
-        // Refresh members list when a member joins or leaves the server
-        onServerMemberJoined: {
-            if (serverId === membersPanel.serverId && visible) {
-                // Refresh the members list to include the new member
-                fetchMembers()
-            }
-        }
-        
-        onServerMemberLeft: {
-            if (serverId === membersPanel.serverId && visible) {
-                // Refresh the members list to remove the departed member
-                fetchMembers()
-            }
-        }
     }
 }

@@ -1160,24 +1160,14 @@ Page {
         // Member events (from REST operations)
         onMemberAdded: {
             console.log("[HomePage] Member added to server:", serverId, userId)
-            if (serverId === currentServerId) {
-                // Refresh members list to include the new member
-                SerchatAPI.getServerMembers(serverId, false)
-            }
         }
         
         onMemberRemoved: {
             console.log("[HomePage] Member removed from server:", serverId, userId)
-            if (serverId === currentServerId) {
-                SerchatAPI.membersModel.removeItem(userId)
-            }
         }
         
         onMemberUpdated: {
             console.log("[HomePage] Member updated in server:", serverId, userId)
-            if (serverId === currentServerId) {
-                SerchatAPI.membersModel.updateItem(userId, member)
-            }
         }
         
         // Permission events
