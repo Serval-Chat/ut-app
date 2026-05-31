@@ -22,6 +22,7 @@ class EmojiCache;
 class UserProfileCache;
 class ServerMemberCache;
 class ChannelCache;
+class FileMetadataCache;
 class MarkdownParser;
 
 /**
@@ -75,6 +76,7 @@ class SerchatAPI : public QObject {
     Q_PROPERTY(UserProfileCache* userProfileCache READ userProfileCache CONSTANT)
     Q_PROPERTY(ServerMemberCache* serverMemberCache READ serverMemberCache CONSTANT)
     Q_PROPERTY(ChannelCache* channelCache READ channelCache CONSTANT)
+    Q_PROPERTY(FileMetadataCache* fileMetadataCache READ fileMetadataCache CONSTANT)
 
     // Markdown parser for text rendering - moves logic from QML to C++
     Q_PROPERTY(MarkdownParser* markdownParser READ markdownParser CONSTANT)
@@ -949,6 +951,8 @@ public:
      * Provides centralized channel storage with TTL and automatic refresh.
      */
     ChannelCache* channelCache() const { return m_channelCache; }
+
+    FileMetadataCache* fileMetadataCache() const { return m_fileMetadataCache; }
     
     /**
      * @brief Get the markdown parser.
@@ -1037,6 +1041,7 @@ private:
     UserProfileCache* m_userProfileCache;
     ServerMemberCache* m_serverMemberCache;
     ChannelCache* m_channelCache;
+    FileMetadataCache* m_fileMetadataCache;
 
     // Markdown parser (owned by this class, exposed to QML)
     MarkdownParser* m_markdownParser;

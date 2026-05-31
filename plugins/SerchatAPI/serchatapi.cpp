@@ -15,6 +15,7 @@
 #include "userprofilecache.h"
 #include "servermembercache.h"
 #include "channelcache.h"
+#include "filemetadatacache.h"
 #include "markdownparser.h"
 
 SerchatAPI::SerchatAPI() {
@@ -45,6 +46,7 @@ SerchatAPI::SerchatAPI() {
     m_userProfileCache = new UserProfileCache(this);
     m_serverMemberCache = new ServerMemberCache(this);
     m_channelCache = new ChannelCache(this);
+    m_fileMetadataCache = new FileMetadataCache(this);
 
     // Initialize markdown parser (moves text processing from QML to C++)
     m_markdownParser = new MarkdownParser(this);
@@ -66,6 +68,7 @@ SerchatAPI::SerchatAPI() {
     m_userProfileCache->setBaseUrl(baseUrl);
     m_serverMemberCache->setApiClient(m_apiClient);
     m_channelCache->setApiClient(m_apiClient);
+    m_fileMetadataCache->setApiClient(m_apiClient);
 
     // Configure markdown parser with base URL
     m_markdownParser->setBaseUrl(baseUrl);
@@ -867,6 +870,7 @@ void SerchatAPI::setCacheTTL(int seconds) {
 
 void SerchatAPI::clearCache() {
     m_apiClient->clearCache();
+    m_fileMetadataCache->clear();
 }
 
 void SerchatAPI::clearCacheFor(const QString& cacheKey) {
@@ -920,6 +924,7 @@ void SerchatAPI::clearAuthState() {
     m_userProfileCache->clear();
     m_serverMemberCache->clear();
     m_channelCache->clear();
+    m_fileMetadataCache->clear();
 
     // Clear API client cache to prevent stale data from previous account
     m_apiClient->clearCache();

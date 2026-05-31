@@ -405,6 +405,10 @@ void ApiClient::emitSuccess(int requestId, const PendingRequest& req, const QVar
             emit fileUploadSuccess(requestId, data.value("url").toString(),
                                    data.value("attachment").toMap());
             break;
+
+        case RequestType::FileMetadata:
+            emit fileMetadataFetched(requestId, req.context.value("filename").toString(), data);
+            break;
             
         case RequestType::Servers:
             emit serversFetched(requestId, data.value("items").toList());
@@ -514,6 +518,10 @@ void ApiClient::emitFailure(int requestId, const PendingRequest& req, const QStr
             
         case RequestType::UploadFile:
             emit fileUploadFailed(requestId, error);
+            break;
+
+        case RequestType::FileMetadata:
+            emit fileMetadataFetchFailed(requestId, req.context.value("filename").toString(), error);
             break;
             
         case RequestType::Servers:

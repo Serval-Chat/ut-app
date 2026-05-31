@@ -39,6 +39,7 @@ enum class RequestType {
     UploadBanner,
     ChangeUsername,
     UploadFile,
+    FileMetadata,
     Servers,
     ServerDetails,
     ServerMembers,
@@ -158,6 +159,7 @@ public:
      * @return Request ID for matching with fileUploadSuccess/fileUploadFailed signals
      */
     int uploadFile(const QString& filePath);
+    int getFileMetadata(const QString& filename, bool useCache = true);
     
     // ========================================================================
     // Servers API (implemented in servers.cpp)
@@ -383,6 +385,8 @@ signals:
     // ========================================================================
     void fileUploadSuccess(int requestId, const QString& url, const QVariantMap& attachment);
     void fileUploadFailed(int requestId, const QString& error);
+    void fileMetadataFetched(int requestId, const QString& filename, const QVariantMap& metadata);
+    void fileMetadataFetchFailed(int requestId, const QString& filename, const QString& error);
     
     // ========================================================================
     // Server Signals

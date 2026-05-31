@@ -54,80 +54,59 @@ Item {
         return baseUrl + downloadUrl
     }
 
-    // Construct metadata URL from download URL
-    readonly property string metadataUrl: {
-        if (!downloadUrl) return ""
-        // Extract filename from download URL
-        var url = downloadUrl
-        // Handle full URLs by extracting the path
-        if (url.indexOf("http://") === 0 || url.indexOf("https://") === 0) {
-            var urlObj = url.split("//")
-            if (urlObj.length > 1) {
-                var pathStart = urlObj[1].indexOf("/")
-                if (pathStart >= 0) {
-                    url = urlObj[1].substring(pathStart)
-                }
-            }
-        }
-        
-        var parts = url.split("/")
-        var fname = parts[parts.length - 1]
-        if (!fname) return ""
-        
-        var baseUrl = SerchatAPI.apiBaseUrl
-        if (baseUrl.charAt(baseUrl.length - 1) === "/") {
-            baseUrl = baseUrl.substring(0, baseUrl.length - 1)
-        }
-        return baseUrl + "/api/v1/files/metadata/" + fname
-    }
+    readonly property string metadataKey: SerchatAPI.fileMetadataCache ?
+                                          SerchatAPI.fileMetadataCache.metadataKeyForUrl(downloadUrl) : ""
 
     width: parent ? Math.min(parent.width, units.gu(35)) : units.gu(35)
     height: contentColumn.height + units.gu(2)
 
-    // Fetch metadata on component creation or when URL changes
-    onMetadataUrlChanged: {
-        if (metadataUrl) {
-            fetchMetadata()
-        }
-    }
+    onMetadataKeyChanged: loadMetadata()
 
     Component.onCompleted: {
-        if (metadataUrl) {
-            fetchMetadata()
+        loadMetadata()
+    }
+
+    Connections {
+        target: SerchatAPI.fileMetadataCache
+
+        onMetadataLoaded: function(loadedFilename) {
+            if (loadedFilename === filePreview.metadataKey) {
+                loadMetadata()
+            }
+        }
+
+        onMetadataFetchFailed: function(failedFilename, error) {
+            if (failedFilename === filePreview.metadataKey) {
+                isLoading = false
+                hasError = true
+                console.warn("[FilePreview] Failed to fetch metadata:", error)
+            }
         }
     }
 
-    function fetchMetadata() {
-        if (!metadataUrl) return
-        
-        isLoading = true
-        hasError = false
-
-        var xhr = new XMLHttpRequest()
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                isLoading = false
-                if (xhr.status === 200) {
-                    try {
-                        var response = JSON.parse(xhr.responseText)
-                        displayName = response.filename || filename
-                        fileSize = response.size || 0
-                        mimeType = response.mimeType || ""
-                        isBinary = response.isBinary !== undefined ? response.isBinary : true
-                        hasError = false
-                        console.log("[FilePreview] Loaded metadata:", displayName, mimeType, fileSize)
-                    } catch (e) {
-                        console.warn("[FilePreview] Failed to parse metadata:", e)
-                        hasError = true
-                    }
-                } else {
-                    console.warn("[FilePreview] Failed to fetch metadata, status:", xhr.status)
-                    hasError = true
-                }
-            }
+    function loadMetadata() {
+        if (!metadataKey || !SerchatAPI.fileMetadataCache) {
+            isLoading = false
+            hasError = false
+            return
         }
-        xhr.open("GET", metadataUrl)
-        xhr.send()
+
+        var metadata = SerchatAPI.fileMetadataCache.getMetadataForUrl(downloadUrl)
+        if (metadata && (metadata.filename || metadata.mimeType || metadata.size !== undefined)) {
+            applyMetadata(metadata)
+            isLoading = false
+            hasError = false
+        } else {
+            isLoading = true
+            hasError = false
+        }
+    }
+
+    function applyMetadata(metadata) {
+        displayName = metadata.filename || filename
+        fileSize = metadata.size || 0
+        mimeType = metadata.mimeType || ""
+        isBinary = metadata.isBinary !== undefined ? metadata.isBinary : true
     }
 
     function formatFileSize(bytes) {

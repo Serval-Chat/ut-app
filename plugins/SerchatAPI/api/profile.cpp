@@ -1,5 +1,6 @@
 #include "apiclient.h"
 #include <QDebug>
+#include <QUrl>
 
 // ============================================================================
 // Profile API
@@ -58,4 +59,13 @@ int ApiClient::changeUsername(const QString& newUsername) {
 
 int ApiClient::uploadFile(const QString& filePath) {
     return startMultipartPostRequest(RequestType::UploadFile, "/api/v1/files/upload", filePath, "file");
+}
+
+int ApiClient::getFileMetadata(const QString& filename, bool useCache) {
+    QString encodedFilename = QString::fromUtf8(QUrl::toPercentEncoding(filename));
+    QString endpoint = QStringLiteral("/api/v1/files/metadata/%1").arg(encodedFilename);
+    QString cacheKey = QStringLiteral("file-metadata:%1").arg(filename);
+    QVariantMap context;
+    context["filename"] = filename;
+    return startGetRequest(RequestType::FileMetadata, endpoint, cacheKey, useCache, context);
 }
